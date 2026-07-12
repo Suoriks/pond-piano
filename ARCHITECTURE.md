@@ -1,0 +1,27 @@
+# Architecture hypothesis v0
+
+## Решение
+
+Начать с installable offline-first PWA на TypeScript. Причина — максимальная переносимость между desktop/Linux/Android/iOS и быстрый цикл дизайна. Не добавлять Capacitor/Tauri до измеренного ограничения браузера.
+
+## Слои
+
+1. **Gesture field** — Pointer Events, pointer capture, нормализация x/y/pressure/velocity, карта активных касаний.
+2. **Musical mapping** — чистые функции координаты → pitch/timbre/gain; строи и квантование не знают о DOM.
+3. **Audio engine** — Web Audio AudioWorklet по мере необходимости; сначала малый полифонический движок с master limiter и корректным lifecycle iOS.
+4. **Pond renderer** — Canvas/WebGL после сравнительного spike; аудио не зависит от частоты кадров.
+5. **Shell** — PWA manifest, service worker, настройки, доступность, сохранение локальных предпочтений.
+
+## Границы
+
+- Никакого сетевого backend для игры.
+- Никакого UI-фреймворка до появления сложности, оправдывающей его.
+- Аудио-время — источник истины для звука; визуал может деградировать без заикания аудио.
+- Feature detection вместо user-agent ветвления.
+
+## Риски, которые доказываем прототипами
+
+- iOS Safari: unlock/resume AudioContext и надёжный multi-touch.
+- Задержка Bluetooth-аудио неизбежна; интерфейс не должен обещать невозможное.
+- Canvas 2D против WebGL: сначала красота и устойчивые 60 fps на среднем телефоне, потом выбор.
+- Pointer pressure непоследователен: velocity fallback обязателен.
