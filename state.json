@@ -1,11 +1,11 @@
 {
   "project": "pond-piano",
   "phase": "visual-prototype",
-  "iteration": 2,
+  "iteration": 3,
   "status": "paused_between_iterations",
   "current_goal": null,
-  "last_verified": "2026-07-12: Chromium pointer study passed at 1280x800 with no page errors; screenshot output/pond-piano/ripple-study-01.png",
-  "next_step": "Test a narrow mobile viewport and add a restrained continuous glide trail without making the pond feel like a drawing canvas",
+  "last_verified": "2026-07-12: node syntax check and Chromium mobile 390x844 @2x glide gesture passed with no page errors; screenshot output/pond-piano/glide-study-mobile-02.png",
+  "next_step": "Connect first contact to one soft Web Audio voice and let horizontal glide continuously change pitch without visible keys",
   "platform_target": [
     "desktop",
     "linux",
@@ -13,5 +13,5 @@
     "ios"
   ],
   "shell_hypothesis": "offline-first-pwa",
-  "updated_at": "2026-07-12T10:04:00+03:00"
+  "updated_at": "2026-07-12T17:31:00+03:00"
 }
