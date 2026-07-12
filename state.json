@@ -1,12 +1,17 @@
 {
   "project": "pond-piano",
-  "phase": "foundation",
-  "iteration": 1,
+  "phase": "visual-prototype",
+  "iteration": 2,
   "status": "paused_between_iterations",
   "current_goal": null,
-  "last_verified": "2026-07-12: product model, design north star and architecture boundaries cross-checked",
-  "next_step": "Build a dependency-free visual one-touch ripple study with Pointer Events and reduced-motion support",
-  "platform_target": ["desktop", "linux", "android", "ios"],
+  "last_verified": "2026-07-12: Chromium pointer study passed at 1280x800 with no page errors; screenshot output/pond-piano/ripple-study-01.png",
+  "next_step": "Test a narrow mobile viewport and add a restrained continuous glide trail without making the pond feel like a drawing canvas",
+  "platform_target": [
+    "desktop",
+    "linux",
+    "android",
+    "ios"
+  ],
   "shell_hypothesis": "offline-first-pwa",
-  "updated_at": "2026-07-12T06:35:00+03:00"
+  "updated_at": "2026-07-12T10:04:00+03:00"
 }
