@@ -234,4 +234,12 @@
     requestAnimationFrame(frame);
   }
   resize(); requestAnimationFrame(frame);
+
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(error => {
+        console.warn('Offline shell could not be prepared', error);
+      });
+    }, { once: true });
+  }
 })();

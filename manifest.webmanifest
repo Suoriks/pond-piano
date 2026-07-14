@@ -1,0 +1,35 @@
+{
+  "id": "./",
+  "name": "Пруд-пианино",
+  "short_name": "Пруд",
+  "description": "Жестовый музыкальный пруд: касание рождает звук, движение меняет его высоту и глубину.",
+  "lang": "ru",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#041313",
+  "theme_color": "#071515",
+  "categories": ["music", "entertainment"],
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
