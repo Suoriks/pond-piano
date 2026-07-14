@@ -13,6 +13,8 @@
     "ios"
   ],
   "shell_hypothesis": "offline-first-pwa",
-  "git_sync": "pending_remote_configuration",
-  "updated_at": "2026-07-14T15:36:00+03:00"
+  "git_sync": "synced_private_github",
+  "git_remote": "https://github.com/Suoriks/pond-piano.git",
+  "git_branch": "main",
+  "updated_at": "2026-07-14T21:11:00+03:00"
 }
