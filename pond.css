@@ -3,7 +3,8 @@
 html, body, main { width: 100%; height: 100%; margin: 0; overflow: hidden; }
 body { background: #06100f; color: #e9f0db; }
 main { position: relative; isolation: isolate; }
-#pond { width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; }
+#pond { width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; outline: none; }
+#pond:focus-visible { box-shadow: inset 0 0 0 3px rgba(218, 231, 180, .78), inset 0 0 30px rgba(145, 199, 174, .16); }
 .shore {
   position: absolute; inset: auto -8vw -10vh; height: 24vh; z-index: 2; pointer-events: none;
   background: radial-gradient(80% 130% at 48% 110%, #182219 0 34%, #101912 56%, transparent 57%);

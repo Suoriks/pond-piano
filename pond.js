@@ -4,7 +4,79 @@
   const status = document.querySelector('#status');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const ripples = [], trails = [], pointers = new Map();
+  const keyboard = { x: .5, y: .52, sounding: false };
+  let audio = null;
   let width = 0, height = 0, dpr = 1, last = performance.now(), announced = false;
+
+  function pitchAt(x) {
+    const normalized = Math.max(0, Math.min(1, x / Math.max(1, width)));
+    return 130.81 * Math.pow(8, normalized);
+  }
+
+  function depthAt(y) {
+    const normalized = 1 - Math.max(0, Math.min(1, y / Math.max(1, height)));
+    return { cutoff: 520 + 4300 * normalized * normalized, brightness: .08 + normalized * .14 };
+  }
+
+  function ensureAudio() {
+    if (!audio) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return null;
+      const context = new AudioContext({ latencyHint: 'interactive' });
+      const master = context.createGain();
+      const compressor = context.createDynamicsCompressor();
+      master.gain.value = .72;
+      compressor.threshold.value = -18; compressor.knee.value = 16;
+      compressor.ratio.value = 6; compressor.attack.value = .006; compressor.release.value = .24;
+      master.connect(compressor).connect(context.destination);
+      audio = { context, master, voices: new Map() };
+    }
+    if (audio.context.state === 'suspended') audio.context.resume();
+    return audio;
+  }
+
+  function startVoice(id, x, y, pressure = .42) {
+    const engine = ensureAudio();
+    if (!engine || engine.voices.has(id)) return;
+    const now = engine.context.currentTime;
+    const oscillator = engine.context.createOscillator();
+    const overtone = engine.context.createOscillator();
+    const overtoneGain = engine.context.createGain();
+    const filter = engine.context.createBiquadFilter();
+    const gain = engine.context.createGain();
+    const depth = depthAt(y), frequency = pitchAt(x);
+    oscillator.type = 'sine'; overtone.type = 'sine'; filter.type = 'lowpass'; filter.Q.value = .7;
+    oscillator.frequency.value = frequency; overtone.frequency.value = frequency * 2.01;
+    overtoneGain.gain.value = depth.brightness;
+    filter.frequency.value = depth.cutoff;
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.exponentialRampToValueAtTime(.055 + pressure * .085, now + .045);
+    gain.gain.exponentialRampToValueAtTime(.04 + pressure * .055, now + .32);
+    oscillator.connect(filter); overtone.connect(overtoneGain).connect(filter);
+    filter.connect(gain).connect(engine.master);
+    oscillator.start(); overtone.start();
+    engine.voices.set(id, { oscillator, overtone, filter, gain });
+  }
+
+  function moveVoice(id, x, y, pressure = .42) {
+    const voice = audio?.voices.get(id);
+    if (!voice) return;
+    const now = audio.context.currentTime, frequency = pitchAt(x), depth = depthAt(y);
+    voice.oscillator.frequency.setTargetAtTime(frequency, now, .018);
+    voice.overtone.frequency.setTargetAtTime(frequency * 2.01, now, .018);
+    voice.filter.frequency.setTargetAtTime(depth.cutoff, now, .035);
+    voice.gain.gain.setTargetAtTime(.04 + pressure * .065, now, .04);
+  }
+
+  function endVoice(id) {
+    const voice = audio?.voices.get(id);
+    if (!voice) return;
+    const now = audio.context.currentTime;
+    voice.gain.gain.cancelScheduledValues(now);
+    voice.gain.gain.setTargetAtTime(.0001, now, .16);
+    voice.oscillator.stop(now + .75); voice.overtone.stop(now + .75);
+    audio.voices.delete(id);
+  }
 
   function resize() {
     dpr = Math.min(devicePixelRatio || 1, 2);
@@ -29,9 +101,10 @@
     if (event.button !== undefined && event.button !== 0) return;
     const p = point(event), now = performance.now();
     pointers.set(event.pointerId, { ...p, sampledX: p.x, sampledY: p.y, sampledAt: now });
+    startVoice(event.pointerId, p.x, p.y, pressureOf(event));
     addRipple(p.x, p.y, pressureOf(event));
     document.body.classList.add('has-played');
-    if (!announced) { status.textContent = 'Вода отозвалась; ведите касание, чтобы оставить след'; announced = true; }
+    if (!announced) { status.textContent = 'Вода зазвучала; ведите касание, чтобы менять высоту и глубину'; announced = true; }
     canvas.setPointerCapture?.(event.pointerId);
   }
 
@@ -52,6 +125,7 @@
         active.sampledX = p.x; active.sampledY = p.y; active.sampledAt = now;
       }
       active.x = p.x; active.y = p.y;
+      moveVoice(event.pointerId, p.x, p.y, pressureOf(sample));
     }
   }
 
@@ -59,14 +133,40 @@
     const active = pointers.get(event.pointerId);
     if (!active) return;
     addRipple(active.x, active.y, pressureOf(event), .55);
+    endVoice(event.pointerId);
     pointers.delete(event.pointerId);
   }
+
+  function keyboardPoint() { return { x: keyboard.x * width, y: keyboard.y * height }; }
+
+  canvas.addEventListener('keydown', event => {
+    const movement = { ArrowLeft: [-.025, 0], ArrowRight: [.025, 0], ArrowUp: [0, -.035], ArrowDown: [0, .035] }[event.key];
+    if (movement) {
+      event.preventDefault();
+      keyboard.x = Math.max(.04, Math.min(.96, keyboard.x + movement[0]));
+      keyboard.y = Math.max(.08, Math.min(.9, keyboard.y + movement[1]));
+      const p = keyboardPoint();
+      if (keyboard.sounding) { moveVoice('keyboard', p.x, p.y, .48); trails.push({ x: p.x, y: p.y, fromX: p.x - movement[0] * width, fromY: p.y - movement[1] * height, born: performance.now(), pressure: .48, speed: .55, hue: 152 + 30 * (1 - p.y / height) }); }
+    }
+    if ((event.code === 'Space' || event.key === 'Enter') && !event.repeat && !keyboard.sounding) {
+      event.preventDefault(); keyboard.sounding = true;
+      const p = keyboardPoint(); startVoice('keyboard', p.x, p.y, .48); addRipple(p.x, p.y, .48);
+      document.body.classList.add('has-played'); status.textContent = 'Звук воды звучит; стрелками меняйте высоту и глубину';
+    }
+  });
+  canvas.addEventListener('keyup', event => {
+    if ((event.code === 'Space' || event.key === 'Enter') && keyboard.sounding) {
+      event.preventDefault(); keyboard.sounding = false;
+      const p = keyboardPoint(); endVoice('keyboard'); addRipple(p.x, p.y, .48, .55);
+    }
+  });
+  canvas.addEventListener('blur', () => { if (keyboard.sounding) { keyboard.sounding = false; endVoice('keyboard'); } });
 
   canvas.addEventListener('pointerdown', start);
   canvas.addEventListener('pointermove', glide);
   canvas.addEventListener('pointerup', end);
   canvas.addEventListener('pointercancel', end);
-  canvas.addEventListener('lostpointercapture', event => pointers.delete(event.pointerId));
+  canvas.addEventListener('lostpointercapture', event => { endVoice(event.pointerId); pointers.delete(event.pointerId); });
   canvas.addEventListener('contextmenu', event => event.preventDefault());
   addEventListener('resize', resize, { passive: true });
 
@@ -89,7 +189,7 @@
   }
 
   function drawTrail(mark, now) {
-    const age = (now - mark.born) / 1000, life = reduced.matches ? .34 : 1.15;
+    const age = Math.max(0, (now - mark.born) / 1000), life = reduced.matches ? .34 : 1.15;
     if (age > life) return false;
     const fade = Math.pow(1 - age / life, 1.8);
     const width = 1.2 + mark.pressure * 4 + mark.speed * 1.8;
@@ -108,7 +208,7 @@
   }
 
   function drawRipple(r, now) {
-    const age = (now - r.born) / 1000, life = (reduced.matches ? .55 : 2.7) * (.7 + r.strength * .3);
+    const age = Math.max(0, (now - r.born) / 1000), life = (reduced.matches ? .55 : 2.7) * (.7 + r.strength * .3);
     if (age > life) return false;
     const fade = Math.pow(1 - age / life, 1.7) * r.strength;
     const spread = reduced.matches ? 34 : 24 + age * (96 + r.pressure * 52);
