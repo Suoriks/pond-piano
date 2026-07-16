@@ -1,4 +1,4 @@
-const CACHE = 'pond-piano-shell-v1';
+const CACHE = 'pond-piano-shell-v2';
 const SHELL = [
   './',
   './index.html',

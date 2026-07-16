@@ -1,11 +1,11 @@
 {
   "project": "pond-piano",
-  "phase": "offline-pwa-shell",
-  "iteration": 5,
+  "phase": "chord-polyphony",
+  "iteration": 6,
   "status": "paused_between_iterations",
   "current_goal": null,
-  "last_verified": "2026-07-14: Chromium mobile 390x844 @2x registered the service worker, precached all 9 shell resources, preserved the pointer gesture, and reloaded fully offline with no page errors; CDP reported zero manifest/installability errors; screenshot output/pond-piano/offline-pwa-mobile-04.png",
-  "next_step": "Prove a true two-touch chord with readable intersecting waves and a bounded voice budget for modest phones.",
+  "last_verified": "2026-07-16: Chromium mobile 390x844 played a two-touch chord/glissando with real Web Audio; seven contacts allocated exactly six two-oscillator voices; runtime/log errors 0. Offline shell v2 served 9 cached resources and preserved the chord in reduced-motion mode. Manual screenshot inspection passed: output/pond-piano/chord-interference-mobile-05.png",
+  "next_step": "Prototype gentle scale attraction after a short hold, revealing available pitches as water currents/caustics rather than a key grid.",
   "platform_target": [
     "desktop",
     "linux",
@@ -16,5 +16,5 @@
   "git_sync": "synced_private_github",
   "git_remote": "https://github.com/Suoriks/pond-piano.git",
   "git_branch": "main",
-  "updated_at": "2026-07-14T21:11:00+03:00"
+  "updated_at": "2026-07-16T08:23:00+03:00"
 }

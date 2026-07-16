@@ -3,6 +3,7 @@
   const ctx = canvas.getContext('2d', { alpha: false });
   const status = document.querySelector('#status');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  const MAX_VOICES = 6;
   const ripples = [], trails = [], pointers = new Map();
   const keyboard = { x: .5, y: .52, sounding: false };
   let audio = null;
@@ -35,9 +36,15 @@
     return audio;
   }
 
+  function balanceVoices(engine) {
+    const sounding = [...engine.voices.values()].filter(voice => !voice.releasing).length;
+    const level = .72 / Math.sqrt(Math.max(1, sounding));
+    engine.master.gain.setTargetAtTime(level, engine.context.currentTime, .045);
+  }
+
   function startVoice(id, x, y, pressure = .42) {
     const engine = ensureAudio();
-    if (!engine || engine.voices.has(id)) return;
+    if (!engine || engine.voices.has(id) || engine.voices.size >= MAX_VOICES) return false;
     const now = engine.context.currentTime;
     const oscillator = engine.context.createOscillator();
     const overtone = engine.context.createOscillator();
@@ -55,7 +62,15 @@
     oscillator.connect(filter); overtone.connect(overtoneGain).connect(filter);
     filter.connect(gain).connect(engine.master);
     oscillator.start(); overtone.start();
-    engine.voices.set(id, { oscillator, overtone, filter, gain });
+    const voice = { oscillator, overtone, filter, gain, releasing: false };
+    engine.voices.set(id, voice);
+    oscillator.addEventListener('ended', () => {
+      if (engine.voices.get(id) !== voice) return;
+      engine.voices.delete(id);
+      balanceVoices(engine);
+    }, { once: true });
+    balanceVoices(engine);
+    return true;
   }
 
   function moveVoice(id, x, y, pressure = .42) {
@@ -70,12 +85,13 @@
 
   function endVoice(id) {
     const voice = audio?.voices.get(id);
-    if (!voice) return;
+    if (!voice || voice.releasing) return;
     const now = audio.context.currentTime;
+    voice.releasing = true;
     voice.gain.gain.cancelScheduledValues(now);
-    voice.gain.gain.setTargetAtTime(.0001, now, .16);
-    voice.oscillator.stop(now + .75); voice.overtone.stop(now + .75);
-    audio.voices.delete(id);
+    voice.gain.gain.setTargetAtTime(.0001, now, .1);
+    voice.oscillator.stop(now + .48); voice.overtone.stop(now + .48);
+    balanceVoices(audio);
   }
 
   function resize() {
@@ -92,6 +108,14 @@
 
   function pressureOf(event) { return event.pressure > 0 ? event.pressure : .42; }
 
+  function voiceWord(count) {
+    const lastTwo = count % 100, last = count % 10;
+    if (lastTwo >= 11 && lastTwo <= 14) return 'голосов';
+    if (last === 1) return 'голос';
+    if (last >= 2 && last <= 4) return 'голоса';
+    return 'голосов';
+  }
+
   function addRipple(x, y, pressure, strength = 1) {
     ripples.push({ x, y, born: performance.now(), pressure, strength, hue: 152 + 30 * (1 - y / height) });
     if (ripples.length > 32) ripples.shift();
@@ -100,11 +124,15 @@
   function start(event) {
     if (event.button !== undefined && event.button !== 0) return;
     const p = point(event), now = performance.now();
-    pointers.set(event.pointerId, { ...p, sampledX: p.x, sampledY: p.y, sampledAt: now });
-    startVoice(event.pointerId, p.x, p.y, pressureOf(event));
+    const pressure = pressureOf(event);
+    const sounding = startVoice(event.pointerId, p.x, p.y, pressure);
+    pointers.set(event.pointerId, { ...p, pressure, sounding, born: now, sampledX: p.x, sampledY: p.y, sampledAt: now });
     addRipple(p.x, p.y, pressureOf(event));
     document.body.classList.add('has-played');
-    if (!announced) { status.textContent = 'Вода зазвучала; ведите касание, чтобы менять высоту и глубину'; announced = true; }
+    const chordSize = [...pointers.values()].filter(pointer => pointer.sounding).length;
+    if (!sounding) status.textContent = `Пруд удерживает до ${MAX_VOICES} голосов; отпустите касание для следующей ноты`;
+    else if (chordSize > 1) status.textContent = `Аккорд: ${chordSize} независимых ${voiceWord(chordSize)}`;
+    else if (!announced) { status.textContent = 'Вода зазвучала; ведите касание, чтобы менять высоту и глубину'; announced = true; }
     canvas.setPointerCapture?.(event.pointerId);
   }
 
@@ -125,6 +153,7 @@
         active.sampledX = p.x; active.sampledY = p.y; active.sampledAt = now;
       }
       active.x = p.x; active.y = p.y;
+      active.pressure = pressureOf(sample);
       moveVoice(event.pointerId, p.x, p.y, pressureOf(sample));
     }
   }
@@ -226,11 +255,59 @@
     return true;
   }
 
+  function drawContact(pointer, now) {
+    const pitch = Math.max(0, Math.min(1, pointer.x / Math.max(1, width)));
+    const pulse = reduced.matches ? .5 : .5 + Math.sin((now - pointer.born) * (.004 + pitch * .003)) * .5;
+    const radius = 18 + (1 - pitch) * 16 + pointer.pressure * 8;
+    const hue = 152 + 30 * (1 - pointer.y / height);
+    const glow = ctx.createRadialGradient(pointer.x, pointer.y, 0, pointer.x, pointer.y, radius * 1.8);
+    glow.addColorStop(0, `hsla(${hue + 15} 72% 84% / ${pointer.sounding ? .25 : .1})`);
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(pointer.x, pointer.y, radius * 1.8, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(pointer.x, pointer.y, radius + pulse * 3, (radius + pulse * 3) * .42, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = `hsla(${hue} 64% 78% / ${pointer.sounding ? .46 : .2})`;
+    ctx.lineWidth = pointer.sounding ? 1.15 : .7; ctx.stroke();
+  }
+
+  function drawResonance(a, b, now) {
+    const dx = b.x - a.x, dy = b.y - a.y, distance = Math.hypot(dx, dy);
+    if (distance < 24) return;
+    const nx = -dy / distance, ny = dx / distance;
+    const phase = reduced.matches ? 0 : Math.sin(now * .004 + distance * .018);
+    const hue = 161 + 21 * (1 - (a.y + b.y) / (height * 2));
+    const knotRadius = Math.max(2.5, Math.min(6, distance * .018));
+
+    for (const portion of [.28, .5, .72]) {
+      const envelope = Math.sin(portion * Math.PI);
+      const offset = phase * 6 * envelope;
+      const x = a.x + dx * portion + nx * offset;
+      const y = a.y + dy * portion + ny * offset;
+      const glow = ctx.createRadialGradient(x, y, 0, x, y, knotRadius * 4);
+      glow.addColorStop(0, `hsla(${hue + portion * 18} 78% 86% / .3)`);
+      glow.addColorStop(.25, `hsla(${hue} 70% 72% / .12)`);
+      glow.addColorStop(1, 'transparent');
+      ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y, knotRadius * 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = `hsla(${hue + portion * 18} 74% 84% / .38)`;
+      ctx.beginPath(); ctx.arc(x, y, knotRadius, 0, Math.PI * 2); ctx.fill();
+    }
+
+    const midX = (a.x + b.x) / 2, midY = (a.y + b.y) / 2;
+    ctx.save(); ctx.translate(midX, midY); ctx.rotate(Math.atan2(dy, dx));
+    ctx.beginPath(); ctx.ellipse(0, 0, Math.min(74, distance * .22), 9 + Math.min(18, distance * .055), 0, 0, Math.PI * 2);
+    ctx.strokeStyle = `hsla(${hue} 62% 76% / ${reduced.matches ? .16 : .14 + Math.abs(phase) * .08})`;
+    ctx.lineWidth = .8; ctx.stroke(); ctx.restore();
+  }
+
   function frame(now) {
     const dt = Math.min((now - last) / 1000, .05); last = now;
     water(now + dt);
     for (let i = trails.length - 1; i >= 0; i--) if (!drawTrail(trails[i], now)) trails.splice(i, 1);
+    const soundingPointers = [...pointers.values()].filter(pointer => pointer.sounding);
+    for (let i = 0; i < soundingPointers.length; i++) {
+      for (let j = i + 1; j < soundingPointers.length; j++) drawResonance(soundingPointers[i], soundingPointers[j], now);
+    }
     for (let i = ripples.length - 1; i >= 0; i--) if (!drawRipple(ripples[i], now)) ripples.splice(i, 1);
+    for (const pointer of pointers.values()) drawContact(pointer, now);
     requestAnimationFrame(frame);
   }
   resize(); requestAnimationFrame(frame);
