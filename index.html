@@ -17,15 +17,16 @@
 </head>
 <body>
   <main>
-    <canvas id="pond" tabindex="0" role="application" aria-label="Музыкальный пруд. Коснитесь воды и ведите в стороны, чтобы менять высоту звука; вверх и вниз — его глубину. С клавиатуры удерживайте пробел, стрелками меняйте звук."></canvas>
+    <canvas id="pond" tabindex="0" role="application" aria-label="Музыкальный пруд. Коснитесь воды и ведите в стороны, чтобы менять высоту звука; задержитесь, чтобы течение мягко удержало ближайшую высоту; вверх и вниз меняют глубину. С клавиатуры удерживайте пробел, стрелками меняйте звук."></canvas>
     <div class="shore" aria-hidden="true"></div>
     <header class="title-block">
-      <p class="eyebrow">Этюд воды · 06</p>
+      <p class="eyebrow">Этюд воды · 07</p>
       <h1>Пруд-пианино</h1>
-      <p class="hint">Коснись воды — и проведи звук</p>
+      <p class="hint">Проведи звук · задержись у течения</p>
     </header>
     <output id="status" class="sr-only" aria-live="polite">Пруд ждёт касания</output>
   </main>
+  <script src="pond-music.js"></script>
   <script src="pond.js"></script>
 </body>
 </html>

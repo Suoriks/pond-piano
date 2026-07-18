@@ -3,15 +3,16 @@
   const ctx = canvas.getContext('2d', { alpha: false });
   const status = document.querySelector('#status');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  const music = window.PondMusic;
+  if (!music) throw new Error('Pond music mapping did not load');
   const MAX_VOICES = 6;
   const ripples = [], trails = [], pointers = new Map();
-  const keyboard = { x: .5, y: .52, sounding: false };
+  const keyboard = { x: .5, y: .52, pressure: .48, sounding: false, born: 0, lastMotion: 0, motionSpeed: 0, mapping: null };
   let audio = null;
   let width = 0, height = 0, dpr = 1, last = performance.now(), announced = false;
 
   function pitchAt(x) {
-    const normalized = Math.max(0, Math.min(1, x / Math.max(1, width)));
-    return 130.81 * Math.pow(8, normalized);
+    return music.frequencyAt(x / Math.max(1, width));
   }
 
   function depthAt(y) {
@@ -42,7 +43,7 @@
     engine.master.gain.setTargetAtTime(level, engine.context.currentTime, .045);
   }
 
-  function startVoice(id, x, y, pressure = .42) {
+  function startVoice(id, x, y, pressure = .42, frequency = pitchAt(x)) {
     const engine = ensureAudio();
     if (!engine || engine.voices.has(id) || engine.voices.size >= MAX_VOICES) return false;
     const now = engine.context.currentTime;
@@ -51,7 +52,7 @@
     const overtoneGain = engine.context.createGain();
     const filter = engine.context.createBiquadFilter();
     const gain = engine.context.createGain();
-    const depth = depthAt(y), frequency = pitchAt(x);
+    const depth = depthAt(y);
     oscillator.type = 'sine'; overtone.type = 'sine'; filter.type = 'lowpass'; filter.Q.value = .7;
     oscillator.frequency.value = frequency; overtone.frequency.value = frequency * 2.01;
     overtoneGain.gain.value = depth.brightness;
@@ -62,7 +63,7 @@
     oscillator.connect(filter); overtone.connect(overtoneGain).connect(filter);
     filter.connect(gain).connect(engine.master);
     oscillator.start(); overtone.start();
-    const voice = { oscillator, overtone, filter, gain, releasing: false };
+    const voice = { oscillator, overtone, filter, gain, targetFrequency: frequency, releasing: false };
     engine.voices.set(id, voice);
     oscillator.addEventListener('ended', () => {
       if (engine.voices.get(id) !== voice) return;
@@ -73,12 +74,15 @@
     return true;
   }
 
-  function moveVoice(id, x, y, pressure = .42) {
+  function moveVoice(id, x, y, pressure = .42, mappedFrequency = null) {
     const voice = audio?.voices.get(id);
     if (!voice) return;
-    const now = audio.context.currentTime, frequency = pitchAt(x), depth = depthAt(y);
-    voice.oscillator.frequency.setTargetAtTime(frequency, now, .018);
-    voice.overtone.frequency.setTargetAtTime(frequency * 2.01, now, .018);
+    const now = audio.context.currentTime, frequency = mappedFrequency ?? pitchAt(x), depth = depthAt(y);
+    if (Math.abs(frequency - voice.targetFrequency) > .08) {
+      voice.oscillator.frequency.setTargetAtTime(frequency, now, .026);
+      voice.overtone.frequency.setTargetAtTime(frequency * 2.01, now, .026);
+      voice.targetFrequency = frequency;
+    }
     voice.filter.frequency.setTargetAtTime(depth.cutoff, now, .035);
     voice.gain.gain.setTargetAtTime(.04 + pressure * .065, now, .04);
   }
@@ -126,7 +130,10 @@
     const p = point(event), now = performance.now();
     const pressure = pressureOf(event);
     const sounding = startVoice(event.pointerId, p.x, p.y, pressure);
-    pointers.set(event.pointerId, { ...p, pressure, sounding, born: now, sampledX: p.x, sampledY: p.y, sampledAt: now });
+    pointers.set(event.pointerId, {
+      ...p, pressure, sounding, born: now, lastMotion: now, movedAt: now, motionSpeed: 0,
+      mapping: null, currentAnnounced: false, sampledX: p.x, sampledY: p.y, sampledAt: now
+    });
     addRipple(p.x, p.y, pressureOf(event));
     document.body.classList.add('has-played');
     const chordSize = [...pointers.values()].filter(pointer => pointer.sounding).length;
@@ -152,6 +159,12 @@
         if (trails.length > (reduced.matches ? 24 : 110)) trails.shift();
         active.sampledX = p.x; active.sampledY = p.y; active.sampledAt = now;
       }
+      const moved = Math.hypot(p.x - active.x, p.y - active.y);
+      if (moved > .8) {
+        const elapsed = Math.max(8, now - active.movedAt);
+        active.motionSpeed = (moved / Math.max(1, width)) * (1000 / elapsed);
+        active.lastMotion = now; active.movedAt = now;
+      }
       active.x = p.x; active.y = p.y;
       active.pressure = pressureOf(sample);
       moveVoice(event.pointerId, p.x, p.y, pressureOf(sample));
@@ -174,11 +187,14 @@
       event.preventDefault();
       keyboard.x = Math.max(.04, Math.min(.96, keyboard.x + movement[0]));
       keyboard.y = Math.max(.08, Math.min(.9, keyboard.y + movement[1]));
-      const p = keyboardPoint();
-      if (keyboard.sounding) { moveVoice('keyboard', p.x, p.y, .48); trails.push({ x: p.x, y: p.y, fromX: p.x - movement[0] * width, fromY: p.y - movement[1] * height, born: performance.now(), pressure: .48, speed: .55, hue: 152 + 30 * (1 - p.y / height) }); }
+      const p = keyboardPoint(), now = performance.now();
+      keyboard.lastMotion = now; keyboard.motionSpeed = .22; keyboard.currentAnnounced = false;
+      if (keyboard.sounding) { moveVoice('keyboard', p.x, p.y, .48); trails.push({ x: p.x, y: p.y, fromX: p.x - movement[0] * width, fromY: p.y - movement[1] * height, born: now, pressure: .48, speed: .55, hue: 152 + 30 * (1 - p.y / height) }); }
     }
     if ((event.code === 'Space' || event.key === 'Enter') && !event.repeat && !keyboard.sounding) {
-      event.preventDefault(); keyboard.sounding = true;
+      event.preventDefault();
+      const now = performance.now();
+      keyboard.sounding = true; keyboard.born = now; keyboard.lastMotion = now; keyboard.motionSpeed = 0; keyboard.currentAnnounced = false;
       const p = keyboardPoint(); startVoice('keyboard', p.x, p.y, .48); addRipple(p.x, p.y, .48);
       document.body.classList.add('has-played'); status.textContent = 'Звук воды звучит; стрелками меняйте высоту и глубину';
     }
@@ -255,6 +271,51 @@
     return true;
   }
 
+  function updatePitchMapping(contact, id, x, y, now) {
+    const idle = Math.max(0, now - contact.lastMotion);
+    const decayedSpeed = contact.motionSpeed * Math.exp(-idle / 180);
+    contact.mapping = music.mapPitch(x / Math.max(1, width), idle, decayedSpeed);
+    if (contact.sounding) moveVoice(id, x, y, contact.pressure, contact.mapping.frequency);
+    if (contact.mapping.attraction > .52 && !contact.currentAnnounced) {
+      contact.currentAnnounced = true;
+      status.textContent = 'Течение мягко удерживает высоту; движение снова освободит звук';
+    }
+  }
+
+  function drawPitchCurrents(pointer, now) {
+    const mapping = pointer.mapping;
+    if (!mapping || mapping.attraction < .025) return;
+    const visibility = Math.min(1, mapping.attraction / .62);
+    const currents = music.neighboringCurrents(mapping.scaleIndex);
+    const reach = Math.min(105, height * .15);
+    const hue = 157 + 24 * (1 - pointer.y / Math.max(1, height));
+    const phase = reduced.matches ? 0 : now * .0012;
+
+    ctx.save();
+    ctx.lineCap = 'round';
+    for (const current of currents) {
+      const x = current.normalizedX * width;
+      const emphasis = current.isTarget ? 1 : .36;
+      const sway = reduced.matches ? 0 : Math.sin(phase + current.scaleIndex * 1.7) * 4;
+      const top = pointer.y - reach, bottom = pointer.y + reach;
+      const strands = current.isTarget ? [-3, 3] : [0];
+      for (const strand of strands) {
+        ctx.beginPath();
+        ctx.moveTo(x + strand - sway * .35, top);
+        ctx.bezierCurveTo(x + strand + 7 + sway, pointer.y - reach * .45,
+          x + strand - 8 - sway, pointer.y + reach * .42, x + strand + sway * .35, bottom);
+        ctx.strokeStyle = `hsla(${hue + (current.isTarget ? 16 : 0)} 66% 78% / ${visibility * emphasis * .2})`;
+        ctx.lineWidth = current.isTarget ? 1.1 : .7;
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.ellipse(x, pointer.y, current.isTarget ? 11 : 6, current.isTarget ? 3.4 : 2.2, sway * .015, 0, Math.PI * 2);
+      ctx.strokeStyle = `hsla(${hue + 12} 72% 82% / ${visibility * emphasis * .34})`;
+      ctx.lineWidth = current.isTarget ? 1 : .65; ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   function drawContact(pointer, now) {
     const pitch = Math.max(0, Math.min(1, pointer.x / Math.max(1, width)));
     const pulse = reduced.matches ? .5 : .5 + Math.sin((now - pointer.born) * (.004 + pitch * .003)) * .5;
@@ -302,12 +363,26 @@
     const dt = Math.min((now - last) / 1000, .05); last = now;
     water(now + dt);
     for (let i = trails.length - 1; i >= 0; i--) if (!drawTrail(trails[i], now)) trails.splice(i, 1);
+
+    for (const [id, pointer] of pointers) {
+      if (pointer.sounding) updatePitchMapping(pointer, id, pointer.x, pointer.y, now);
+    }
+    let keyboardVisual = null;
+    if (keyboard.sounding) {
+      const p = keyboardPoint();
+      updatePitchMapping(keyboard, 'keyboard', p.x, p.y, now);
+      keyboardVisual = { ...keyboard, ...p };
+    }
+
     const soundingPointers = [...pointers.values()].filter(pointer => pointer.sounding);
+    if (keyboardVisual) soundingPointers.push(keyboardVisual);
+    for (const pointer of soundingPointers) drawPitchCurrents(pointer, now);
     for (let i = 0; i < soundingPointers.length; i++) {
       for (let j = i + 1; j < soundingPointers.length; j++) drawResonance(soundingPointers[i], soundingPointers[j], now);
     }
     for (let i = ripples.length - 1; i >= 0; i--) if (!drawRipple(ripples[i], now)) ripples.splice(i, 1);
     for (const pointer of pointers.values()) drawContact(pointer, now);
+    if (keyboardVisual) drawContact(keyboardVisual, now);
     requestAnimationFrame(frame);
   }
   resize(); requestAnimationFrame(frame);

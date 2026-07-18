@@ -1,11 +1,11 @@
 {
   "project": "pond-piano",
-  "phase": "chord-polyphony",
-  "iteration": 6,
+  "phase": "pitch-currents",
+  "iteration": 7,
   "status": "paused_between_iterations",
   "current_goal": null,
-  "last_verified": "2026-07-16: Chromium mobile 390x844 played a two-touch chord/glissando with real Web Audio; seven contacts allocated exactly six two-oscillator voices; runtime/log errors 0. Offline shell v2 served 9 cached resources and preserved the chord in reduced-motion mode. Manual screenshot inspection passed: output/pond-piano/chord-interference-mobile-05.png",
-  "next_step": "Prototype gentle scale attraction after a short hold, revealing available pitches as water currents/caustics rather than a key grid.",
+  "last_verified": "2026-07-18: Node mapping tests and syntax/diff checks passed. Chromium mobile 390x844 @2x held a real Web Audio pointer voice until local pitch currents appeared, cached all 10 shell v3 resources, and reloaded offline with 0 runtime/console errors. Desktop reduced-motion keyboard hold/move/release and focus feedback passed. Manual screenshot inspection passed: output/pond-piano/pitch-currents-mobile-06.png",
+  "next_step": "Turn released-note traces into a calm short-term water score that preserves phrase, pitch, and depth without a staff or permanent grid.",
   "platform_target": [
     "desktop",
     "linux",
@@ -16,5 +16,5 @@
   "git_sync": "synced_private_github",
   "git_remote": "https://github.com/Suoriks/pond-piano.git",
   "git_branch": "main",
-  "updated_at": "2026-07-16T08:23:00+03:00"
+  "updated_at": "2026-07-18T17:24:00+03:00"
 }
