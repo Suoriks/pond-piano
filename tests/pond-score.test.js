@@ -16,6 +16,7 @@ assert.deepEqual(memory.points[0], samples[0]);
 assert.deepEqual(memory.points.at(-1), samples.at(-1));
 assert.equal(memory.pitch, 1);
 assert.equal(memory.depth, .7);
+assert.equal(memory.startedAt, 1000);
 assert.equal(memory.durationMs, 2000);
 assert.equal(score.visibility(memory, memory.born - 1), 0);
 assert.ok(score.visibility(memory, memory.born + 300) > .99);
@@ -30,4 +31,34 @@ assert.equal(phrase.length, score.MAX_MEMORIES, 'phrase memory must stay bounded
 assert.equal(phrase[0].born, 103);
 assert.equal(score.createMemory([], 100), null);
 
-console.log('pond-score: bounded phrase paths, duration, and fading verified');
+const note = (startedAt, releasedAt, x = .5) => score.createMemory([
+  { x, y: .5, at: startedAt, pressure: .4 }
+], releasedAt);
+const motifs = score.groupMotifs([
+  note(100, 400, .2),
+  note(620, 850, .4),
+  note(2400, 2850, .7),
+  note(2600, 3000, .8)
+]);
+assert.equal(motifs.length, 2, 'silence longer than the motif gap must open a new motif');
+assert.equal(motifs[0].memories.length, 2, 'nearby sequential notes belong to one motif');
+assert.equal(motifs[1].memories.length, 2, 'temporally overlapping notes belong to one motif');
+assert.equal(motifs[1].startedAt, 2400);
+assert.equal(motifs[1].endedAt, 3000);
+
+const reverseReleaseChord = score.groupMotifs([
+  note(300, 600, .8),
+  note(100, 900, .2)
+], 0);
+assert.equal(reverseReleaseChord.length, 1, 'overlapping chord releases stay together regardless of release order');
+assert.ok(Object.isFrozen(reverseReleaseChord[0].memories));
+
+const bridgeNote = score.groupMotifs([
+  note(100, 300, .2),
+  note(700, 900, .8),
+  note(0, 1000, .5)
+], 0);
+assert.equal(bridgeNote.length, 1, 'a held note must bridge every gesture it temporally overlaps');
+assert.deepEqual(score.groupMotifs([null, {}]), []);
+
+console.log('pond-score: bounded paths, duration, fading, and motif grouping verified');

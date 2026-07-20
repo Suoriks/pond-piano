@@ -5,6 +5,7 @@
 })(typeof globalThis === 'object' ? globalThis : this, () => {
   const MAX_MEMORIES = 12;
   const MAX_POINTS = 24;
+  const MOTIF_GAP_MS = 1400;
   const FULL_LIFE_MS = 18000;
   const REDUCED_LIFE_MS = 9000;
   const clamp = value => Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
@@ -36,6 +37,7 @@
     const durationMs = Math.max(80, Math.min(8000, releasedAt - first.at));
     const pressure = points.reduce((sum, point) => sum + point.pressure, 0) / points.length;
     return Object.freeze({
+      startedAt: first.at,
       born: releasedAt,
       durationMs,
       pitch: last.x,
@@ -64,5 +66,28 @@
     return [...(Array.isArray(memories) ? memories : []), memory].slice(-Math.max(1, maximum));
   }
 
-  return Object.freeze({ MAX_MEMORIES, MAX_POINTS, createMemory, lifeMs, visibility, append });
+  function groupMotifs(memories, gapMs = MOTIF_GAP_MS) {
+    const gap = Math.max(0, Number.isFinite(gapMs) ? gapMs : MOTIF_GAP_MS);
+    const groups = [];
+    const chronological = (Array.isArray(memories) ? memories : [])
+      .filter(memory => memory && Number.isFinite(memory.startedAt) && Number.isFinite(memory.born))
+      .slice().sort((a, b) => a.startedAt - b.startedAt || a.born - b.born);
+    for (const memory of chronological) {
+      const previous = groups.at(-1);
+      if (!previous || memory.startedAt > previous.endedAt + gap) {
+        groups.push({ startedAt: memory.startedAt, endedAt: memory.born, memories: [memory] });
+      } else {
+        previous.startedAt = Math.min(previous.startedAt, memory.startedAt);
+        previous.endedAt = Math.max(previous.endedAt, memory.born);
+        previous.memories.push(memory);
+      }
+    }
+    return groups.map(group => Object.freeze({
+      startedAt: group.startedAt,
+      endedAt: group.endedAt,
+      memories: Object.freeze(group.memories.slice())
+    }));
+  }
+
+  return Object.freeze({ MAX_MEMORIES, MAX_POINTS, MOTIF_GAP_MS, createMemory, lifeMs, visibility, append, groupMotifs });
 });

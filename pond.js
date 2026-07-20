@@ -148,8 +148,12 @@
   function rememberContact(contact, x, y, now, pressure) {
     if (!contact.sounding) return;
     captureScoreSample(contact, x, y, now, pressure, true);
+    const previousMotifs = score.groupMotifs(memories).length;
     memories = score.append(memories, score.createMemory(contact.scoreSamples, now));
-    if (!scoreAnnounced) {
+    const motifCount = score.groupMotifs(memories).length;
+    if (previousMotifs > 0 && motifCount > previousMotifs) {
+      status.textContent = 'Пауза отделила новый мотив; вода не связывает его с предыдущим';
+    } else if (!scoreAnnounced) {
       status.textContent = 'Отпущенная нота остаётся на воде; сыграйте ещё, чтобы сложить короткую фразу';
       scoreAnnounced = true;
     }
@@ -378,6 +382,43 @@
     return true;
   }
 
+  function traceMotifEndpoints(memories, drift, phase) {
+    const endpoints = memories.map(memory => memory.points.at(-1));
+    const first = endpoints[0];
+    ctx.beginPath(); ctx.moveTo(first.x * width, first.y * height + drift);
+    for (let index = 1; index < endpoints.length; index += 1) {
+      const previous = endpoints[index - 1], point = endpoints[index];
+      const fromX = previous.x * width, fromY = previous.y * height;
+      const x = point.x * width, y = point.y * height;
+      const dx = x - fromX, dy = y - fromY, distance = Math.max(1, Math.hypot(dx, dy));
+      const curl = Math.sin(phase + index * 1.73) * Math.min(22, distance * .11);
+      ctx.quadraticCurveTo(
+        (fromX + x) * .5 - dy / distance * curl,
+        (fromY + y) * .5 + dx / distance * curl + drift,
+        x, y + drift
+      );
+    }
+  }
+
+  function drawMotifUndercurrent(motif, now) {
+    const visible = motif.memories.filter(memory => score.visibility(memory, now, reduced.matches) > 0);
+    if (visible.length < 2) return;
+    const strength = visible.reduce((sum, memory) => sum + score.visibility(memory, now, reduced.matches), 0) / visible.length;
+    const phase = (motif.startedAt % 997) / 997 * Math.PI * 2;
+    const drift = reduced.matches ? 0 : Math.sin(now * .00042 + phase) * 3;
+    const meanDepth = visible.reduce((sum, memory) => sum + memory.depth, 0) / visible.length;
+    const hue = 153 + 30 * (1 - meanDepth);
+
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    traceMotifEndpoints(visible, drift, phase);
+    ctx.strokeStyle = `hsla(${hue + 10} 52% 62% / ${strength * .045})`;
+    ctx.lineWidth = 12; ctx.stroke();
+    traceMotifEndpoints(visible, drift, phase);
+    ctx.strokeStyle = `hsla(${hue} 62% 78% / ${strength * .16})`;
+    ctx.lineWidth = .75; ctx.stroke();
+    ctx.restore();
+  }
+
   function updatePitchMapping(contact, id, x, y, now) {
     const idle = Math.max(0, now - contact.lastMotion);
     const decayedSpeed = contact.motionSpeed * Math.exp(-idle / 180);
@@ -469,7 +510,9 @@
   function frame(now) {
     const dt = Math.min((now - last) / 1000, .05); last = now;
     water(now + dt);
-    memories = memories.filter(memory => drawScoreMemory(memory, now));
+    memories = memories.filter(memory => now >= memory.born && now < memory.born + score.lifeMs(reduced.matches));
+    for (const motif of score.groupMotifs(memories)) drawMotifUndercurrent(motif, now);
+    for (const memory of memories) drawScoreMemory(memory, now);
     for (let i = trails.length - 1; i >= 0; i--) if (!drawTrail(trails[i], now)) trails.splice(i, 1);
 
     for (const [id, pointer] of pointers) {
