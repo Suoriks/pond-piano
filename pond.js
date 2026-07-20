@@ -4,12 +4,15 @@
   const status = document.querySelector('#status');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const music = window.PondMusic;
+  const score = window.PondScore;
   if (!music) throw new Error('Pond music mapping did not load');
+  if (!score) throw new Error('Pond score mapping did not load');
   const MAX_VOICES = 6;
   const ripples = [], trails = [], pointers = new Map();
-  const keyboard = { x: .5, y: .52, pressure: .48, sounding: false, born: 0, lastMotion: 0, motionSpeed: 0, mapping: null };
+  let memories = [];
+  const keyboard = { x: .5, y: .52, pressure: .48, sounding: false, born: 0, lastMotion: 0, motionSpeed: 0, mapping: null, scoreSamples: [] };
   let audio = null;
-  let width = 0, height = 0, dpr = 1, last = performance.now(), announced = false;
+  let width = 0, height = 0, dpr = 1, last = performance.now(), announced = false, scoreAnnounced = false;
 
   function pitchAt(x) {
     return music.frequencyAt(x / Math.max(1, width));
@@ -125,6 +128,33 @@
     if (ripples.length > 32) ripples.shift();
   }
 
+  function captureScoreSample(contact, x, y, now, pressure, force = false) {
+    if (!contact.sounding) return;
+    const sample = {
+      x: Math.max(0, Math.min(1, x / Math.max(1, width))),
+      y: Math.max(0, Math.min(1, y / Math.max(1, height))),
+      at: now,
+      pressure
+    };
+    const previous = contact.scoreSamples.at(-1);
+    const distance = previous ? Math.hypot(sample.x - previous.x, sample.y - previous.y) : Infinity;
+    if (!force && previous && distance < .012 && now - previous.at < 90) return;
+    contact.scoreSamples.push(sample);
+    if (contact.scoreSamples.length > 96) {
+      contact.scoreSamples = contact.scoreSamples.filter((point, index, all) => index === 0 || index === all.length - 1 || index % 2 === 0);
+    }
+  }
+
+  function rememberContact(contact, x, y, now, pressure) {
+    if (!contact.sounding) return;
+    captureScoreSample(contact, x, y, now, pressure, true);
+    memories = score.append(memories, score.createMemory(contact.scoreSamples, now));
+    if (!scoreAnnounced) {
+      status.textContent = 'Отпущенная нота остаётся на воде; сыграйте ещё, чтобы сложить короткую фразу';
+      scoreAnnounced = true;
+    }
+  }
+
   function start(event) {
     if (event.button !== undefined && event.button !== 0) return;
     const p = point(event), now = performance.now();
@@ -132,7 +162,8 @@
     const sounding = startVoice(event.pointerId, p.x, p.y, pressure);
     pointers.set(event.pointerId, {
       ...p, pressure, sounding, born: now, lastMotion: now, movedAt: now, motionSpeed: 0,
-      mapping: null, currentAnnounced: false, sampledX: p.x, sampledY: p.y, sampledAt: now
+      mapping: null, currentAnnounced: false, sampledX: p.x, sampledY: p.y, sampledAt: now,
+      scoreSamples: sounding ? [{ x: p.x / Math.max(1, width), y: p.y / Math.max(1, height), at: now, pressure }] : []
     });
     addRipple(p.x, p.y, pressureOf(event));
     document.body.classList.add('has-played');
@@ -167,6 +198,7 @@
       }
       active.x = p.x; active.y = p.y;
       active.pressure = pressureOf(sample);
+      captureScoreSample(active, p.x, p.y, now, active.pressure);
       moveVoice(event.pointerId, p.x, p.y, pressureOf(sample));
     }
   }
@@ -174,7 +206,9 @@
   function end(event) {
     const active = pointers.get(event.pointerId);
     if (!active) return;
-    addRipple(active.x, active.y, pressureOf(event), .55);
+    const now = performance.now(), pressure = pressureOf(event);
+    addRipple(active.x, active.y, pressure, .55);
+    rememberContact(active, active.x, active.y, now, pressure);
     endVoice(event.pointerId);
     pointers.delete(event.pointerId);
   }
@@ -189,29 +223,47 @@
       keyboard.y = Math.max(.08, Math.min(.9, keyboard.y + movement[1]));
       const p = keyboardPoint(), now = performance.now();
       keyboard.lastMotion = now; keyboard.motionSpeed = .22; keyboard.currentAnnounced = false;
-      if (keyboard.sounding) { moveVoice('keyboard', p.x, p.y, .48); trails.push({ x: p.x, y: p.y, fromX: p.x - movement[0] * width, fromY: p.y - movement[1] * height, born: now, pressure: .48, speed: .55, hue: 152 + 30 * (1 - p.y / height) }); }
+      if (keyboard.sounding) {
+        moveVoice('keyboard', p.x, p.y, .48);
+        captureScoreSample(keyboard, p.x, p.y, now, .48);
+        trails.push({ x: p.x, y: p.y, fromX: p.x - movement[0] * width, fromY: p.y - movement[1] * height, born: now, pressure: .48, speed: .55, hue: 152 + 30 * (1 - p.y / height) });
+      }
     }
     if ((event.code === 'Space' || event.key === 'Enter') && !event.repeat && !keyboard.sounding) {
       event.preventDefault();
       const now = performance.now();
       keyboard.sounding = true; keyboard.born = now; keyboard.lastMotion = now; keyboard.motionSpeed = 0; keyboard.currentAnnounced = false;
-      const p = keyboardPoint(); startVoice('keyboard', p.x, p.y, .48); addRipple(p.x, p.y, .48);
+      const p = keyboardPoint();
+      keyboard.scoreSamples = [{ x: keyboard.x, y: keyboard.y, at: now, pressure: .48 }];
+      startVoice('keyboard', p.x, p.y, .48); addRipple(p.x, p.y, .48);
       document.body.classList.add('has-played'); status.textContent = 'Звук воды звучит; стрелками меняйте высоту и глубину';
     }
   });
   canvas.addEventListener('keyup', event => {
     if ((event.code === 'Space' || event.key === 'Enter') && keyboard.sounding) {
-      event.preventDefault(); keyboard.sounding = false;
-      const p = keyboardPoint(); endVoice('keyboard'); addRipple(p.x, p.y, .48, .55);
+      event.preventDefault();
+      const p = keyboardPoint(), now = performance.now();
+      rememberContact(keyboard, p.x, p.y, now, .48);
+      keyboard.sounding = false; endVoice('keyboard'); addRipple(p.x, p.y, .48, .55);
     }
   });
-  canvas.addEventListener('blur', () => { if (keyboard.sounding) { keyboard.sounding = false; endVoice('keyboard'); } });
+  canvas.addEventListener('blur', () => {
+    if (keyboard.sounding) {
+      const p = keyboardPoint();
+      rememberContact(keyboard, p.x, p.y, performance.now(), .48);
+      keyboard.sounding = false; endVoice('keyboard');
+    }
+  });
 
   canvas.addEventListener('pointerdown', start);
   canvas.addEventListener('pointermove', glide);
   canvas.addEventListener('pointerup', end);
   canvas.addEventListener('pointercancel', end);
-  canvas.addEventListener('lostpointercapture', event => { endVoice(event.pointerId); pointers.delete(event.pointerId); });
+  canvas.addEventListener('lostpointercapture', event => {
+    const active = pointers.get(event.pointerId);
+    if (active) rememberContact(active, active.x, active.y, performance.now(), active.pressure);
+    endVoice(event.pointerId); pointers.delete(event.pointerId);
+  });
   canvas.addEventListener('contextmenu', event => event.preventDefault());
   addEventListener('resize', resize, { passive: true });
 
@@ -268,6 +320,61 @@
       ctx.strokeStyle = `hsla(${r.hue + i * 7} 70% ${78 - i * 7}% / ${fade * (.68 - i * .13)})`;
       ctx.lineWidth = Math.max(.7, 1.8 - age * .35 - i * .2); ctx.stroke();
     }
+    return true;
+  }
+
+  function traceMemoryPath(points, drift) {
+    const first = points[0];
+    ctx.beginPath();
+    ctx.moveTo(first.x * width, first.y * height + drift);
+    if (points.length === 1) return;
+    for (let index = 1; index < points.length - 1; index += 1) {
+      const point = points[index], next = points[index + 1];
+      ctx.quadraticCurveTo(
+        point.x * width, point.y * height + drift,
+        (point.x + next.x) * width * .5, (point.y + next.y) * height * .5 + drift
+      );
+    }
+    const lastPoint = points.at(-1);
+    ctx.lineTo(lastPoint.x * width, lastPoint.y * height + drift);
+  }
+
+  function drawScoreMemory(memory, now) {
+    const visibility = score.visibility(memory, now, reduced.matches);
+    if (visibility <= 0) return now >= memory.born && now < memory.born + score.lifeMs(reduced.matches);
+    const age = now - memory.born;
+    const endpoint = memory.points.at(-1);
+    const x = endpoint.x * width, y = endpoint.y * height;
+    const lowPitchWeight = 1 - memory.pitch;
+    const lineWidth = 1.1 + lowPitchWeight * 2.2 + memory.pressure * 1.2;
+    const drift = reduced.matches ? 0 : Math.sin(age * .00038 + memory.pitch * 5) * 2.2;
+    const hue = 153 + 30 * (1 - memory.depth);
+    const alpha = visibility * .34;
+
+    ctx.save();
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    if (memory.points.length > 1) {
+      traceMemoryPath(memory.points, drift);
+      ctx.strokeStyle = `hsla(${hue + 12} 54% 65% / ${alpha * .22})`;
+      ctx.lineWidth = lineWidth * 5.5; ctx.stroke();
+      traceMemoryPath(memory.points, drift);
+      ctx.strokeStyle = `hsla(${hue} 68% 81% / ${alpha})`;
+      ctx.lineWidth = lineWidth; ctx.stroke();
+    }
+
+    const radius = 7 + lowPitchWeight * 8 + memory.pressure * 3;
+    const rings = memory.durationMs >= 1800 ? 3 : memory.durationMs >= 650 ? 2 : 1;
+    const glow = ctx.createRadialGradient(x, y + drift, 0, x, y + drift, radius * 3.2);
+    glow.addColorStop(0, `hsla(${hue + 18} 72% 84% / ${alpha * .5})`);
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y + drift, radius * 3.2, 0, Math.PI * 2); ctx.fill();
+    for (let index = 0; index < rings; index += 1) {
+      const spread = radius + index * 5.5;
+      ctx.beginPath(); ctx.ellipse(x, y + drift, spread, spread * .36, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = `hsla(${hue + index * 7} 64% ${78 - index * 5}% / ${alpha * (1 - index * .18)})`;
+      ctx.lineWidth = Math.max(.6, lineWidth * .38); ctx.stroke();
+    }
+    ctx.restore();
     return true;
   }
 
@@ -362,6 +469,7 @@
   function frame(now) {
     const dt = Math.min((now - last) / 1000, .05); last = now;
     water(now + dt);
+    memories = memories.filter(memory => drawScoreMemory(memory, now));
     for (let i = trails.length - 1; i >= 0; i--) if (!drawTrail(trails[i], now)) trails.splice(i, 1);
 
     for (const [id, pointer] of pointers) {
