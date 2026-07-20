@@ -1,11 +1,11 @@
 {
   "project": "pond-piano",
-  "phase": "motif-grouping",
-  "iteration": 9,
+  "phase": "expressive-attack",
+  "iteration": 10,
   "status": "paused_between_iterations",
   "current_goal": null,
-  "last_verified": "2026-07-20: JS syntax, music/score tests, JSON and diff checks passed. Chromium mobile 390x844 @2x played two gesture pairs separated by 1.55s: the new motif was announced, each pair had its own curved undercurrent, Canvas was 780x1688, shell v5 cached 11 resources, and full offline reload succeeded without runtime errors. Desktop reduced-motion keyboard play and focus passed. Manual screenshot inspection passed: output/pond-piano/motif-groups-mobile-08.png",
-  "next_step": "Give non-pressure devices expressive dynamics by deriving a bounded attack/splash fallback from the first movement velocity, while preserving real pen pressure and calm holds.",
+  "last_verified": "2026-07-20: JS syntax, music/score tests, JSON and diff checks passed. Chromium mobile 390x844 @2x measured a calm AudioContext peak of 0.0788 and a fast fallback peak of 0.1349, announced the splash, kept keyboard focus and reduced-motion feedback, cached shell v6, and fully reloaded offline without runtime/console errors. Manual screenshot inspection passed: output/pond-piano/expressive-attack-mobile-09.png. Automated vision inspection was unavailable because the image model could not extract account ID.",
+  "next_step": "Give held voices a subtle evolving water texture through bounded depth drift and soft beating, without masking pitch or exceeding the current mobile audio budget.",
   "platform_target": [
     "desktop",
     "linux",
@@ -16,5 +16,5 @@
   "git_sync": "synced_private_github",
   "git_remote": "https://github.com/Suoriks/pond-piano.git",
   "git_branch": "main",
-  "updated_at": "2026-07-20T08:36:00+03:00"
+  "updated_at": "2026-07-20T14:49:00+03:00"
 }

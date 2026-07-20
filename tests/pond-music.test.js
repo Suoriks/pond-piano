@@ -23,4 +23,22 @@ assert.ok(currents.every((current, index) => index === 0 || current.normalizedX 
 assert.equal(music.frequencyAt(-1), music.BASE_FREQUENCY);
 assert.ok(Math.abs(music.frequencyAt(1) / music.BASE_FREQUENCY - 8) < 1e-9);
 
-console.log('pond-music: hold attraction and local currents verified');
+assert.equal(music.hasExpressivePressure('mouse', .5), false, 'mouse fallback pressure is not expressive');
+assert.equal(music.hasExpressivePressure('touch', .5), false, 'spec fallback touch pressure is not expressive');
+assert.equal(music.hasExpressivePressure('touch', .73), true, 'varying touch pressure is preserved when available');
+assert.equal(music.hasExpressivePressure('pen', .18), true, 'pen pressure always wins over velocity');
+
+const calmAttack = music.attackIntensity({ speedPerSecond: 0 });
+const brushedAttack = music.attackIntensity({ speedPerSecond: .7 });
+const fastAttack = music.attackIntensity({ speedPerSecond: 9 });
+assert.equal(calmAttack, .28, 'a still contact must begin calmly');
+assert.ok(brushedAttack > calmAttack && brushedAttack < fastAttack, 'movement velocity must add bounded expression');
+assert.ok(Math.abs(fastAttack - .94) < 1e-9, 'a fast stroke must stay below the hard output ceiling');
+assert.ok(Math.abs(music.attackIntensity({ pressure: 1, speedPerSecond: 4, pressureAvailable: true }) - .94) < 1e-9);
+assert.ok(music.attackIntensity({ pressure: .12, speedPerSecond: 4, pressureAvailable: true }) < .4,
+  'a light pen must remain light even when it moves quickly');
+assert.equal(music.movementSpeed(0, 16, 390), 0);
+assert.ok(Math.abs(music.movementSpeed(39, 100, 390) - 1) < 1e-9);
+assert.equal(music.movementSpeed(1000, 1, 390), 4, 'movement speed must be capped');
+
+console.log('pond-music: pitch currents and expressive attack mapping verified');

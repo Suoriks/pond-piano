@@ -5,6 +5,7 @@
 })(typeof globalThis === 'object' ? globalThis : this, () => {
   const BASE_FREQUENCY = 130.81278265; // C3
   const OCTAVES = 3;
+  const ATTACK_WINDOW_MS = 240;
   const PENTATONIC = [0, 2, 4, 7, 9];
   const SCALE = [];
 
@@ -24,6 +25,26 @@
   const frequencyAt = normalizedX => BASE_FREQUENCY * Math.pow(2, clamp(normalizedX) * OCTAVES);
   const normalizedAtSemitones = semitones => clamp(semitones / (OCTAVES * 12));
   const frequencyAtSemitones = semitones => BASE_FREQUENCY * Math.pow(2, semitones / 12);
+
+  function hasExpressivePressure(pointerType, pressure) {
+    if (!Number.isFinite(pressure) || pressure <= 0) return false;
+    if (pointerType === 'pen') return true;
+    // Pointer Events specifies .5 while active when touch hardware cannot report pressure.
+    return pointerType === 'touch' && Math.abs(pressure - .5) > .08;
+  }
+
+  function movementSpeed(distancePixels, elapsedMilliseconds, viewportSpan) {
+    if (![distancePixels, elapsedMilliseconds, viewportSpan].every(Number.isFinite)) return 0;
+    if (distancePixels <= 0 || elapsedMilliseconds <= 0 || viewportSpan <= 0) return 0;
+    return clamp((distancePixels / viewportSpan) * (1000 / elapsedMilliseconds), 0, 4);
+  }
+
+  function attackIntensity({ pressure = .5, speedPerSecond = 0, pressureAvailable = false } = {}) {
+    if (pressureAvailable) {
+      return .22 + Math.pow(clamp(pressure), .72) * .72;
+    }
+    return .28 + smoothstep(.12, 2.2, Math.max(0, speedPerSecond)) * .66;
+  }
 
   function nearestScaleIndex(frequency) {
     const semitones = 12 * Math.log2(Math.max(BASE_FREQUENCY, frequency) / BASE_FREQUENCY);
@@ -61,7 +82,11 @@
   return Object.freeze({
     BASE_FREQUENCY,
     OCTAVES,
+    ATTACK_WINDOW_MS,
+    attackIntensity,
+    hasExpressivePressure,
     mapPitch,
+    movementSpeed,
     neighboringCurrents,
     frequencyAt
   });

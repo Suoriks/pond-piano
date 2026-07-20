@@ -8,11 +8,11 @@
   if (!music) throw new Error('Pond music mapping did not load');
   if (!score) throw new Error('Pond score mapping did not load');
   const MAX_VOICES = 6;
-  const ripples = [], trails = [], pointers = new Map();
+  const ripples = [], trails = [], splashes = [], pointers = new Map();
   let memories = [];
   const keyboard = { x: .5, y: .52, pressure: .48, sounding: false, born: 0, lastMotion: 0, motionSpeed: 0, mapping: null, scoreSamples: [] };
   let audio = null;
-  let width = 0, height = 0, dpr = 1, last = performance.now(), announced = false, scoreAnnounced = false;
+  let width = 0, height = 0, dpr = 1, last = performance.now(), announced = false, scoreAnnounced = false, dynamicsAnnounced = false;
 
   function pitchAt(x) {
     return music.frequencyAt(x / Math.max(1, width));
@@ -46,7 +46,7 @@
     engine.master.gain.setTargetAtTime(level, engine.context.currentTime, .045);
   }
 
-  function startVoice(id, x, y, pressure = .42, frequency = pitchAt(x)) {
+  function startVoice(id, x, y, pressure = .42, frequency = pitchAt(x), attack = pressure) {
     const engine = ensureAudio();
     if (!engine || engine.voices.has(id) || engine.voices.size >= MAX_VOICES) return false;
     const now = engine.context.currentTime;
@@ -61,12 +61,12 @@
     overtoneGain.gain.value = depth.brightness;
     filter.frequency.value = depth.cutoff;
     gain.gain.setValueAtTime(.0001, now);
-    gain.gain.exponentialRampToValueAtTime(.055 + pressure * .085, now + .045);
+    gain.gain.exponentialRampToValueAtTime(.055 + attack * .085, now + .045);
     gain.gain.exponentialRampToValueAtTime(.04 + pressure * .055, now + .32);
     oscillator.connect(filter); overtone.connect(overtoneGain).connect(filter);
     filter.connect(gain).connect(engine.master);
     oscillator.start(); overtone.start();
-    const voice = { oscillator, overtone, filter, gain, targetFrequency: frequency, releasing: false };
+    const voice = { oscillator, overtone, filter, gain, targetFrequency: frequency, attack, accentUntil: now + .32, releasing: false };
     engine.voices.set(id, voice);
     oscillator.addEventListener('ended', () => {
       if (engine.voices.get(id) !== voice) return;
@@ -87,7 +87,21 @@
       voice.targetFrequency = frequency;
     }
     voice.filter.frequency.setTargetAtTime(depth.cutoff, now, .035);
-    voice.gain.gain.setTargetAtTime(.04 + pressure * .065, now, .04);
+    if (now >= voice.accentUntil) voice.gain.gain.setTargetAtTime(.04 + pressure * .065, now, .04);
+  }
+
+  function accentVoice(id, intensity) {
+    const voice = audio?.voices.get(id);
+    if (!voice || voice.releasing || intensity <= voice.attack + .025) return false;
+    const now = audio.context.currentTime;
+    const current = Math.max(.0001, voice.gain.gain.value);
+    voice.gain.gain.cancelScheduledValues(now);
+    voice.gain.gain.setValueAtTime(current, now);
+    voice.gain.gain.exponentialRampToValueAtTime(.055 + intensity * .085, now + .026);
+    voice.gain.gain.exponentialRampToValueAtTime(.063, now + .23);
+    voice.attack = intensity;
+    voice.accentUntil = now + .23;
+    return true;
   }
 
   function endVoice(id) {
@@ -113,7 +127,14 @@
     return { x: event.clientX - rect.left, y: event.clientY - rect.top };
   }
 
-  function pressureOf(event) { return event.pressure > 0 ? event.pressure : .42; }
+  function eventTime(event) {
+    const now = performance.now(), stamp = Number(event.timeStamp);
+    return Number.isFinite(stamp) && Math.abs(stamp - now) < 60000 ? stamp : now;
+  }
+
+  function pressureOf(event, pressureAvailable = music.hasExpressivePressure(event.pointerType, event.pressure)) {
+    return pressureAvailable ? Math.max(.04, Math.min(1, event.pressure)) : .42;
+  }
 
   function voiceWord(count) {
     const lastTwo = count % 100, last = count % 10;
@@ -126,6 +147,15 @@
   function addRipple(x, y, pressure, strength = 1) {
     ripples.push({ x, y, born: performance.now(), pressure, strength, hue: 152 + 30 * (1 - y / height) });
     if (ripples.length > 32) ripples.shift();
+  }
+
+  function addSplash(x, y, intensity, dx, dy) {
+    if (intensity < .5) return;
+    splashes.push({
+      x, y, born: performance.now(), intensity,
+      angle: Math.atan2(dy, dx), hue: 152 + 30 * (1 - y / height)
+    });
+    if (splashes.length > 14) splashes.shift();
   }
 
   function captureScoreSample(contact, x, y, now, pressure, force = false) {
@@ -161,15 +191,17 @@
 
   function start(event) {
     if (event.button !== undefined && event.button !== 0) return;
-    const p = point(event), now = performance.now();
-    const pressure = pressureOf(event);
-    const sounding = startVoice(event.pointerId, p.x, p.y, pressure);
+    const p = point(event), now = eventTime(event);
+    const pressureAvailable = music.hasExpressivePressure(event.pointerType, event.pressure);
+    const pressure = pressureOf(event, pressureAvailable);
+    const attack = music.attackIntensity({ pressure, pressureAvailable });
+    const sounding = startVoice(event.pointerId, p.x, p.y, pressure, pitchAt(p.x), attack);
     pointers.set(event.pointerId, {
-      ...p, pressure, sounding, born: now, lastMotion: now, movedAt: now, motionSpeed: 0,
+      ...p, pressure, pressureAvailable, attack, splashPlayed: false, sounding, born: now, lastMotion: now, movedAt: now, motionSpeed: 0,
       mapping: null, currentAnnounced: false, sampledX: p.x, sampledY: p.y, sampledAt: now,
-      scoreSamples: sounding ? [{ x: p.x / Math.max(1, width), y: p.y / Math.max(1, height), at: now, pressure }] : []
+      scoreSamples: sounding ? [{ x: p.x / Math.max(1, width), y: p.y / Math.max(1, height), at: now, pressure: attack }] : []
     });
-    addRipple(p.x, p.y, pressureOf(event));
+    addRipple(p.x, p.y, attack);
     document.body.classList.add('has-played');
     const chordSize = [...pointers.values()].filter(pointer => pointer.sounding).length;
     if (!sounding) status.textContent = `Пруд удерживает до ${MAX_VOICES} голосов; отпустите касание для следующей ноты`;
@@ -181,9 +213,10 @@
   function glide(event) {
     const active = pointers.get(event.pointerId);
     if (!active) return;
-    const samples = event.getCoalescedEvents?.() || [event];
+    const coalesced = event.getCoalescedEvents?.();
+    const samples = coalesced?.length ? coalesced : [event];
     for (const sample of samples) {
-      const p = point(sample), now = performance.now();
+      const p = point(sample), now = eventTime(sample);
       const dx = p.x - active.sampledX, dy = p.y - active.sampledY;
       const distance = Math.hypot(dx, dy);
       const threshold = reduced.matches ? 28 : 9;
@@ -197,20 +230,44 @@
       const moved = Math.hypot(p.x - active.x, p.y - active.y);
       if (moved > .8) {
         const elapsed = Math.max(8, now - active.movedAt);
-        active.motionSpeed = (moved / Math.max(1, width)) * (1000 / elapsed);
+        active.motionSpeed = music.movementSpeed(moved, elapsed, Math.max(1, Math.min(width, height)));
         active.lastMotion = now; active.movedAt = now;
+        const reportsPressure = music.hasExpressivePressure(sample.pointerType, sample.pressure);
+        if (reportsPressure) active.pressureAvailable = true;
+        const samplePressure = pressureOf(sample, active.pressureAvailable);
+        if (now - active.born <= music.ATTACK_WINDOW_MS) {
+          const attack = music.attackIntensity({
+            pressure: samplePressure,
+            speedPerSecond: active.motionSpeed,
+            pressureAvailable: active.pressureAvailable
+          });
+          if (attack > active.attack) {
+            active.attack = attack;
+            if (active.scoreSamples[0]) active.scoreSamples[0].pressure = attack;
+            if (accentVoice(event.pointerId, attack) && attack >= .5 && !active.splashPlayed) {
+              addRipple(p.x, p.y, attack, .42 + attack * .55);
+              addSplash(p.x, p.y, attack, p.x - active.x, p.y - active.y);
+              active.splashPlayed = true;
+              if (!dynamicsAnnounced) {
+                status.textContent = 'Быстрый взмах поднял яркий всплеск; спокойное касание останется мягким';
+                dynamicsAnnounced = true;
+              }
+            }
+          }
+        }
       }
       active.x = p.x; active.y = p.y;
-      active.pressure = pressureOf(sample);
-      captureScoreSample(active, p.x, p.y, now, active.pressure);
-      moveVoice(event.pointerId, p.x, p.y, pressureOf(sample));
+      active.pressure = pressureOf(sample, active.pressureAvailable);
+      const scorePressure = active.pressureAvailable ? active.pressure : active.attack;
+      captureScoreSample(active, p.x, p.y, now, scorePressure);
+      moveVoice(event.pointerId, p.x, p.y, active.pressure);
     }
   }
 
   function end(event) {
     const active = pointers.get(event.pointerId);
     if (!active) return;
-    const now = performance.now(), pressure = pressureOf(event);
+    const now = performance.now(), pressure = active.pressureAvailable ? active.pressure : active.attack;
     addRipple(active.x, active.y, pressure, .55);
     rememberContact(active, active.x, active.y, now, pressure);
     endVoice(event.pointerId);
@@ -324,6 +381,27 @@
       ctx.strokeStyle = `hsla(${r.hue + i * 7} 70% ${78 - i * 7}% / ${fade * (.68 - i * .13)})`;
       ctx.lineWidth = Math.max(.7, 1.8 - age * .35 - i * .2); ctx.stroke();
     }
+    return true;
+  }
+
+  function drawSplash(splash, now) {
+    const age = Math.max(0, (now - splash.born) / 1000), life = reduced.matches ? .34 : .78;
+    if (age > life) return false;
+    const progress = age / life, fade = Math.pow(1 - progress, 1.7);
+    const count = reduced.matches ? 1 : 3 + Math.round((splash.intensity - .5) * 5);
+    ctx.save(); ctx.fillStyle = `hsla(${splash.hue + 14} 74% 84% / ${fade * .62})`;
+    for (let index = 0; index < count; index += 1) {
+      const spread = count === 1 ? 0 : (index / (count - 1) - .5) * 1.05;
+      const angle = splash.angle + spread;
+      const travel = reduced.matches ? 3 : progress * (18 + splash.intensity * 28) * (.72 + index * .09);
+      const x = splash.x + Math.cos(angle) * travel;
+      const y = splash.y + Math.sin(angle) * travel;
+      const radius = Math.max(.8, (2.1 + splash.intensity * 2.2) * (1 - progress * .58));
+      ctx.beginPath();
+      ctx.ellipse(x, y, radius * 1.45, radius * .62, angle, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
     return true;
   }
 
@@ -514,6 +592,7 @@
     for (const motif of score.groupMotifs(memories)) drawMotifUndercurrent(motif, now);
     for (const memory of memories) drawScoreMemory(memory, now);
     for (let i = trails.length - 1; i >= 0; i--) if (!drawTrail(trails[i], now)) trails.splice(i, 1);
+    for (let i = splashes.length - 1; i >= 0; i--) if (!drawSplash(splashes[i], now)) splashes.splice(i, 1);
 
     for (const [id, pointer] of pointers) {
       if (pointer.sounding) updatePitchMapping(pointer, id, pointer.x, pointer.y, now);
