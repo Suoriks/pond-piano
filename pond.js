@@ -12,15 +12,16 @@
   let memories = [];
   const keyboard = { x: .5, y: .52, pressure: .48, sounding: false, born: 0, lastMotion: 0, motionSpeed: 0, mapping: null, scoreSamples: [] };
   let audio = null;
-  let width = 0, height = 0, dpr = 1, last = performance.now(), announced = false, scoreAnnounced = false, dynamicsAnnounced = false;
+  let width = 0, height = 0, dpr = 1, last = performance.now(), announced = false, scoreAnnounced = false, dynamicsAnnounced = false, textureAnnounced = false;
 
   function pitchAt(x) {
     return music.frequencyAt(x / Math.max(1, width));
   }
 
   function depthAt(y) {
-    const normalized = 1 - Math.max(0, Math.min(1, y / Math.max(1, height)));
-    return { cutoff: 520 + 4300 * normalized * normalized, brightness: .08 + normalized * .14 };
+    const normalizedDepth = Math.max(0, Math.min(1, y / Math.max(1, height)));
+    const clarity = 1 - normalizedDepth;
+    return { normalizedDepth, cutoff: 520 + 4300 * clarity * clarity, brightness: .08 + clarity * .14 };
   }
 
   function ensureAudio() {
@@ -46,6 +47,36 @@
     engine.master.gain.setTargetAtTime(level, engine.context.currentTime, .045);
   }
 
+  function scheduleTextureBloom(parameter, target, now) {
+    parameter.setValueAtTime(0, now);
+    parameter.setValueAtTime(0, now + music.TEXTURE_BLOOM_START_MS / 1000);
+    parameter.linearRampToValueAtTime(target, now + music.TEXTURE_BLOOM_END_MS / 1000);
+  }
+
+  function retargetTexture(voice, normalizedDepth, now) {
+    if (Math.abs(normalizedDepth - voice.textureDepth) < .015) return;
+    voice.textureDepth = normalizedDepth;
+    const elapsedMs = Math.max(0, (now - voice.born) * 1000);
+    const current = music.heldTexture(normalizedDepth, elapsedMs);
+    const mature = music.heldTexture(normalizedDepth, music.TEXTURE_BLOOM_END_MS);
+    voice.undertow.frequency.setTargetAtTime(mature.rateHz, now, .35);
+    for (const [parameter, currentValue, targetValue] of [
+      [voice.filterDrift.gain, current.filterSweepHz, mature.filterSweepHz],
+      [voice.overtoneDrift.gain, current.overtonePulse, mature.overtonePulse]
+    ]) {
+      if (typeof parameter.cancelAndHoldAtTime === 'function') parameter.cancelAndHoldAtTime(now);
+      else {
+        const held = parameter.value;
+        parameter.cancelScheduledValues(now);
+        parameter.setValueAtTime(held, now);
+      }
+      parameter.setTargetAtTime(currentValue, now, .08);
+      const bloomEndsAt = voice.born + music.TEXTURE_BLOOM_END_MS / 1000;
+      if (bloomEndsAt > now + .16) parameter.linearRampToValueAtTime(targetValue, bloomEndsAt);
+      else parameter.setTargetAtTime(targetValue, now, .22);
+    }
+  }
+
   function startVoice(id, x, y, pressure = .42, frequency = pitchAt(x), attack = pressure) {
     const engine = ensureAudio();
     if (!engine || engine.voices.has(id) || engine.voices.size >= MAX_VOICES) return false;
@@ -55,18 +86,31 @@
     const overtoneGain = engine.context.createGain();
     const filter = engine.context.createBiquadFilter();
     const gain = engine.context.createGain();
+    const undertow = engine.context.createOscillator();
+    const filterDrift = engine.context.createGain();
+    const overtoneDrift = engine.context.createGain();
     const depth = depthAt(y);
-    oscillator.type = 'sine'; overtone.type = 'sine'; filter.type = 'lowpass'; filter.Q.value = .7;
-    oscillator.frequency.value = frequency; overtone.frequency.value = frequency * 2.01;
+    const texture = music.heldTexture(depth.normalizedDepth, music.TEXTURE_BLOOM_END_MS);
+    oscillator.type = 'sine'; overtone.type = 'sine'; undertow.type = 'sine'; filter.type = 'lowpass'; filter.Q.value = .7;
+    oscillator.frequency.value = frequency; overtone.frequency.value = frequency * 2;
+    undertow.frequency.value = texture.rateHz;
     overtoneGain.gain.value = depth.brightness;
     filter.frequency.value = depth.cutoff;
     gain.gain.setValueAtTime(.0001, now);
     gain.gain.exponentialRampToValueAtTime(.055 + attack * .085, now + .045);
     gain.gain.exponentialRampToValueAtTime(.04 + pressure * .055, now + .32);
     oscillator.connect(filter); overtone.connect(overtoneGain).connect(filter);
+    undertow.connect(filterDrift).connect(filter.frequency);
+    undertow.connect(overtoneDrift).connect(overtoneGain.gain);
     filter.connect(gain).connect(engine.master);
-    oscillator.start(); overtone.start();
-    const voice = { oscillator, overtone, filter, gain, targetFrequency: frequency, attack, accentUntil: now + .32, releasing: false };
+    scheduleTextureBloom(filterDrift.gain, texture.filterSweepHz, now);
+    scheduleTextureBloom(overtoneDrift.gain, texture.overtonePulse, now);
+    oscillator.start(); overtone.start(); undertow.start();
+    const voice = {
+      oscillator, overtone, overtoneGain, filter, gain, undertow, filterDrift, overtoneDrift,
+      born: now, textureDepth: depth.normalizedDepth, targetFrequency: frequency,
+      attack, accentUntil: now + .32, releasing: false
+    };
     engine.voices.set(id, voice);
     oscillator.addEventListener('ended', () => {
       if (engine.voices.get(id) !== voice) return;
@@ -83,10 +127,12 @@
     const now = audio.context.currentTime, frequency = mappedFrequency ?? pitchAt(x), depth = depthAt(y);
     if (Math.abs(frequency - voice.targetFrequency) > .08) {
       voice.oscillator.frequency.setTargetAtTime(frequency, now, .026);
-      voice.overtone.frequency.setTargetAtTime(frequency * 2.01, now, .026);
+      voice.overtone.frequency.setTargetAtTime(frequency * 2, now, .026);
       voice.targetFrequency = frequency;
     }
     voice.filter.frequency.setTargetAtTime(depth.cutoff, now, .035);
+    voice.overtoneGain.gain.setTargetAtTime(depth.brightness, now, .06);
+    retargetTexture(voice, depth.normalizedDepth, now);
     if (now >= voice.accentUntil) voice.gain.gain.setTargetAtTime(.04 + pressure * .065, now, .04);
   }
 
@@ -111,7 +157,7 @@
     voice.releasing = true;
     voice.gain.gain.cancelScheduledValues(now);
     voice.gain.gain.setTargetAtTime(.0001, now, .1);
-    voice.oscillator.stop(now + .48); voice.overtone.stop(now + .48);
+    voice.oscillator.stop(now + .48); voice.overtone.stop(now + .48); voice.undertow.stop(now + .48);
     balanceVoices(audio);
   }
 
@@ -506,6 +552,11 @@
       contact.currentAnnounced = true;
       status.textContent = 'Течение мягко удерживает высоту; движение снова освободит звук';
     }
+    const texture = music.heldTexture(y / Math.max(1, height), now - contact.born);
+    if (texture.bloom > .52 && !textureAnnounced) {
+      textureAnnounced = true;
+      status.textContent = 'Удерживаемая нота дышит вместе с глубинным течением';
+    }
   }
 
   function drawPitchCurrents(pointer, now) {
@@ -542,11 +593,34 @@
     ctx.restore();
   }
 
+  function drawHeldUndertow(pointer, now, radius, hue) {
+    const texture = music.heldTexture(pointer.y / Math.max(1, height), now - pointer.born);
+    if (texture.bloom < .01) return;
+    const phase = reduced.matches ? 0 : Math.sin((now - pointer.born) * texture.rateHz * Math.PI * 2 / 1000);
+    const reach = radius + texture.visualReach + phase * 3.2;
+    const lift = radius * (.32 + texture.bloom * .12);
+
+    ctx.save();
+    ctx.translate(pointer.x, pointer.y);
+    ctx.rotate((pointer.x / Math.max(1, width) - .5) * .22);
+    ctx.lineCap = 'round';
+    for (const side of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(-reach * .72, side * lift * .45);
+      ctx.bezierCurveTo(-reach * .25, side * (lift + phase * 1.8), reach * .26, side * (lift * .86 - phase), reach * .76, side * lift * .18);
+      ctx.strokeStyle = `hsla(${hue + 10 + side * 5} 58% 76% / ${texture.bloom * (side > 0 ? .13 : .085)})`;
+      ctx.lineWidth = side > 0 ? 1 : .7;
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   function drawContact(pointer, now) {
     const pitch = Math.max(0, Math.min(1, pointer.x / Math.max(1, width)));
     const pulse = reduced.matches ? .5 : .5 + Math.sin((now - pointer.born) * (.004 + pitch * .003)) * .5;
     const radius = 18 + (1 - pitch) * 16 + pointer.pressure * 8;
     const hue = 152 + 30 * (1 - pointer.y / height);
+    drawHeldUndertow(pointer, now, radius, hue);
     const glow = ctx.createRadialGradient(pointer.x, pointer.y, 0, pointer.x, pointer.y, radius * 1.8);
     glow.addColorStop(0, `hsla(${hue + 15} 72% 84% / ${pointer.sounding ? .25 : .1})`);
     glow.addColorStop(1, 'transparent');

@@ -6,6 +6,8 @@
   const BASE_FREQUENCY = 130.81278265; // C3
   const OCTAVES = 3;
   const ATTACK_WINDOW_MS = 240;
+  const TEXTURE_BLOOM_START_MS = 620;
+  const TEXTURE_BLOOM_END_MS = 3600;
   const PENTATONIC = [0, 2, 4, 7, 9];
   const SCALE = [];
 
@@ -46,6 +48,19 @@
     return .28 + smoothstep(.12, 2.2, Math.max(0, speedPerSecond)) * .66;
   }
 
+  function heldTexture(normalizedDepth, holdMilliseconds = 0) {
+    const depth = clamp(normalizedDepth);
+    const clarity = 1 - depth;
+    const bloom = smoothstep(TEXTURE_BLOOM_START_MS, TEXTURE_BLOOM_END_MS, Math.max(0, holdMilliseconds));
+    return {
+      bloom,
+      rateHz: .12 + clarity * .07,
+      filterSweepHz: bloom * (42 + clarity * 96),
+      overtonePulse: bloom * (.008 + clarity * .012),
+      visualReach: bloom * (11 + depth * 9)
+    };
+  }
+
   function nearestScaleIndex(frequency) {
     const semitones = 12 * Math.log2(Math.max(BASE_FREQUENCY, frequency) / BASE_FREQUENCY);
     let nearest = 0;
@@ -83,8 +98,11 @@
     BASE_FREQUENCY,
     OCTAVES,
     ATTACK_WINDOW_MS,
+    TEXTURE_BLOOM_START_MS,
+    TEXTURE_BLOOM_END_MS,
     attackIntensity,
     hasExpressivePressure,
+    heldTexture,
     mapPitch,
     movementSpeed,
     neighboringCurrents,

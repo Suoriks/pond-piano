@@ -41,4 +41,19 @@ assert.equal(music.movementSpeed(0, 16, 390), 0);
 assert.ok(Math.abs(music.movementSpeed(39, 100, 390) - 1) < 1e-9);
 assert.equal(music.movementSpeed(1000, 1, 390), 4, 'movement speed must be capped');
 
-console.log('pond-music: pitch currents and expressive attack mapping verified');
+const freshTexture = music.heldTexture(.7, 300);
+const bloomingTexture = music.heldTexture(.7, 1900);
+const deepTexture = music.heldTexture(1, 5000);
+const shallowTexture = music.heldTexture(0, 5000);
+assert.equal(freshTexture.bloom, 0, 'water texture must not colour a fresh attack');
+assert.equal(freshTexture.filterSweepHz, 0);
+assert.ok(bloomingTexture.bloom > 0 && bloomingTexture.bloom < 1, 'the undertow must grow gradually');
+assert.equal(deepTexture.bloom, 1);
+assert.equal(shallowTexture.bloom, 1);
+assert.ok(deepTexture.rateHz < shallowTexture.rateHz, 'deep water must breathe more slowly');
+assert.ok(deepTexture.filterSweepHz < shallowTexture.filterSweepHz, 'bright water can carry a wider safe filter drift');
+assert.ok(deepTexture.overtonePulse > 0 && shallowTexture.overtonePulse <= .02, 'overtone motion must stay subtle and bounded');
+assert.ok(deepTexture.visualReach > shallowTexture.visualReach, 'deep undertow should read by shape, not colour alone');
+assert.ok([deepTexture, shallowTexture].every(texture => texture.rateHz >= .12 && texture.rateHz <= .19));
+
+console.log('pond-music: pitch currents, expressive attack, and held-water texture verified');
