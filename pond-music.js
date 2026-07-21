@@ -8,6 +8,7 @@
   const ATTACK_WINDOW_MS = 240;
   const TEXTURE_BLOOM_START_MS = 620;
   const TEXTURE_BLOOM_END_MS = 3600;
+  const MAX_STEREO_PAN = .68;
   const PENTATONIC = [0, 2, 4, 7, 9];
   const SCALE = [];
 
@@ -25,6 +26,7 @@
     return t * t * (3 - 2 * t);
   };
   const frequencyAt = normalizedX => BASE_FREQUENCY * Math.pow(2, clamp(normalizedX) * OCTAVES);
+  const spatialPan = normalizedX => (clamp(normalizedX) * 2 - 1) * MAX_STEREO_PAN;
   const normalizedAtSemitones = semitones => clamp(semitones / (OCTAVES * 12));
   const frequencyAtSemitones = semitones => BASE_FREQUENCY * Math.pow(2, semitones / 12);
 
@@ -100,12 +102,14 @@
     ATTACK_WINDOW_MS,
     TEXTURE_BLOOM_START_MS,
     TEXTURE_BLOOM_END_MS,
+    MAX_STEREO_PAN,
     attackIntensity,
     hasExpressivePressure,
     heldTexture,
     mapPitch,
     movementSpeed,
     neighboringCurrents,
+    spatialPan,
     frequencyAt
   });
 });

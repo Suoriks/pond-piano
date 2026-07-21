@@ -92,7 +92,9 @@
     const undertow = engine.context.createOscillator();
     const filterDrift = engine.context.createGain();
     const overtoneDrift = engine.context.createGain();
+    const panner = typeof engine.context.createStereoPanner === 'function' ? engine.context.createStereoPanner() : null;
     const depth = depthAt(y);
+    const pan = music.spatialPan(x / Math.max(1, width));
     const texture = music.heldTexture(depth.normalizedDepth, music.TEXTURE_BLOOM_END_MS);
     oscillator.type = 'sine'; overtone.type = 'sine'; undertow.type = 'sine'; filter.type = 'lowpass'; filter.Q.value = .7;
     oscillator.frequency.value = frequency; overtone.frequency.value = frequency * 2;
@@ -105,14 +107,19 @@
     oscillator.connect(filter); overtone.connect(overtoneGain).connect(filter);
     undertow.connect(filterDrift).connect(filter.frequency);
     undertow.connect(overtoneDrift).connect(overtoneGain.gain);
-    filter.connect(gain).connect(engine.master);
+    if (panner) {
+      panner.pan.value = pan;
+      filter.connect(gain).connect(panner).connect(engine.master);
+    } else {
+      filter.connect(gain).connect(engine.master);
+    }
     scheduleTextureBloom(filterDrift.gain, texture.filterSweepHz, now);
     scheduleTextureBloom(overtoneDrift.gain, texture.overtonePulse, now);
     oscillator.start(); overtone.start(); undertow.start();
     const voice = {
-      oscillator, overtone, overtoneGain, filter, gain, undertow, filterDrift, overtoneDrift,
+      oscillator, overtone, overtoneGain, filter, gain, undertow, filterDrift, overtoneDrift, panner,
       born: now, textureDepth: depth.normalizedDepth, targetFrequency: frequency,
-      attack, accentUntil: now + .32, releasing: false
+      targetPan: pan, attack, accentUntil: now + .32, releasing: false
     };
     engine.voices.set(id, voice);
     oscillator.addEventListener('ended', () => {
@@ -132,6 +139,11 @@
       voice.oscillator.frequency.setTargetAtTime(frequency, now, .026);
       voice.overtone.frequency.setTargetAtTime(frequency * 2, now, .026);
       voice.targetFrequency = frequency;
+    }
+    const pan = music.spatialPan(x / Math.max(1, width));
+    if (voice.panner && Math.abs(pan - voice.targetPan) > .002) {
+      voice.panner.pan.setTargetAtTime(pan, now, .045);
+      voice.targetPan = pan;
     }
     voice.filter.frequency.setTargetAtTime(depth.cutoff, now, .035);
     voice.overtoneGain.gain.setTargetAtTime(depth.brightness, now, .06);

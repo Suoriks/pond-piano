@@ -23,6 +23,12 @@ assert.ok(currents.every((current, index) => index === 0 || current.normalizedX 
 assert.equal(music.frequencyAt(-1), music.BASE_FREQUENCY);
 assert.ok(Math.abs(music.frequencyAt(1) / music.BASE_FREQUENCY - 8) < 1e-9);
 
+assert.equal(music.spatialPan(.5), 0, 'the centre of the pond must remain centred');
+assert.equal(music.spatialPan(0), -music.MAX_STEREO_PAN);
+assert.equal(music.spatialPan(1), music.MAX_STEREO_PAN);
+assert.equal(music.spatialPan(-4), -music.MAX_STEREO_PAN, 'spatial width must stay safely bounded');
+assert.ok(music.spatialPan(.7) > 0 && music.spatialPan(.7) < .4, 'small visual moves need subtle spatial motion');
+
 assert.equal(music.hasExpressivePressure('mouse', .5), false, 'mouse fallback pressure is not expressive');
 assert.equal(music.hasExpressivePressure('touch', .5), false, 'spec fallback touch pressure is not expressive');
 assert.equal(music.hasExpressivePressure('touch', .73), true, 'varying touch pressure is preserved when available');
@@ -56,4 +62,4 @@ assert.ok(deepTexture.overtonePulse > 0 && shallowTexture.overtonePulse <= .02, 
 assert.ok(deepTexture.visualReach > shallowTexture.visualReach, 'deep undertow should read by shape, not colour alone');
 assert.ok([deepTexture, shallowTexture].every(texture => texture.rateHz >= .12 && texture.rateHz <= .19));
 
-console.log('pond-music: pitch currents, expressive attack, and held-water texture verified');
+console.log('pond-music: pitch currents, expressive attack, spatial place, and held-water texture verified');
