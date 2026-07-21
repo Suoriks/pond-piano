@@ -34,11 +34,31 @@
       const context = new AudioContext({ latencyHint: 'interactive' });
       const master = context.createGain();
       const compressor = context.createDynamicsCompressor();
+      let reflection = null;
       master.gain.value = .72;
       compressor.threshold.value = -18; compressor.knee.value = 16;
       compressor.ratio.value = 6; compressor.attack.value = .006; compressor.release.value = .24;
       master.connect(compressor).connect(context.destination);
-      audio = { context, master, voices: new Map() };
+      if (typeof context.createDelay === 'function' && typeof context.createBiquadFilter === 'function') {
+        try {
+          const settings = music.depthReflection(.5);
+          const input = context.createGain();
+          const delay = context.createDelay(.18);
+          const tone = context.createBiquadFilter();
+          const feedback = context.createGain();
+          const wet = context.createGain();
+          delay.delayTime.value = settings.delaySeconds;
+          tone.type = 'lowpass'; tone.frequency.value = 2300; tone.Q.value = .38;
+          feedback.gain.value = settings.feedback;
+          wet.gain.value = settings.wetGain;
+          input.connect(delay); delay.connect(tone); tone.connect(wet).connect(master);
+          tone.connect(feedback).connect(delay);
+          reflection = { input, delay, tone, feedback, wet };
+        } catch (error) {
+          console.warn('Water reflection is unavailable; keeping the direct voice', error);
+        }
+      }
+      audio = { context, master, reflection, voices: new Map() };
     }
     if (audio.context.state === 'suspended') audio.context.resume();
     return audio;
@@ -93,9 +113,11 @@
     const filterDrift = engine.context.createGain();
     const overtoneDrift = engine.context.createGain();
     const panner = typeof engine.context.createStereoPanner === 'function' ? engine.context.createStereoPanner() : null;
+    const reflectionSend = engine.reflection ? engine.context.createGain() : null;
     const depth = depthAt(y);
     const pan = music.spatialPan(x / Math.max(1, width));
     const texture = music.heldTexture(depth.normalizedDepth, music.TEXTURE_BLOOM_END_MS);
+    const reflection = music.depthReflection(depth.normalizedDepth);
     oscillator.type = 'sine'; overtone.type = 'sine'; undertow.type = 'sine'; filter.type = 'lowpass'; filter.Q.value = .7;
     oscillator.frequency.value = frequency; overtone.frequency.value = frequency * 2;
     undertow.frequency.value = texture.rateHz;
@@ -107,17 +129,23 @@
     oscillator.connect(filter); overtone.connect(overtoneGain).connect(filter);
     undertow.connect(filterDrift).connect(filter.frequency);
     undertow.connect(overtoneDrift).connect(overtoneGain.gain);
+    filter.connect(gain);
+    let output = gain;
     if (panner) {
       panner.pan.value = pan;
-      filter.connect(gain).connect(panner).connect(engine.master);
-    } else {
-      filter.connect(gain).connect(engine.master);
+      gain.connect(panner);
+      output = panner;
+    }
+    output.connect(engine.master);
+    if (reflectionSend) {
+      reflectionSend.gain.value = reflection.sendGain;
+      output.connect(reflectionSend).connect(engine.reflection.input);
     }
     scheduleTextureBloom(filterDrift.gain, texture.filterSweepHz, now);
     scheduleTextureBloom(overtoneDrift.gain, texture.overtonePulse, now);
     oscillator.start(); overtone.start(); undertow.start();
     const voice = {
-      oscillator, overtone, overtoneGain, filter, gain, undertow, filterDrift, overtoneDrift, panner,
+      oscillator, overtone, overtoneGain, filter, gain, undertow, filterDrift, overtoneDrift, panner, reflectionSend,
       born: now, textureDepth: depth.normalizedDepth, targetFrequency: frequency,
       targetPan: pan, attack, accentUntil: now + .32, releasing: false
     };
@@ -125,6 +153,9 @@
     oscillator.addEventListener('ended', () => {
       if (engine.voices.get(id) !== voice) return;
       engine.voices.delete(id);
+      for (const node of [oscillator, overtone, overtoneGain, filter, gain, undertow, filterDrift, overtoneDrift, panner, reflectionSend]) {
+        try { node?.disconnect(); } catch {}
+      }
       balanceVoices(engine);
     }, { once: true });
     balanceVoices(engine);
@@ -147,6 +178,9 @@
     }
     voice.filter.frequency.setTargetAtTime(depth.cutoff, now, .035);
     voice.overtoneGain.gain.setTargetAtTime(depth.brightness, now, .06);
+    if (voice.reflectionSend) {
+      voice.reflectionSend.gain.setTargetAtTime(music.depthReflection(depth.normalizedDepth).sendGain, now, .08);
+    }
     retargetTexture(voice, depth.normalizedDepth, now);
     if (now >= voice.accentUntil) voice.gain.gain.setTargetAtTime(.04 + pressure * .065, now, .04);
   }
@@ -300,7 +334,7 @@
     if (!sounding) status.textContent = `Пруд удерживает до ${MAX_VOICES} голосов; отпустите касание для следующей ноты`;
     else if (chordSize > 1) status.textContent = `Аккорд: ${chordSize} независимых ${voiceWord(chordSize)}`;
     else if (!announced) { status.textContent = 'Вода зазвучала; ведите касание, чтобы менять высоту и глубину'; announced = true; }
-    canvas.setPointerCapture?.(event.pointerId);
+    try { canvas.setPointerCapture?.(event.pointerId); } catch {}
   }
 
   function glide(event) {

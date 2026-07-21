@@ -9,6 +9,9 @@
   const TEXTURE_BLOOM_START_MS = 620;
   const TEXTURE_BLOOM_END_MS = 3600;
   const MAX_STEREO_PAN = .68;
+  const REFLECTION_DELAY_SECONDS = .072;
+  const REFLECTION_FEEDBACK = .12;
+  const REFLECTION_WET_GAIN = .36;
   const PENTATONIC = [0, 2, 4, 7, 9];
   const SCALE = [];
 
@@ -63,6 +66,16 @@
     };
   }
 
+  function depthReflection(normalizedDepth) {
+    const depth = clamp(normalizedDepth);
+    return {
+      sendGain: .018 + smoothstep(.08, .94, depth) * .14,
+      delaySeconds: REFLECTION_DELAY_SECONDS,
+      feedback: REFLECTION_FEEDBACK,
+      wetGain: REFLECTION_WET_GAIN
+    };
+  }
+
   function nearestScaleIndex(frequency) {
     const semitones = 12 * Math.log2(Math.max(BASE_FREQUENCY, frequency) / BASE_FREQUENCY);
     let nearest = 0;
@@ -103,7 +116,11 @@
     TEXTURE_BLOOM_START_MS,
     TEXTURE_BLOOM_END_MS,
     MAX_STEREO_PAN,
+    REFLECTION_DELAY_SECONDS,
+    REFLECTION_FEEDBACK,
+    REFLECTION_WET_GAIN,
     attackIntensity,
+    depthReflection,
     hasExpressivePressure,
     heldTexture,
     mapPitch,

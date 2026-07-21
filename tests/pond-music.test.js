@@ -62,4 +62,26 @@ assert.ok(deepTexture.overtonePulse > 0 && shallowTexture.overtonePulse <= .02, 
 assert.ok(deepTexture.visualReach > shallowTexture.visualReach, 'deep undertow should read by shape, not colour alone');
 assert.ok([deepTexture, shallowTexture].every(texture => texture.rateHz >= .12 && texture.rateHz <= .19));
 
-console.log('pond-music: pitch currents, expressive attack, spatial place, and held-water texture verified');
+const shallowReflection = music.depthReflection(0);
+const middleReflection = music.depthReflection(.5);
+const deepReflection = music.depthReflection(1);
+assert.ok(shallowReflection.sendGain < middleReflection.sendGain && middleReflection.sendGain < deepReflection.sendGain,
+  'deeper water must feed more of the shared reflection without changing the direct voice');
+assert.ok(shallowReflection.sendGain >= .015 && deepReflection.sendGain <= .16, 'reflection sends must remain quiet and bounded');
+assert.equal(music.depthReflection(-4).sendGain, shallowReflection.sendGain, 'reflection depth clamps below the pond');
+assert.equal(music.depthReflection(4).sendGain, deepReflection.sendGain, 'reflection depth clamps above the pond');
+assert.ok(deepReflection.delaySeconds > .045 && deepReflection.delaySeconds < .09,
+  'the first reflection must arrive after the direct attack but remain a short water response');
+assert.ok(deepReflection.feedback > 0 && deepReflection.feedback <= .12, 'feedback must not build a delay wash');
+assert.ok(deepReflection.wetGain > 0 && deepReflection.wetGain <= .36, 'the shared return must stay below the dry path');
+assert.ok(deepReflection.sendGain * deepReflection.wetGain < .057, 'the deepest first return must remain under 5.7% of dry');
+assert.ok(deepReflection.sendGain * deepReflection.wetGain * deepReflection.feedback < .007,
+  'the second return must decay below 0.7% of dry');
+const lightBus = music.depthReflection(.2), darkBus = music.depthReflection(.8);
+assert.deepEqual(
+  { delaySeconds: lightBus.delaySeconds, feedback: lightBus.feedback, wetGain: lightBus.wetGain },
+  { delaySeconds: darkBus.delaySeconds, feedback: darkBus.feedback, wetGain: darkBus.wetGain },
+  'only the per-voice send may depend on depth; the shared bus itself must stay stable'
+);
+
+console.log('pond-music: pitch currents, expressive attack, spatial place, held texture, and depth reflection verified');
