@@ -1,11 +1,11 @@
 {
   "project": "pond-piano",
-  "phase": "depth-reflection-bus",
-  "iteration": 14,
+  "phase": "ios-audio-lifecycle",
+  "iteration": 15,
   "status": "paused_between_iterations",
   "current_goal": null,
-  "last_verified": "2026-07-22: JS syntax, music/score tests, JSON and diff checks passed. Instrumented Chromium mobile 390x844 @2x measured one shared 72 ms reflection bus, send 0.0201 in shallow water and 0.1551 in deep water, exactly six sends for seven simultaneous contacts, and an intact direct path for every accepted voice. Release disconnected all 10 per-voice nodes. Missing and throwing createDelay fallbacks each preserved the complete 3-oscillator direct voice without page errors. Shell v10 cached 11 resources and fully reloaded offline. Direct screenshot inspection passed; automated image-model inspection remained unavailable because account ID extraction failed.",
-  "next_step": "Finish a reliable iPhone/iPad audio lifecycle: unlock only from an explicit gesture, recover after background/suspend without creating a second AudioContext, losing notes, or duplicating voices.",
+  "last_verified": "2026-07-22: JS syntax, music/score/lifecycle tests, JSON and diff checks passed. Instrumented Chromium mobile 390x844 @2x created no AudioContext before interaction, then exactly one context and one voice from the first trusted pointer gesture. Pagehide retired the held voice immediately; after forced suspend, the next trusted gesture resumed the same context and created one clean voice. Shell v11 cached all 12 resources including pond-audio-lifecycle.js and fully reloaded offline without runtime or console errors. Direct screenshot inspection passed; automated image-model inspection remained unavailable because account ID extraction failed.",
+  "next_step": "Finish one shared precision model for mouse and touch: slow movement after a short hold should allow fine control near the current, while a broad stroke immediately restores free glissando, without pointer-type modes or hidden keys.",
   "platform_target": [
     "desktop",
     "linux",
@@ -16,5 +16,5 @@
   "git_sync": "synced_private_github",
   "git_remote": "https://github.com/Suoriks/pond-piano.git",
   "git_branch": "main",
-  "updated_at": "2026-07-22T00:41:00+03:00"
+  "updated_at": "2026-07-22T01:24:00+03:00"
 }

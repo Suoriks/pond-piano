@@ -5,8 +5,10 @@
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const music = window.PondMusic;
   const score = window.PondScore;
+  const audioLifecycleFactory = window.PondAudioLifecycle;
   if (!music) throw new Error('Pond music mapping did not load');
   if (!score) throw new Error('Pond score mapping did not load');
+  if (!audioLifecycleFactory) throw new Error('Pond audio lifecycle did not load');
   const MAX_VOICES = 6;
   const ECHO_COOLDOWN_MS = 3200;
   const ripples = [], trails = [], splashes = [], scoreEchoes = [], pointers = new Map();
@@ -14,6 +16,7 @@
   let memories = [];
   const keyboard = { x: .5, y: .52, pressure: .48, sounding: false, born: 0, lastMotion: 0, motionSpeed: 0, mapping: null, scoreSamples: [], distanceTraveled: 0, resonanceX: 0, resonanceY: 0, resonatedMemories: new Set() };
   let audio = null;
+  let audioLifecycle = null;
   let echoSerial = 0;
   let width = 0, height = 0, dpr = 1, last = performance.now(), announced = false, scoreAnnounced = false, dynamicsAnnounced = false, textureAnnounced = false;
 
@@ -27,41 +30,54 @@
     return { normalizedDepth, cutoff: 520 + 4300 * clarity * clarity, brightness: .08 + clarity * .14 };
   }
 
-  function ensureAudio() {
-    if (!audio) {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContext) return null;
-      const context = new AudioContext({ latencyHint: 'interactive' });
-      const master = context.createGain();
-      const compressor = context.createDynamicsCompressor();
-      let reflection = null;
-      master.gain.value = .72;
-      compressor.threshold.value = -18; compressor.knee.value = 16;
-      compressor.ratio.value = 6; compressor.attack.value = .006; compressor.release.value = .24;
-      master.connect(compressor).connect(context.destination);
-      if (typeof context.createDelay === 'function' && typeof context.createBiquadFilter === 'function') {
-        try {
-          const settings = music.depthReflection(.5);
-          const input = context.createGain();
-          const delay = context.createDelay(.18);
-          const tone = context.createBiquadFilter();
-          const feedback = context.createGain();
-          const wet = context.createGain();
-          delay.delayTime.value = settings.delaySeconds;
-          tone.type = 'lowpass'; tone.frequency.value = 2300; tone.Q.value = .38;
-          feedback.gain.value = settings.feedback;
-          wet.gain.value = settings.wetGain;
-          input.connect(delay); delay.connect(tone); tone.connect(wet).connect(master);
-          tone.connect(feedback).connect(delay);
-          reflection = { input, delay, tone, feedback, wet };
-        } catch (error) {
-          console.warn('Water reflection is unavailable; keeping the direct voice', error);
-        }
+  function createAudioEngine() {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return null;
+    const context = new AudioContext({ latencyHint: 'interactive' });
+    const master = context.createGain();
+    const compressor = context.createDynamicsCompressor();
+    let reflection = null;
+    master.gain.value = .72;
+    compressor.threshold.value = -18; compressor.knee.value = 16;
+    compressor.ratio.value = 6; compressor.attack.value = .006; compressor.release.value = .24;
+    master.connect(compressor).connect(context.destination);
+    if (typeof context.createDelay === 'function' && typeof context.createBiquadFilter === 'function') {
+      try {
+        const settings = music.depthReflection(.5);
+        const input = context.createGain();
+        const delay = context.createDelay(.18);
+        const tone = context.createBiquadFilter();
+        const feedback = context.createGain();
+        const wet = context.createGain();
+        delay.delayTime.value = settings.delaySeconds;
+        tone.type = 'lowpass'; tone.frequency.value = 2300; tone.Q.value = .38;
+        feedback.gain.value = settings.feedback;
+        wet.gain.value = settings.wetGain;
+        input.connect(delay); delay.connect(tone); tone.connect(wet).connect(master);
+        tone.connect(feedback).connect(delay);
+        reflection = { input, delay, tone, feedback, wet };
+      } catch (error) {
+        console.warn('Water reflection is unavailable; keeping the direct voice', error);
       }
-      audio = { context, master, reflection, voices: new Map() };
     }
-    if (audio.context.state === 'suspended') audio.context.resume();
+    audio = { context, master, reflection, voices: new Map() };
     return audio;
+  }
+
+  function primeAudioEngine(engine) {
+    const context = engine.context;
+    if (typeof context.createBuffer !== 'function' || typeof context.createBufferSource !== 'function') return;
+    const source = context.createBufferSource();
+    const silence = context.createGain();
+    silence.gain.value = 0;
+    source.buffer = context.createBuffer(1, 1, context.sampleRate || 44100);
+    source.connect(silence).connect(engine.master);
+    const disconnectPrimer = () => {
+      try { source.disconnect(); silence.disconnect(); } catch {}
+    };
+    if (typeof source.addEventListener === 'function') source.addEventListener('ended', disconnectPrimer, { once: true });
+    else source.onended = disconnectPrimer;
+    source.start(0);
   }
 
   function balanceVoices(engine) {
@@ -100,9 +116,56 @@
     }
   }
 
-  function startVoice(id, x, y, pressure = .42, frequency = pitchAt(x), attack = pressure) {
-    const engine = ensureAudio();
-    if (!engine || engine.voices.has(id) || engine.voices.size >= MAX_VOICES) return false;
+  function voiceNodes(voice) {
+    return [voice.oscillator, voice.overtone, voice.overtoneGain, voice.filter, voice.gain, voice.undertow,
+      voice.filterDrift, voice.overtoneDrift, voice.panner, voice.reflectionSend];
+  }
+
+  function disconnectVoice(voice) {
+    for (const node of voiceNodes(voice)) {
+      try { node?.disconnect(); } catch {}
+    }
+  }
+
+  function retireAudioEngine(engine, reason) {
+    const now = engine.context.currentTime;
+    for (const [id, voice] of engine.voices) {
+      engine.voices.delete(id);
+      voice.releasing = true;
+      try {
+        voice.gain.gain.cancelScheduledValues(now);
+        voice.gain.gain.setValueAtTime(.0001, now);
+      } catch {}
+      for (const oscillator of [voice.oscillator, voice.overtone, voice.undertow]) {
+        try { oscillator.stop(now); } catch {}
+      }
+      disconnectVoice(voice);
+    }
+    balanceVoices(engine);
+    for (const pointerId of pointers.keys()) {
+      try { canvas.releasePointerCapture?.(pointerId); } catch {}
+    }
+    pointers.clear();
+    keyboard.sounding = false;
+    if ((reason === 'visibility-hidden' || reason === 'pagehide') && engine.context.state === 'running') {
+      Promise.resolve(engine.context.suspend()).catch(() => {});
+    }
+  }
+
+  function reflectAudioState(event) {
+    canvas.dataset.audioState = event.state;
+    canvas.dataset.audioVoices = String(event.engine?.voices?.size ?? 0);
+    if (event.reason === 'gesture-required') {
+      status.textContent = 'Звук пруда уснул; коснитесь воды, чтобы мягко разбудить его';
+    } else if (event.reason === 'resume-failed') {
+      status.textContent = 'Браузер пока не вернул звук; коснитесь воды ещё раз';
+    } else if (event.reason === 'closed') {
+      status.textContent = 'Аудиосистема закрыта браузером; перезагрузите пруд, чтобы снова играть';
+    }
+  }
+
+  function startVoice(id, x, y, pressure = .42, frequency = pitchAt(x), attack = pressure, engine = audio) {
+    if (!engine || engine.context.state === 'closed' || engine.voices.has(id) || engine.voices.size >= MAX_VOICES) return false;
     const now = engine.context.currentTime;
     const oscillator = engine.context.createOscillator();
     const overtone = engine.context.createOscillator();
@@ -150,12 +213,12 @@
       targetPan: pan, attack, accentUntil: now + .32, releasing: false
     };
     engine.voices.set(id, voice);
+    canvas.dataset.audioVoices = String(engine.voices.size);
     oscillator.addEventListener('ended', () => {
       if (engine.voices.get(id) !== voice) return;
       engine.voices.delete(id);
-      for (const node of [oscillator, overtone, overtoneGain, filter, gain, undertow, filterDrift, overtoneDrift, panner, reflectionSend]) {
-        try { node?.disconnect(); } catch {}
-      }
+      disconnectVoice(voice);
+      canvas.dataset.audioVoices = String(engine.voices.size);
       balanceVoices(engine);
     }, { once: true });
     balanceVoices(engine);
@@ -209,6 +272,14 @@
     voice.oscillator.stop(now + .48); voice.overtone.stop(now + .48); voice.undertow.stop(now + .48);
     balanceVoices(audio);
   }
+
+  audioLifecycle = audioLifecycleFactory.create({
+    createEngine: createAudioEngine,
+    primeEngine: primeAudioEngine,
+    retireEngine: retireAudioEngine,
+    onState: reflectAudioState,
+    isVisible: () => document.visibilityState !== 'hidden'
+  });
 
   function resize() {
     dpr = Math.min(devicePixelRatio || 1, 2);
@@ -321,7 +392,8 @@
     const pressureAvailable = music.hasExpressivePressure(event.pointerType, event.pressure);
     const pressure = pressureOf(event, pressureAvailable);
     const attack = music.attackIntensity({ pressure, pressureAvailable });
-    const sounding = startVoice(event.pointerId, p.x, p.y, pressure, pitchAt(p.x), attack);
+    const engine = audioLifecycle.activateFromGesture();
+    const sounding = startVoice(event.pointerId, p.x, p.y, pressure, pitchAt(p.x), attack, engine);
     pointers.set(event.pointerId, {
       ...p, pressure, pressureAvailable, attack, splashPlayed: false, sounding, born: now, lastMotion: now, movedAt: now, motionSpeed: 0,
       mapping: null, currentAnnounced: false, sampledX: p.x, sampledY: p.y, sampledAt: now,
@@ -428,7 +500,10 @@
       const p = keyboardPoint();
       keyboard.distanceTraveled = 0; keyboard.resonanceX = p.x; keyboard.resonanceY = p.y; keyboard.resonatedMemories = new Set();
       keyboard.scoreSamples = [{ x: keyboard.x, y: keyboard.y, at: now, pressure: .48 }];
-      startVoice('keyboard', p.x, p.y, .48); addRipple(p.x, p.y, .48);
+      const engine = audioLifecycle.activateFromGesture();
+      keyboard.sounding = startVoice('keyboard', p.x, p.y, .48, pitchAt(p.x), .48, engine);
+      if (!keyboard.sounding) keyboard.scoreSamples = [];
+      addRipple(p.x, p.y, .48);
       document.body.classList.add('has-played'); status.textContent = 'Звук воды звучит; стрелками меняйте высоту и глубину';
     }
   });
@@ -459,6 +534,15 @@
   });
   canvas.addEventListener('contextmenu', event => event.preventDefault());
   addEventListener('resize', resize, { passive: true });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') audioLifecycle.background('visibility-hidden');
+    else audioLifecycle.foreground();
+  });
+  addEventListener('pagehide', () => audioLifecycle.background('pagehide'));
+  addEventListener('pageshow', () => {
+    audioLifecycle.foreground();
+    resize();
+  });
 
   function water(now) {
     const t = now * .0001;

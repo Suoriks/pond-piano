@@ -34,10 +34,11 @@
 - Партитура стала входным слоем инструмента: чистая геометрия `pond-score.js` находит пересечение нового экранного сегмента с ещё видимым нормализованным путём, а browser-слой создаёт один короткий голос из сохранённых pitch/depth. Per-gesture latch, WeakMap cooldown 3,2 секунды, общий лимит голосов и отсутствие записи эхо в score разрывают feedback-цикл; pointer и keyboard используют одну модель.
 - Каждый голос получил feature-detected пространственный выход: чистая функция отображает нормализованный X в ограниченную панораму ±0,68, один `StereoPannerNode` стоит после voice gain и плавно следует glissando. Pointer, keyboard и эхо памяти проходят один путь; при отсутствии API voice gain подключается прямо к mono master. Лимит остаётся шестью голосами, то есть пространственный слой добавляет не более шести дешёвых узлов.
 - Глубина Y управляет только send каждого голоса в один общий короткий reflection-bus: чистый direct path всегда остаётся подключённым к master, первый отзвук приходит через 72 мс, feedback ограничен 0,12, а низкочастотно смягчённый return остаётся тише dry. Все шесть голосов и эхо памяти делят пять постоянных bus-узлов плюс не более шести send-gain; при отсутствии или ошибке Delay API инструмент сохраняет direct mono/stereo path. Завершившиеся voice-графы явно отсоединяются.
+- Audio lifecycle вынесен в чистый координатор `pond-audio-lifecycle.js`: загрузка страницы не создаёт звук, первый pointer/keyboard-жест создаёт и при необходимости примирует один контекст, а `visibilitychange`/`pagehide`/Safari `interrupted` атомарно освобождают voice-графы и pointer capture. `pageshow` и foreground сами звук не запускают; следующий явный жест возобновляет тот же контекст. Состояние `closed` требует reload вместо создания скрытого второго движка.
 
 ## Риски, которые доказываем прототипами
 
-- iOS Safari: unlock/resume AudioContext и надёжный multi-touch.
+- iOS Safari: реальное устройство всё ещё нужно для замера latency и multi-touch, но explicit unlock/resume, background/BFCache cleanup и single-context policy доказаны автоматизированным lifecycle-слоем и Chromium suspend/resume smoke-test.
 - Задержка Bluetooth-аудио неизбежна; интерфейс не должен обещать невозможное.
 - Canvas 2D против WebGL: сначала красота и устойчивые 60 fps на среднем телефоне, потом выбор.
 - Pointer pressure непоследователен: velocity fallback обязателен.

@@ -1,10 +1,11 @@
-const CACHE = 'pond-piano-shell-v10';
+const CACHE = 'pond-piano-shell-v11';
 const SHELL = [
   './',
   './index.html',
   './pond.css',
   './pond-music.js',
   './pond-score.js',
+  './pond-audio-lifecycle.js',
   './pond.js',
   './manifest.webmanifest',
   './assets/icon-192.png',
