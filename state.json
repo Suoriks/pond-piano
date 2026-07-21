@@ -1,11 +1,11 @@
 {
   "project": "pond-piano",
-  "phase": "held-water-texture",
-  "iteration": 11,
+  "phase": "playable-water-score-resonance",
+  "iteration": 12,
   "status": "paused_between_iterations",
   "current_goal": null,
-  "last_verified": "2026-07-20: JS syntax, music/texture and score tests, JSON and diff checks passed. Chromium mobile 390x844 @2x held and depth-moved a real Web Audio voice with exactly 2 audible + 1 sub-audio control oscillators (0.1477 Hz), stopped all 3 on release, capped seven touch contacts at six voices / 18 oscillators, then stopped all 18. Shell v7 cached and fully reloaded offline; reduced-motion and direct screenshot inspection passed with no runtime/console errors. Automated image-model inspection was unavailable because account ID extraction failed.",
-  "next_step": "Make the fading water score playable: a deliberate new gesture crossing a remembered path should softly reawaken its stored pitch and depth once, with a strict cooldown that prevents feedback loops.",
+  "last_verified": "2026-07-21: JS syntax, music/score tests, JSON and diff checks passed. Chromium mobile 390x844 @2x played and crossed a remembered path with exactly one 3-oscillator echo; same-gesture latch and 3.2s cross-gesture cooldown prevented retriggers, all 12 created oscillators stopped, shell v8 cached and fully reloaded offline, and no runtime/console errors appeared. Reduced-motion keyboard crossing and focus passed. Direct screenshot inspection passed; automated image-model inspection remained unavailable because account ID extraction failed.",
+  "next_step": "Give every active and remembered voice a soft spatial place: map X to bounded stereo position with feature-detected mono fallback, so sound comes from where the water responds without exaggerating headphone width.",
   "platform_target": [
     "desktop",
     "linux",
@@ -16,5 +16,5 @@
   "git_sync": "synced_private_github",
   "git_remote": "https://github.com/Suoriks/pond-piano.git",
   "git_branch": "main",
-  "updated_at": "2026-07-20T18:51:25+03:00"
+  "updated_at": "2026-07-21T18:26:00+03:00"
 }

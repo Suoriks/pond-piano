@@ -8,10 +8,13 @@
   if (!music) throw new Error('Pond music mapping did not load');
   if (!score) throw new Error('Pond score mapping did not load');
   const MAX_VOICES = 6;
-  const ripples = [], trails = [], splashes = [], pointers = new Map();
+  const ECHO_COOLDOWN_MS = 3200;
+  const ripples = [], trails = [], splashes = [], scoreEchoes = [], pointers = new Map();
+  const echoCooldowns = new WeakMap();
   let memories = [];
-  const keyboard = { x: .5, y: .52, pressure: .48, sounding: false, born: 0, lastMotion: 0, motionSpeed: 0, mapping: null, scoreSamples: [] };
+  const keyboard = { x: .5, y: .52, pressure: .48, sounding: false, born: 0, lastMotion: 0, motionSpeed: 0, mapping: null, scoreSamples: [], distanceTraveled: 0, resonanceX: 0, resonanceY: 0, resonatedMemories: new Set() };
   let audio = null;
+  let echoSerial = 0;
   let width = 0, height = 0, dpr = 1, last = performance.now(), announced = false, scoreAnnounced = false, dynamicsAnnounced = false, textureAnnounced = false;
 
   function pitchAt(x) {
@@ -204,6 +207,37 @@
     if (splashes.length > 14) splashes.shift();
   }
 
+  function playScoreEcho(memory, crossing, now) {
+    const id = `score-echo-${++echoSerial}`;
+    const x = memory.pitch * width, y = memory.depth * height;
+    const pressure = .2 + memory.pressure * .18;
+    const attack = .18 + memory.pressure * .16;
+    if (!startVoice(id, x, y, pressure, music.frequencyAt(memory.pitch), attack)) return false;
+    scoreEchoes.push({ memory, crossing, segmentIndex: crossing.segmentIndex, born: now });
+    if (scoreEchoes.length > 8) scoreEchoes.shift();
+    addRipple(x, y, pressure, .55);
+    setTimeout(() => endVoice(id), 420);
+    return true;
+  }
+
+  function tryScoreResonance(contact, point, now) {
+    if (!contact.sounding || contact.distanceTraveled < 22 || now - contact.born < 80) return;
+    const from = { x: contact.resonanceX / Math.max(1, width), y: contact.resonanceY / Math.max(1, height) };
+    const to = { x: point.x / Math.max(1, width), y: point.y / Math.max(1, height) };
+    if (Math.hypot(point.x - contact.resonanceX, point.y - contact.resonanceY) < 7) return;
+    contact.resonanceX = point.x; contact.resonanceY = point.y;
+    const eligible = memories.filter(memory =>
+      !contact.resonatedMemories.has(memory) && now - (echoCooldowns.get(memory) ?? -Infinity) >= ECHO_COOLDOWN_MS
+    );
+    const crossing = score.findCrossedMemory(eligible, from, to, now, {
+      width, height, radiusPx: Math.max(14, Math.min(22, Math.min(width, height) * .045)), reducedMotion: reduced.matches
+    });
+    if (!crossing || !playScoreEcho(crossing.memory, crossing, now)) return;
+    contact.resonatedMemories.add(crossing.memory);
+    echoCooldowns.set(crossing.memory, now);
+    status.textContent = 'Жест пересёк водный след; сохранённая нота мягко отозвалась';
+  }
+
   function captureScoreSample(contact, x, y, now, pressure, force = false) {
     if (!contact.sounding) return;
     const sample = {
@@ -245,6 +279,7 @@
     pointers.set(event.pointerId, {
       ...p, pressure, pressureAvailable, attack, splashPlayed: false, sounding, born: now, lastMotion: now, movedAt: now, motionSpeed: 0,
       mapping: null, currentAnnounced: false, sampledX: p.x, sampledY: p.y, sampledAt: now,
+      distanceTraveled: 0, resonanceX: p.x, resonanceY: p.y, resonatedMemories: new Set(),
       scoreSamples: sounding ? [{ x: p.x / Math.max(1, width), y: p.y / Math.max(1, height), at: now, pressure: attack }] : []
     });
     addRipple(p.x, p.y, attack);
@@ -275,6 +310,7 @@
       }
       const moved = Math.hypot(p.x - active.x, p.y - active.y);
       if (moved > .8) {
+        active.distanceTraveled += moved;
         const elapsed = Math.max(8, now - active.movedAt);
         active.motionSpeed = music.movementSpeed(moved, elapsed, Math.max(1, Math.min(width, height)));
         active.lastMotion = now; active.movedAt = now;
@@ -306,6 +342,7 @@
       active.pressure = pressureOf(sample, active.pressureAvailable);
       const scorePressure = active.pressureAvailable ? active.pressure : active.attack;
       captureScoreSample(active, p.x, p.y, now, scorePressure);
+      tryScoreResonance(active, p, now);
       moveVoice(event.pointerId, p.x, p.y, active.pressure);
     }
   }
@@ -331,8 +368,10 @@
       const p = keyboardPoint(), now = performance.now();
       keyboard.lastMotion = now; keyboard.motionSpeed = .22; keyboard.currentAnnounced = false;
       if (keyboard.sounding) {
+        keyboard.distanceTraveled += Math.hypot(movement[0] * width, movement[1] * height);
         moveVoice('keyboard', p.x, p.y, .48);
         captureScoreSample(keyboard, p.x, p.y, now, .48);
+        tryScoreResonance(keyboard, p, now);
         trails.push({ x: p.x, y: p.y, fromX: p.x - movement[0] * width, fromY: p.y - movement[1] * height, born: now, pressure: .48, speed: .55, hue: 152 + 30 * (1 - p.y / height) });
       }
     }
@@ -341,6 +380,7 @@
       const now = performance.now();
       keyboard.sounding = true; keyboard.born = now; keyboard.lastMotion = now; keyboard.motionSpeed = 0; keyboard.currentAnnounced = false;
       const p = keyboardPoint();
+      keyboard.distanceTraveled = 0; keyboard.resonanceX = p.x; keyboard.resonanceY = p.y; keyboard.resonatedMemories = new Set();
       keyboard.scoreSamples = [{ x: keyboard.x, y: keyboard.y, at: now, pressure: .48 }];
       startVoice('keyboard', p.x, p.y, .48); addRipple(p.x, p.y, .48);
       document.body.classList.add('has-played'); status.textContent = 'Звук воды звучит; стрелками меняйте высоту и глубину';
@@ -506,6 +546,45 @@
     return true;
   }
 
+  function echoPoint(echo, progress) {
+    const points = echo.memory.points;
+    if (points.length === 1) return points[0];
+    const start = Math.min(points.length - 1, echo.segmentIndex + 1);
+    const position = start + (points.length - 1 - start) * progress;
+    const index = Math.min(points.length - 2, Math.floor(position));
+    const amount = position - index;
+    return {
+      x: points[index].x + (points[index + 1].x - points[index].x) * amount,
+      y: points[index].y + (points[index + 1].y - points[index].y) * amount
+    };
+  }
+
+  function drawScoreEcho(echo, now) {
+    const life = reduced.matches ? 620 : 1380;
+    const age = now - echo.born;
+    if (age < 0 || age >= life) return false;
+    const progress = Math.max(0, Math.min(1, age / life));
+    const fade = Math.pow(1 - progress, 1.35);
+    const hue = 153 + 30 * (1 - echo.memory.depth);
+    const pulse = reduced.matches ? echo.memory.points.at(-1) : echoPoint(echo, Math.min(1, progress * 1.75));
+
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    traceMemoryPath(echo.memory.points, 0);
+    ctx.strokeStyle = `hsla(${hue + 16} 74% 87% / ${fade * .42})`;
+    ctx.lineWidth = 2.2 + echo.memory.pressure * 2.4; ctx.stroke();
+    const x = pulse.x * width, y = pulse.y * height;
+    const radius = 9 + (1 - echo.memory.pitch) * 7;
+    const glow = ctx.createRadialGradient(x, y, 0, x, y, radius * 3.4);
+    glow.addColorStop(0, `hsla(${hue + 20} 82% 90% / ${fade * .72})`);
+    glow.addColorStop(.24, `hsla(${hue + 8} 70% 75% / ${fade * .24})`);
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y, radius * 3.4, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x, y, radius, radius * .38, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = `hsla(${hue + 15} 76% 88% / ${fade * .65})`; ctx.lineWidth = 1.1; ctx.stroke();
+    ctx.restore();
+    return true;
+  }
+
   function traceMotifEndpoints(memories, drift, phase) {
     const endpoints = memories.map(memory => memory.points.at(-1));
     const first = endpoints[0];
@@ -665,6 +744,7 @@
     memories = memories.filter(memory => now >= memory.born && now < memory.born + score.lifeMs(reduced.matches));
     for (const motif of score.groupMotifs(memories)) drawMotifUndercurrent(motif, now);
     for (const memory of memories) drawScoreMemory(memory, now);
+    for (let i = scoreEchoes.length - 1; i >= 0; i--) if (!drawScoreEcho(scoreEchoes[i], now)) scoreEchoes.splice(i, 1);
     for (let i = trails.length - 1; i >= 0; i--) if (!drawTrail(trails[i], now)) trails.splice(i, 1);
     for (let i = splashes.length - 1; i >= 0; i--) if (!drawSplash(splashes[i], now)) splashes.splice(i, 1);
 

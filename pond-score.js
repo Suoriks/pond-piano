@@ -89,5 +89,70 @@
     }));
   }
 
-  return Object.freeze({ MAX_MEMORIES, MAX_POINTS, MOTIF_GAP_MS, createMemory, lifeMs, visibility, append, groupMotifs });
+  function pointSegmentDistance(point, start, end) {
+    const dx = end.x - start.x, dy = end.y - start.y;
+    const lengthSquared = dx * dx + dy * dy;
+    if (lengthSquared <= .000001) return Math.hypot(point.x - start.x, point.y - start.y);
+    const amount = Math.max(0, Math.min(1,
+      ((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared));
+    return Math.hypot(point.x - (start.x + dx * amount), point.y - (start.y + dy * amount));
+  }
+
+  function orientation(a, b, c) {
+    return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+  }
+
+  function within(value, start, end) {
+    return value >= Math.min(start, end) - .000001 && value <= Math.max(start, end) + .000001;
+  }
+
+  function segmentsIntersect(a, b, c, d) {
+    const abC = orientation(a, b, c), abD = orientation(a, b, d);
+    const cdA = orientation(c, d, a), cdB = orientation(c, d, b);
+    if (((abC > 0 && abD < 0) || (abC < 0 && abD > 0)) &&
+        ((cdA > 0 && cdB < 0) || (cdA < 0 && cdB > 0))) return true;
+    for (const [value, p, q, r] of [[abC, c, a, b], [abD, d, a, b], [cdA, a, c, d], [cdB, b, c, d]]) {
+      if (Math.abs(value) <= .000001 && within(p.x, q.x, r.x) && within(p.y, q.y, r.y)) return true;
+    }
+    return false;
+  }
+
+  function segmentDistance(a, b, c, d) {
+    if (segmentsIntersect(a, b, c, d)) return 0;
+    return Math.min(
+      pointSegmentDistance(a, c, d), pointSegmentDistance(b, c, d),
+      pointSegmentDistance(c, a, b), pointSegmentDistance(d, a, b)
+    );
+  }
+
+  function findCrossedMemory(memories, from, to, now, options = {}) {
+    if (![from?.x, from?.y, to?.x, to?.y, now].every(Number.isFinite)) return null;
+    const width = Math.max(1, Number.isFinite(options.width) ? options.width : 1);
+    const height = Math.max(1, Number.isFinite(options.height) ? options.height : 1);
+    const radiusPx = Math.max(1, Number.isFinite(options.radiusPx) ? options.radiusPx : 18);
+    const reducedMotion = options.reducedMotion === true;
+    const scale = point => ({ x: clamp(point.x) * width, y: clamp(point.y) * height });
+    const strokeStart = scale(from), strokeEnd = scale(to);
+    if (Math.hypot(strokeEnd.x - strokeStart.x, strokeEnd.y - strokeStart.y) < 4) return null;
+    let closest = null;
+
+    for (const memory of Array.isArray(memories) ? memories : []) {
+      const visible = visibility(memory, now, reducedMotion);
+      if (visible <= .035 || !Array.isArray(memory?.points) || !memory.points.length) continue;
+      const points = memory.points.map(scale);
+      if (points.length === 1) points.push(points[0]);
+      for (let index = 1; index < points.length; index += 1) {
+        const distancePx = segmentDistance(strokeStart, strokeEnd, points[index - 1], points[index]);
+        if (distancePx <= radiusPx && (!closest || distancePx < closest.distancePx)) {
+          closest = { memory, distancePx, segmentIndex: index - 1, visibility: visible };
+        }
+      }
+    }
+    return closest ? Object.freeze(closest) : null;
+  }
+
+  return Object.freeze({
+    MAX_MEMORIES, MAX_POINTS, MOTIF_GAP_MS,
+    createMemory, lifeMs, visibility, append, groupMotifs, findCrossedMemory
+  });
 });

@@ -61,4 +61,29 @@ const bridgeNote = score.groupMotifs([
 assert.equal(bridgeNote.length, 1, 'a held note must bridge every gesture it temporally overlaps');
 assert.deepEqual(score.groupMotifs([null, {}]), []);
 
-console.log('pond-score: bounded paths, duration, fading, and motif grouping verified');
+const crossingMemory = score.createMemory([
+  { x: .15, y: .5, at: 100, pressure: .4 },
+  { x: .5, y: .48, at: 200, pressure: .5 },
+  { x: .85, y: .52, at: 300, pressure: .6 }
+], 400);
+const crossing = score.findCrossedMemory(
+  [crossingMemory], { x: .5, y: .28 }, { x: .5, y: .72 }, 700,
+  { width: 390, height: 844, radiusPx: 18 }
+);
+assert.equal(crossing.memory, crossingMemory, 'a deliberate stroke crossing a visible path must find its memory');
+assert.ok(crossing.distancePx < 1);
+assert.equal(crossing.segmentIndex, 0);
+assert.equal(score.findCrossedMemory(
+  [crossingMemory], { x: .04, y: .1 }, { x: .08, y: .2 }, 700,
+  { width: 390, height: 844, radiusPx: 18 }
+), null, 'a remote stroke must not wake the score');
+assert.equal(score.findCrossedMemory(
+  [crossingMemory], { x: .5, y: .28 }, { x: .5, y: .72 }, crossingMemory.born + score.lifeMs(),
+  { width: 390, height: 844, radiusPx: 18 }
+), null, 'an expired score path must no longer be playable');
+assert.equal(score.findCrossedMemory(
+  [crossingMemory], { x: .5, y: .499 }, { x: .501, y: .501 }, 700,
+  { width: 390, height: 844, radiusPx: 18 }
+), null, 'tiny pointer jitter must not count as a deliberate crossing');
+
+console.log('pond-score: bounded paths, fading, motifs, and playable path crossings verified');
