@@ -1,0 +1,80 @@
+{
+  "name": "pond-piano",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Offline-first gesture instrument packaged as a secure Windows desktop app.",
+  "main": "electron/main.js",
+  "license": "UNLICENSED",
+  "author": "Pond Piano contributors",
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "assets/apple-touch-icon.png",
+    "assets/icon-192.png",
+    "assets/icon-512.png",
+    "assets/icon-maskable-512.png",
+    "build/icon.ico",
+    "electron/main.js",
+    "electron/static-server.js",
+    "index.html",
+    "manifest.webmanifest",
+    "pond-audio-lifecycle.js",
+    "pond.css",
+    "pond.js",
+    "pond-music.js",
+    "pond-score.js",
+    "sw.js"
+  ],
+  "scripts": {
+    "start": "electron .",
+    "test": "npm run test:unit && npm run check:syntax",
+    "test:unit": "node --test \"tests/*.test.js\"",
+    "check:syntax": "node scripts/check-js-syntax.js",
+    "build": "npm run build:windows",
+    "build:windows": "electron-builder --win portable --x64"
+  },
+  "devDependencies": {
+    "electron": "37.2.6",
+    "electron-builder": "26.0.12"
+  },
+  "build": {
+    "appId": "org.pondpiano.app",
+    "productName": "Pond Piano",
+    "asar": true,
+    "compression": "maximum",
+    "artifactName": "Pond-Piano-${version}-Windows-${arch}.${ext}",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "package.json",
+      "electron/main.js",
+      "electron/static-server.js",
+      "index.html",
+      "manifest.webmanifest",
+      "pond-audio-lifecycle.js",
+      "pond.css",
+      "pond.js",
+      "pond-music.js",
+      "pond-score.js",
+      "sw.js",
+      "assets/apple-touch-icon.png",
+      "assets/icon-192.png",
+      "assets/icon-512.png",
+      "assets/icon-maskable-512.png"
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    }
+  }
+}

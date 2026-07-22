@@ -1,7 +1,14 @@
 .DS_Store
 *.log
+
+# Dependencies
 node_modules/
+
+# Desktop build output
 dist/
+out/
+release/
+
 .env
 .env.*
 !.env.example

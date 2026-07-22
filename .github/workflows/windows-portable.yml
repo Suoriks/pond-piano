@@ -1,0 +1,44 @@
+name: Windows portable build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows-x64:
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Run tests and syntax checks
+        run: npm test
+
+      - name: Build portable Windows executable
+        run: npm run build
+
+      - name: Verify exact artifact
+        shell: pwsh
+        run: |
+          $artifact = "dist/Pond-Piano-0.1.0-Windows-x64.exe"
+          if (-not (Test-Path -LiteralPath $artifact -PathType Leaf)) {
+            throw "Expected artifact not found: $artifact"
+          }
+
+      - name: Upload portable executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pond-Piano-0.1.0-Windows-x64
+          path: dist/Pond-Piano-0.1.0-Windows-x64.exe
+          if-no-files-found: error
