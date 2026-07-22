@@ -19,6 +19,7 @@
       .filter(sample => sample && Number.isFinite(sample.x) && Number.isFinite(sample.y))
       .map(sample => ({
         x: clamp(sample.x), y: clamp(sample.y),
+        pitch: Number.isFinite(sample.pitch) ? clamp(sample.pitch) : clamp(sample.x),
         at: Number.isFinite(sample.at) ? sample.at : 0,
         pressure: clamp(Number.isFinite(sample.pressure) ? sample.pressure : .42)
       }));
@@ -40,7 +41,7 @@
       startedAt: first.at,
       born: releasedAt,
       durationMs,
-      pitch: last.x,
+      pitch: last.pitch,
       depth: last.y,
       pressure,
       points: Object.freeze(points.map(Object.freeze))

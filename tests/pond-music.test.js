@@ -20,6 +20,60 @@ assert.ok(currents.length >= 2 && currents.length <= 3);
 assert.equal(currents.filter(current => current.isTarget).length, 1);
 assert.ok(currents.every((current, index) => index === 0 || current.normalizedX > currents[index - 1].normalizedX));
 
+const normalizedRoundTrip = .413;
+assert.ok(Math.abs(music.normalizedAtFrequency(music.frequencyAt(normalizedRoundTrip)) - normalizedRoundTrip) < 1e-12,
+  'frequency conversion must preserve the logarithmic pond coordinate');
+
+const unarmedPrecision = music.precisionMotion({
+  previousRawX: .4, rawX: .405, pitchX: .4, holdMilliseconds: 180, speedPerSecond: .08
+});
+assert.equal(unarmedPrecision.active, false, 'fresh movement must stay free even when it is slow');
+assert.equal(unarmedPrecision.pitchX, .405);
+
+const settledX = music.normalizedAtFrequency(held.frequency);
+const enteredPrecision = music.precisionMotion({
+  previousRawX: .413, rawX: .418, pitchX: settledX, holdMilliseconds: 900, speedPerSecond: .08
+});
+assert.equal(enteredPrecision.active, true, 'slow movement after a hold must enter precision naturally');
+assert.equal(enteredPrecision.entered, true);
+assert.ok(enteredPrecision.gain < 1 && enteredPrecision.gain >= music.PRECISION_MIN_GAIN);
+assert.ok(Math.abs(enteredPrecision.pitchX - settledX) < Math.abs(.418 - settledX),
+  'precision must steer from the sounding settled current rather than jumping back to raw position');
+
+const continuedPrecision = music.precisionMotion({
+  previousRawX: .418, rawX: .422, pitchX: enteredPrecision.pitchX,
+  originRawX: enteredPrecision.originRawX, holdMilliseconds: 12, speedPerSecond: .09, active: true
+});
+assert.equal(continuedPrecision.active, true, 'precision stays engaged across a slow continuous stroke');
+assert.ok(continuedPrecision.pitchX - enteredPrecision.pitchX < .004);
+
+const releasedPrecision = music.precisionMotion({
+  previousRawX: .422, rawX: .47, pitchX: continuedPrecision.pitchX,
+  originRawX: continuedPrecision.originRawX, holdMilliseconds: 8, speedPerSecond: .9, active: true
+});
+assert.equal(releasedPrecision.active, false, 'a broad stroke must immediately restore free glissando');
+assert.equal(releasedPrecision.released, true);
+assert.equal(releasedPrecision.pitchX, .47, 'free glissando must align pitch with the visible contact again');
+
+const distanceReleasedPrecision = music.precisionMotion({
+  previousRawX: .2, rawX: .25, pitchX: .2,
+  holdMilliseconds: 900, speedPerSecond: .02, active: true
+});
+assert.equal(distanceReleasedPrecision.active, false, 'one broad sample must release precision even with an unreliable timestamp');
+assert.equal(distanceReleasedPrecision.pitchX, .25);
+
+let packetPitch = .4, packetRaw = .4, packetOrigin = .4, packetActive = true;
+for (let index = 0; index < 10; index += 1) {
+  const nextRaw = packetRaw + .005;
+  const packet = music.precisionMotion({
+    previousRawX: packetRaw, rawX: nextRaw, pitchX: packetPitch, originRawX: packetOrigin,
+    holdMilliseconds: 20, speedPerSecond: .02, active: packetActive
+  });
+  packetPitch = packet.pitchX; packetOrigin = packet.originRawX; packetActive = packet.active; packetRaw = nextRaw;
+}
+assert.equal(packetActive, false, 'broad excursion must release precision independent of coalesced-event packet size');
+assert.equal(packetPitch, packetRaw);
+
 assert.equal(music.frequencyAt(-1), music.BASE_FREQUENCY);
 assert.ok(Math.abs(music.frequencyAt(1) / music.BASE_FREQUENCY - 8) < 1e-9);
 
@@ -84,4 +138,4 @@ assert.deepEqual(
   'only the per-voice send may depend on depth; the shared bus itself must stay stable'
 );
 
-console.log('pond-music: pitch currents, expressive attack, spatial place, held texture, and depth reflection verified');
+console.log('pond-music: pitch currents, shared precision, expressive attack, spatial place, held texture, and depth reflection verified');

@@ -14,11 +14,11 @@
   const ripples = [], trails = [], splashes = [], scoreEchoes = [], pointers = new Map();
   const echoCooldowns = new WeakMap();
   let memories = [];
-  const keyboard = { x: .5, y: .52, pressure: .48, sounding: false, born: 0, lastMotion: 0, motionSpeed: 0, mapping: null, scoreSamples: [], distanceTraveled: 0, resonanceX: 0, resonanceY: 0, resonatedMemories: new Set() };
+  const keyboard = { x: .5, y: .52, pitchX: .5, pressure: .48, sounding: false, born: 0, lastMotion: 0, motionSpeed: 0, mapping: null, precisionActive: false, precisionAmount: 0, precisionOriginX: null, scoreSamples: [], distanceTraveled: 0, resonanceX: 0, resonanceY: 0, resonatedMemories: new Set() };
   let audio = null;
   let audioLifecycle = null;
   let echoSerial = 0;
-  let width = 0, height = 0, dpr = 1, last = performance.now(), announced = false, scoreAnnounced = false, dynamicsAnnounced = false, textureAnnounced = false;
+  let width = 0, height = 0, dpr = 1, last = performance.now(), announced = false, scoreAnnounced = false, dynamicsAnnounced = false, textureAnnounced = false, precisionAnnounced = false, freedomAnnounced = false;
 
   function pitchAt(x) {
     return music.frequencyAt(x / Math.max(1, width));
@@ -357,9 +357,13 @@
 
   function captureScoreSample(contact, x, y, now, pressure, force = false) {
     if (!contact.sounding) return;
+    const mappedPitch = Number.isFinite(contact.mapping?.frequency)
+      ? music.normalizedAtFrequency(contact.mapping.frequency)
+      : Number.isFinite(contact.pitchX) ? contact.pitchX : x / Math.max(1, width);
     const sample = {
       x: Math.max(0, Math.min(1, x / Math.max(1, width))),
       y: Math.max(0, Math.min(1, y / Math.max(1, height))),
+      pitch: mappedPitch,
       at: now,
       pressure
     };
@@ -396,9 +400,10 @@
     const sounding = startVoice(event.pointerId, p.x, p.y, pressure, pitchAt(p.x), attack, engine);
     pointers.set(event.pointerId, {
       ...p, pressure, pressureAvailable, attack, splashPlayed: false, sounding, born: now, lastMotion: now, movedAt: now, motionSpeed: 0,
-      mapping: null, currentAnnounced: false, sampledX: p.x, sampledY: p.y, sampledAt: now,
+      pitchX: p.x / Math.max(1, width), mapping: null, precisionActive: false, precisionAmount: 0, precisionOriginX: null,
+      currentAnnounced: false, sampledX: p.x, sampledY: p.y, sampledAt: now,
       distanceTraveled: 0, resonanceX: p.x, resonanceY: p.y, resonatedMemories: new Set(),
-      scoreSamples: sounding ? [{ x: p.x / Math.max(1, width), y: p.y / Math.max(1, height), at: now, pressure: attack }] : []
+      scoreSamples: sounding ? [{ x: p.x / Math.max(1, width), y: p.y / Math.max(1, height), pitch: p.x / Math.max(1, width), at: now, pressure: attack }] : []
     });
     addRipple(p.x, p.y, attack);
     document.body.classList.add('has-played');
@@ -428,9 +433,34 @@
       }
       const moved = Math.hypot(p.x - active.x, p.y - active.y);
       if (moved > .8) {
+        const heldBeforeMovement = Math.max(0, now - active.lastMotion);
+        const previousRawX = active.x / Math.max(1, width);
         active.distanceTraveled += moved;
         const elapsed = Math.max(8, now - active.movedAt);
         active.motionSpeed = music.movementSpeed(moved, elapsed, Math.max(1, Math.min(width, height)));
+        if (heldBeforeMovement >= music.PRECISION_HOLD_MS && Number.isFinite(active.mapping?.frequency)) {
+          active.pitchX = music.normalizedAtFrequency(active.mapping.frequency);
+        }
+        const steering = music.precisionMotion({
+          previousRawX,
+          rawX: p.x / Math.max(1, width),
+          pitchX: active.pitchX,
+          originRawX: active.precisionOriginX,
+          holdMilliseconds: heldBeforeMovement,
+          speedPerSecond: active.motionSpeed,
+          active: active.precisionActive
+        });
+        active.pitchX = steering.pitchX;
+        active.precisionActive = steering.active;
+        active.precisionAmount = steering.amount;
+        active.precisionOriginX = steering.originRawX;
+        if (steering.entered && !precisionAnnounced) {
+          status.textContent = 'Медленное движение ведёт высоту тонко вдоль ближайшего течения';
+          precisionAnnounced = true;
+        } else if (steering.released && !freedomAnnounced) {
+          status.textContent = 'Широкий взмах сразу освободил непрерывное скольжение';
+          freedomAnnounced = true;
+        }
         active.lastMotion = now; active.movedAt = now;
         const reportsPressure = music.hasExpressivePressure(sample.pointerType, sample.pressure);
         if (reportsPressure) active.pressureAvailable = true;
@@ -458,10 +488,14 @@
       }
       active.x = p.x; active.y = p.y;
       active.pressure = pressureOf(sample, active.pressureAvailable);
+      active.mapping = {
+        ...music.mapPitch(active.pitchX, 0, active.motionSpeed),
+        precision: active.precisionAmount
+      };
       const scorePressure = active.pressureAvailable ? active.pressure : active.attack;
       captureScoreSample(active, p.x, p.y, now, scorePressure);
       tryScoreResonance(active, p, now);
-      moveVoice(event.pointerId, p.x, p.y, active.pressure);
+      moveVoice(event.pointerId, p.x, p.y, active.pressure, active.mapping.frequency);
     }
   }
 
@@ -481,13 +515,41 @@
     const movement = { ArrowLeft: [-.025, 0], ArrowRight: [.025, 0], ArrowUp: [0, -.035], ArrowDown: [0, .035] }[event.key];
     if (movement) {
       event.preventDefault();
+      const previousX = keyboard.x, previousY = keyboard.y;
+      const now = performance.now(), heldBeforeMovement = Math.max(0, now - keyboard.lastMotion);
       keyboard.x = Math.max(.04, Math.min(.96, keyboard.x + movement[0]));
       keyboard.y = Math.max(.08, Math.min(.9, keyboard.y + movement[1]));
-      const p = keyboardPoint(), now = performance.now();
-      keyboard.lastMotion = now; keyboard.motionSpeed = .22; keyboard.currentAnnounced = false;
+      const p = keyboardPoint();
+      const moved = Math.hypot((keyboard.x - previousX) * width, (keyboard.y - previousY) * height);
+      keyboard.motionSpeed = music.movementSpeed(moved, Math.max(8, heldBeforeMovement), Math.max(1, Math.min(width, height)));
+      if (!keyboard.sounding) {
+        keyboard.pitchX = keyboard.x;
+        keyboard.precisionActive = false;
+        keyboard.precisionAmount = 0;
+        keyboard.precisionOriginX = null;
+      } else if (movement[0]) {
+        if (heldBeforeMovement >= music.PRECISION_HOLD_MS && Number.isFinite(keyboard.mapping?.frequency)) {
+          keyboard.pitchX = music.normalizedAtFrequency(keyboard.mapping.frequency);
+        }
+        const steering = music.precisionMotion({
+          previousRawX: previousX,
+          rawX: keyboard.x,
+          pitchX: keyboard.pitchX,
+          originRawX: keyboard.precisionOriginX,
+          holdMilliseconds: heldBeforeMovement,
+          speedPerSecond: keyboard.motionSpeed,
+          active: keyboard.precisionActive
+        });
+        keyboard.pitchX = steering.pitchX;
+        keyboard.precisionActive = steering.active;
+        keyboard.precisionAmount = steering.amount;
+        keyboard.precisionOriginX = steering.originRawX;
+      }
+      keyboard.lastMotion = now; keyboard.currentAnnounced = false;
       if (keyboard.sounding) {
         keyboard.distanceTraveled += Math.hypot(movement[0] * width, movement[1] * height);
-        moveVoice('keyboard', p.x, p.y, .48);
+        keyboard.mapping = { ...music.mapPitch(keyboard.pitchX, 0, keyboard.motionSpeed), precision: keyboard.precisionAmount };
+        moveVoice('keyboard', p.x, p.y, .48, keyboard.mapping.frequency);
         captureScoreSample(keyboard, p.x, p.y, now, .48);
         tryScoreResonance(keyboard, p, now);
         trails.push({ x: p.x, y: p.y, fromX: p.x - movement[0] * width, fromY: p.y - movement[1] * height, born: now, pressure: .48, speed: .55, hue: 152 + 30 * (1 - p.y / height) });
@@ -497,9 +559,10 @@
       event.preventDefault();
       const now = performance.now();
       keyboard.sounding = true; keyboard.born = now; keyboard.lastMotion = now; keyboard.motionSpeed = 0; keyboard.currentAnnounced = false;
+      keyboard.pitchX = keyboard.x; keyboard.mapping = null; keyboard.precisionActive = false; keyboard.precisionAmount = 0; keyboard.precisionOriginX = null;
       const p = keyboardPoint();
       keyboard.distanceTraveled = 0; keyboard.resonanceX = p.x; keyboard.resonanceY = p.y; keyboard.resonatedMemories = new Set();
-      keyboard.scoreSamples = [{ x: keyboard.x, y: keyboard.y, at: now, pressure: .48 }];
+      keyboard.scoreSamples = [{ x: keyboard.x, y: keyboard.y, pitch: keyboard.pitchX, at: now, pressure: .48 }];
       const engine = audioLifecycle.activateFromGesture();
       keyboard.sounding = startVoice('keyboard', p.x, p.y, .48, pitchAt(p.x), .48, engine);
       if (!keyboard.sounding) keyboard.scoreSamples = [];
@@ -755,7 +818,10 @@
   function updatePitchMapping(contact, id, x, y, now) {
     const idle = Math.max(0, now - contact.lastMotion);
     const decayedSpeed = contact.motionSpeed * Math.exp(-idle / 180);
-    contact.mapping = music.mapPitch(x / Math.max(1, width), idle, decayedSpeed);
+    contact.mapping = {
+      ...music.mapPitch(Number.isFinite(contact.pitchX) ? contact.pitchX : x / Math.max(1, width), idle, decayedSpeed),
+      precision: contact.precisionAmount || 0
+    };
     if (contact.sounding) moveVoice(id, x, y, contact.pressure, contact.mapping.frequency);
     if (contact.mapping.attraction > .52 && !contact.currentAnnounced) {
       contact.currentAnnounced = true;
@@ -770,8 +836,9 @@
 
   function drawPitchCurrents(pointer, now) {
     const mapping = pointer.mapping;
-    if (!mapping || mapping.attraction < .025) return;
-    const visibility = Math.min(1, mapping.attraction / .62);
+    const currentStrength = Math.max(mapping?.attraction || 0, mapping?.precision || 0);
+    if (!mapping || currentStrength < .025) return;
+    const visibility = Math.min(1, currentStrength / .62);
     const currents = music.neighboringCurrents(mapping.scaleIndex);
     const reach = Math.min(105, height * .15);
     const hue = 157 + 24 * (1 - pointer.y / Math.max(1, height));

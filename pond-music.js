@@ -12,6 +12,10 @@
   const REFLECTION_DELAY_SECONDS = .072;
   const REFLECTION_FEEDBACK = .12;
   const REFLECTION_WET_GAIN = .36;
+  const PRECISION_HOLD_MS = 420;
+  const PRECISION_RELEASE_SPEED = .42;
+  const PRECISION_RELEASE_DISTANCE = .045;
+  const PRECISION_MIN_GAIN = .24;
   const PENTATONIC = [0, 2, 4, 7, 9];
   const SCALE = [];
 
@@ -29,6 +33,7 @@
     return t * t * (3 - 2 * t);
   };
   const frequencyAt = normalizedX => BASE_FREQUENCY * Math.pow(2, clamp(normalizedX) * OCTAVES);
+  const normalizedAtFrequency = frequency => clamp(Math.log2(Math.max(BASE_FREQUENCY, frequency) / BASE_FREQUENCY) / OCTAVES);
   const spatialPan = normalizedX => (clamp(normalizedX) * 2 - 1) * MAX_STEREO_PAN;
   const normalizedAtSemitones = semitones => clamp(semitones / (OCTAVES * 12));
   const frequencyAtSemitones = semitones => BASE_FREQUENCY * Math.pow(2, semitones / 12);
@@ -96,6 +101,48 @@
     return { frequency, continuous, target, attraction, scaleIndex };
   }
 
+  function precisionMotion({
+    rawX = 0,
+    previousRawX = rawX,
+    pitchX = previousRawX,
+    originRawX = previousRawX,
+    holdMilliseconds = 0,
+    speedPerSecond = 0,
+    active = false
+  } = {}) {
+    const raw = clamp(rawX);
+    const previousRaw = clamp(previousRawX);
+    const controlled = clamp(pitchX);
+    const origin = active && Number.isFinite(originRawX) ? clamp(originRawX) : previousRaw;
+    const distance = Math.abs(raw - previousRaw);
+    const excursion = Math.abs(raw - origin);
+    const speed = Math.max(0, Number.isFinite(speedPerSecond) ? speedPerSecond : 0);
+    const broadStroke = speed >= PRECISION_RELEASE_SPEED || distance >= PRECISION_RELEASE_DISTANCE ||
+      (active && excursion >= PRECISION_RELEASE_DISTANCE);
+    if (broadStroke) {
+      return { pitchX: raw, originRawX: null, active: false, amount: 0, gain: 1, entered: false, released: active };
+    }
+
+    const canEnter = active || holdMilliseconds >= PRECISION_HOLD_MS;
+    if (!canEnter) {
+      return { pitchX: raw, originRawX: null, active: false, amount: 0, gain: 1, entered: false, released: false };
+    }
+
+    const readiness = active ? 1 : smoothstep(PRECISION_HOLD_MS, 780, holdMilliseconds);
+    const slowness = 1 - smoothstep(.055, .32, speed);
+    const amount = clamp(Math.max(.28, readiness) * Math.max(.28, slowness));
+    const gain = 1 - amount * (1 - PRECISION_MIN_GAIN);
+    return {
+      pitchX: clamp(controlled + (raw - previousRaw) * gain),
+      originRawX: origin,
+      active: true,
+      amount,
+      gain,
+      entered: !active,
+      released: false
+    };
+  }
+
   function neighboringCurrents(scaleIndex, radius = 1) {
     const currents = [];
     for (let index = Math.max(0, scaleIndex - radius); index <= Math.min(SCALE.length - 1, scaleIndex + radius); index += 1) {
@@ -119,6 +166,10 @@
     REFLECTION_DELAY_SECONDS,
     REFLECTION_FEEDBACK,
     REFLECTION_WET_GAIN,
+    PRECISION_HOLD_MS,
+    PRECISION_RELEASE_SPEED,
+    PRECISION_RELEASE_DISTANCE,
+    PRECISION_MIN_GAIN,
     attackIntensity,
     depthReflection,
     hasExpressivePressure,
@@ -126,6 +177,8 @@
     mapPitch,
     movementSpeed,
     neighboringCurrents,
+    normalizedAtFrequency,
+    precisionMotion,
     spatialPan,
     frequencyAt
   });

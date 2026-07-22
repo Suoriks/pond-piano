@@ -12,8 +12,8 @@ const samples = Array.from({ length: 80 }, (_, index) => ({
 const memory = score.createMemory(samples, 3000);
 assert.ok(memory);
 assert.equal(memory.points.length, score.MAX_POINTS, 'long gestures must have a bounded score path');
-assert.deepEqual(memory.points[0], samples[0]);
-assert.deepEqual(memory.points.at(-1), samples.at(-1));
+assert.deepEqual(memory.points[0], { ...samples[0], pitch: samples[0].x });
+assert.deepEqual(memory.points.at(-1), { ...samples.at(-1), pitch: samples.at(-1).x });
 assert.equal(memory.pitch, 1);
 assert.equal(memory.depth, .7);
 assert.equal(memory.startedAt, 1000);
@@ -30,6 +30,13 @@ for (let index = 0; index < score.MAX_MEMORIES + 3; index += 1) {
 assert.equal(phrase.length, score.MAX_MEMORIES, 'phrase memory must stay bounded');
 assert.equal(phrase[0].born, 103);
 assert.equal(score.createMemory([], 100), null);
+
+const precisionMemory = score.createMemory([
+  { x: .64, y: .45, pitch: .58, at: 10, pressure: .4 },
+  { x: .67, y: .46, pitch: .59, at: 90, pressure: .4 }
+], 120);
+assert.equal(precisionMemory.points.at(-1).x, .67, 'the visible score path must preserve the real contact');
+assert.equal(precisionMemory.pitch, .59, 'the score must remember the finely controlled sounding pitch');
 
 const note = (startedAt, releasedAt, x = .5) => score.createMemory([
   { x, y: .5, at: startedAt, pressure: .4 }
