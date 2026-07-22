@@ -5,10 +5,19 @@
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const music = window.PondMusic;
   const score = window.PondScore;
+  const masterModel = window.PondMaster;
   const audioLifecycleFactory = window.PondAudioLifecycle;
   if (!music) throw new Error('Pond music mapping did not load');
   if (!score) throw new Error('Pond score mapping did not load');
+  if (!masterModel) throw new Error('Pond master control did not load');
   if (!audioLifecycleFactory) throw new Error('Pond audio lifecycle did not load');
+  const volumeControl = document.querySelector('.shore-control');
+  const volumeStone = document.querySelector('#volume-stone');
+  const volumePanel = document.querySelector('#volume-panel');
+  const volumeRange = document.querySelector('#master-volume');
+  const volumeValue = document.querySelector('#volume-value');
+  const muteButton = document.querySelector('#mute-water');
+  const MASTER_STORAGE_KEY = 'pond-piano.master.v1';
   const MAX_VOICES = 6;
   const ECHO_COOLDOWN_MS = 3200;
   const ripples = [], trails = [], splashes = [], scoreEchoes = [], pointers = new Map();
@@ -17,6 +26,7 @@
   const keyboard = { x: .5, y: .52, pitchX: .5, pressure: .48, sounding: false, born: 0, lastMotion: 0, motionSpeed: 0, mapping: null, precisionActive: false, precisionAmount: 0, precisionOriginX: null, scoreSamples: [], distanceTraveled: 0, resonanceX: 0, resonanceY: 0, resonatedMemories: new Set() };
   let audio = null;
   let audioLifecycle = null;
+  let masterState = loadMasterState();
   let echoSerial = 0;
   let width = 0, height = 0, dpr = 1, last = performance.now(), announced = false, scoreAnnounced = false, dynamicsAnnounced = false, textureAnnounced = false, precisionAnnounced = false, freedomAnnounced = false;
 
@@ -37,7 +47,7 @@
     const master = context.createGain();
     const compressor = context.createDynamicsCompressor();
     let reflection = null;
-    master.gain.value = .72;
+    master.gain.value = masterModel.gainFor(masterState);
     compressor.threshold.value = -18; compressor.knee.value = 16;
     compressor.ratio.value = 6; compressor.attack.value = .006; compressor.release.value = .24;
     master.connect(compressor).connect(context.destination);
@@ -82,7 +92,7 @@
 
   function balanceVoices(engine) {
     const sounding = [...engine.voices.values()].filter(voice => !voice.releasing).length;
-    const level = .72 / Math.sqrt(Math.max(1, sounding));
+    const level = masterModel.gainFor(masterState, sounding);
     engine.master.gain.setTargetAtTime(level, engine.context.currentTime, .045);
   }
 
@@ -280,6 +290,73 @@
     onState: reflectAudioState,
     isVisible: () => document.visibilityState !== 'hidden'
   });
+
+  function loadMasterState() {
+    try { return masterModel.parse(localStorage.getItem(MASTER_STORAGE_KEY)); }
+    catch { return masterModel.normalize(); }
+  }
+
+  function storeMasterState() {
+    try { localStorage.setItem(MASTER_STORAGE_KEY, masterModel.serialize(masterState)); }
+    catch {}
+  }
+
+  function reflectMasterState(announce = false) {
+    const volume = masterState.volume;
+    volumeRange.value = String(volume);
+    volumeValue.value = `${volume}%`;
+    volumeValue.textContent = `${volume}%`;
+    muteButton.textContent = masterState.muted ? 'Вернуть звук' : 'Приглушить';
+    muteButton.setAttribute('aria-pressed', String(masterState.muted));
+    volumeControl.classList.toggle('is-muted', masterState.muted || volume === 0);
+    volumeStone.setAttribute('aria-label', masterState.muted
+      ? `Громкость пруда: приглушено, сохранено ${volume} процентов`
+      : `Громкость пруда: ${volume} процентов`);
+    canvas.dataset.masterVolume = String(volume);
+    canvas.dataset.masterMuted = String(masterState.muted);
+    if (audio) balanceVoices(audio);
+    if (announce) status.textContent = masterState.muted
+      ? 'Звук пруда приглушён; жесты и водная партитура продолжают жить'
+      : `Громкость пруда: ${volume} процентов`;
+  }
+
+  function setVolumePanelOpen(open) {
+    volumeControl.classList.toggle('is-open', open);
+    volumeStone.setAttribute('aria-expanded', String(open));
+  }
+
+  volumeStone.addEventListener('click', () => setVolumePanelOpen(true));
+  volumeControl.addEventListener('focusin', () => volumeStone.setAttribute('aria-expanded', 'true'));
+  volumeControl.addEventListener('focusout', () => {
+    requestAnimationFrame(() => {
+      if (!volumeControl.contains(document.activeElement) && !volumeControl.classList.contains('is-open')) {
+        volumeStone.setAttribute('aria-expanded', 'false');
+      }
+    });
+  });
+  document.addEventListener('pointerdown', event => {
+    if (!volumeControl.contains(event.target)) setVolumePanelOpen(false);
+  });
+  volumeControl.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    setVolumePanelOpen(false);
+    canvas.focus();
+  });
+  volumeRange.addEventListener('input', () => {
+    masterState = masterModel.withVolume(masterState, volumeRange.value);
+    reflectMasterState(false);
+  });
+  volumeRange.addEventListener('change', () => {
+    storeMasterState();
+    reflectMasterState(true);
+  });
+  muteButton.addEventListener('click', () => {
+    masterState = masterModel.toggleMute(masterState);
+    storeMasterState();
+    reflectMasterState(true);
+  });
+  reflectMasterState(false);
 
   function resize() {
     dpr = Math.min(devicePixelRatio || 1, 2);

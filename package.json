@@ -22,6 +22,7 @@
     "pond-audio-lifecycle.js",
     "pond.css",
     "pond.js",
+    "pond-master.js",
     "pond-music.js",
     "pond-score.js",
     "sw.js"
@@ -57,6 +58,7 @@
       "pond-audio-lifecycle.js",
       "pond.css",
       "pond.js",
+      "pond-master.js",
       "pond-music.js",
       "pond-score.js",
       "sw.js",

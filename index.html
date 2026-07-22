@@ -20,14 +20,29 @@
     <canvas id="pond" tabindex="0" role="application" aria-label="Музыкальный пруд. Коснитесь воды и ведите в стороны, чтобы менять высоту и мягкое пространственное место звука; движение вниз делает тембр глубже и добавляет короткое водное отражение, не размывая атаку; быстрый начальный взмах даёт более яркую атаку, а спокойное касание — мягкую; задержитесь, чтобы течение удержало ближайшую высоту, затем ведите медленно для точности или сделайте широкий взмах для свободного скольжения; после отпускания жест остаётся на воде как часть мотива, а новый жест может пересечь след и разбудить сохранённую ноту. С клавиатуры удерживайте пробел, стрелками меняйте звук."></canvas>
     <div class="shore" aria-hidden="true"></div>
     <header class="title-block">
-      <p class="eyebrow">Этюд воды · 16</p>
+      <p class="eyebrow">Этюд воды · 17</p>
       <h1>Пруд-пианино</h1>
       <p class="hint">Задержись для точности · взмахни для свободы</p>
     </header>
+    <section class="shore-control" aria-label="Громкость пруда">
+      <button id="volume-stone" class="volume-stone" type="button" aria-expanded="false" aria-controls="volume-panel">
+        <span class="stone-rings" aria-hidden="true"></span>
+        <span class="sr-only">Настроить громкость пруда</span>
+      </button>
+      <div id="volume-panel" class="volume-panel" role="group" aria-labelledby="volume-label">
+        <div class="volume-heading">
+          <label id="volume-label" for="master-volume">Громкость воды</label>
+          <output id="volume-value" for="master-volume">72%</output>
+        </div>
+        <input id="master-volume" type="range" min="0" max="100" step="1" value="72">
+        <button id="mute-water" class="mute-water" type="button">Приглушить</button>
+      </div>
+    </section>
     <output id="status" class="sr-only" aria-live="polite">Пруд ждёт касания</output>
   </main>
   <script src="pond-music.js"></script>
   <script src="pond-score.js"></script>
+  <script src="pond-master.js"></script>
   <script src="pond-audio-lifecycle.js"></script>
   <script src="pond.js"></script>
 </body>
