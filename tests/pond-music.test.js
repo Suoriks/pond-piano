@@ -3,6 +3,30 @@
 const assert = require('node:assert/strict');
 const music = require('../pond-music.js');
 
+assert.deepEqual(Object.keys(music.SCALE_FAMILIES), ['dawn', 'dusk', 'mist']);
+assert.equal(music.normalizeScaleFamily('dusk'), 'dusk');
+assert.equal(music.normalizeScaleFamily('unknown-current'), music.DEFAULT_SCALE_FAMILY);
+assert.equal(music.parseScaleFamily(music.serializeScaleFamily('mist')), 'mist', 'the chosen current must survive local storage');
+assert.equal(music.parseScaleFamily('{"family":"lost"}'), music.DEFAULT_SCALE_FAMILY, 'damaged stored choices must fall back safely');
+assert.ok(Object.isFrozen(music.scaleSemitones('dawn')) && Object.isFrozen(music.SCALE_FAMILIES.dawn.intervals));
+
+for (const family of Object.keys(music.SCALE_FAMILIES)) {
+  const free = music.mapPitch(.413, 1400, .3, family);
+  assert.equal(free.attraction, 0, `${family} must not quantize a moving gesture`);
+  assert.equal(free.frequency, free.continuous, `${family} must preserve continuous glissando`);
+}
+
+const dawnHeld = music.mapPitch(.413, 1400, 0, 'dawn');
+const duskHeld = music.mapPitch(.413, 1400, 0, 'dusk');
+assert.notEqual(dawnHeld.target, duskHeld.target, 'different shoreline currents must offer a real musical choice');
+assert.equal(dawnHeld.scaleFamily, 'dawn');
+assert.equal(duskHeld.scaleFamily, 'dusk');
+assert.deepEqual(
+  music.neighboringCurrents(duskHeld.scaleIndex, 1, 'dusk').map(current => current.frequency),
+  music.neighboringCurrents(duskHeld.scaleIndex, 1, duskHeld.scaleFamily).map(current => current.frequency),
+  'visible currents must use the same scale family as the sounding attraction'
+);
+
 const moving = music.mapPitch(.413, 1200, .3);
 assert.equal(moving.attraction, 0, 'a moving gesture must remain continuous');
 assert.equal(moving.frequency, moving.continuous);
@@ -138,4 +162,4 @@ assert.deepEqual(
   'only the per-voice send may depend on depth; the shared bus itself must stay stable'
 );
 
-console.log('pond-music: pitch currents, shared precision, expressive attack, spatial place, held texture, and depth reflection verified');
+console.log('pond-music: selectable pitch currents, shared precision, expressive attack, spatial place, held texture, and depth reflection verified');

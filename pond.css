@@ -15,6 +15,38 @@ main { position: relative; isolation: isolate; }
 h1 { margin: 0; font: 400 clamp(24px, 4vw, 44px)/1.05 Georgia, serif; letter-spacing: -.035em; }
 .hint { margin: 12px 0 0; color: #c3cdb8; font-size: 13px; opacity: .74; transition: opacity .6s ease; }
 .has-played .hint { opacity: 0; }
+.tuning-control {
+  position: absolute; z-index: 4;
+  left: max(18px, env(safe-area-inset-left)); bottom: max(14px, env(safe-area-inset-bottom));
+  min-width: 174px; color: #dce6ce; text-shadow: 0 2px 12px rgba(0, 7, 5, .84);
+}
+.tuning-label { margin: 0 0 5px 4px; color: #9fb7a5; font: 600 10px/1.2 ui-monospace, monospace; letter-spacing: .12em; text-transform: uppercase; }
+#tuning-value { color: #e4ead7; letter-spacing: .04em; }
+.tuning-pebbles { display: flex; align-items: end; gap: 7px; }
+.tuning-choice { position: relative; display: grid; width: 50px; height: 50px; place-items: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.tuning-choice input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.tuning-pebble {
+  position: relative; display: block; width: 42px; height: 38px; border: 1px solid rgba(190, 210, 176, .24);
+  background: radial-gradient(circle at 38% 30%, rgba(222, 230, 198, .18), transparent 19%), linear-gradient(145deg, #2b382e, #111b16 72%);
+  box-shadow: inset 3px 4px 8px rgba(222, 232, 197, .06), inset -5px -7px 10px rgba(1, 8, 6, .45), 0 7px 15px rgba(0, 7, 5, .46);
+  transition: border-color .2s ease, filter .2s ease, transform .2s ease, box-shadow .2s ease;
+}
+.tuning-pebble::before, .tuning-pebble::after { content: ''; position: absolute; pointer-events: none; }
+.pebble-dawn { border-radius: 54% 46% 52% 48% / 44% 52% 48% 56%; transform: rotate(-5deg); }
+.pebble-dawn::before { left: 10px; top: 18px; width: 21px; height: 7px; border-top: 1px solid rgba(208, 225, 190, .48); border-radius: 50%; }
+.pebble-dawn::after { left: 18px; top: 10px; width: 7px; height: 7px; border: 1px solid rgba(208, 225, 190, .36); border-radius: 50%; }
+.pebble-dusk { width: 40px; height: 41px; border-radius: 44% 56% 42% 58% / 58% 43% 57% 42%; transform: rotate(4deg); }
+.pebble-dusk::before { left: 11px; top: 9px; width: 17px; height: 20px; border-left: 1px solid rgba(208, 225, 190, .45); border-radius: 50%; transform: rotate(24deg); }
+.pebble-dusk::after { left: 18px; top: 15px; width: 4px; height: 4px; background: rgba(208, 225, 190, .42); border-radius: 50%; }
+.pebble-mist { width: 44px; height: 35px; border-radius: 58% 42% 48% 52% / 50% 57% 43% 50%; transform: rotate(-1deg); }
+.pebble-mist::before { left: 9px; top: 13px; width: 25px; height: 8px; border-top: 1px solid rgba(208, 225, 190, .42); border-bottom: 1px solid rgba(208, 225, 190, .28); border-radius: 50%; }
+.tuning-choice:hover .tuning-pebble { border-color: rgba(218, 232, 191, .46); filter: brightness(1.08); }
+.tuning-choice input:focus-visible + .tuning-pebble { outline: 3px solid #dae7b4; outline-offset: 3px; }
+.tuning-choice input:checked + .tuning-pebble {
+  border-color: rgba(222, 235, 197, .68); filter: brightness(1.13); transform: translateY(-3px) rotate(0);
+  box-shadow: inset 3px 4px 8px rgba(222, 232, 197, .11), inset -5px -7px 10px rgba(1, 8, 6, .38), 0 0 0 5px rgba(145, 199, 174, .09), 0 8px 18px rgba(0, 7, 5, .55);
+}
+.tuning-choice input:checked + .tuning-pebble::after { box-shadow: 0 0 9px 2px rgba(194, 220, 178, .18); }
 .shore-control {
   position: absolute; z-index: 4;
   right: max(18px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom));
@@ -67,9 +99,10 @@ h1 { margin: 0; font: 400 clamp(24px, 4vw, 44px)/1.05 Georgia, serif; letter-spa
 .mute-water:focus-visible { outline: 3px solid #dae7b4; outline-offset: 2px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 @media (max-width: 420px) {
+  .tuning-control { left: max(12px, env(safe-area-inset-left)); bottom: max(11px, env(safe-area-inset-bottom)); }
   .shore-control { right: max(14px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); }
   .volume-panel { right: -2px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .hint, .volume-stone, .volume-stone::after, .volume-panel { transition: none; }
+  .hint, .tuning-pebble, .volume-stone, .volume-stone::after, .volume-panel { transition: none; }
 }

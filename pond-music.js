@@ -16,16 +16,22 @@
   const PRECISION_RELEASE_SPEED = .42;
   const PRECISION_RELEASE_DISTANCE = .045;
   const PRECISION_MIN_GAIN = .24;
-  const PENTATONIC = [0, 2, 4, 7, 9];
-  const SCALE = [];
-
-  for (let octave = 0; octave <= OCTAVES; octave += 1) {
-    for (const interval of PENTATONIC) {
-      const semitones = octave * 12 + interval;
-      if (semitones <= OCTAVES * 12) SCALE.push(semitones);
-    }
-  }
-  if (SCALE[SCALE.length - 1] !== OCTAVES * 12) SCALE.push(OCTAVES * 12);
+  const DEFAULT_SCALE_FAMILY = 'dawn';
+  const SCALE_FAMILIES = Object.freeze({
+    dawn: Object.freeze({
+      id: 'dawn', name: 'Рассвет', description: 'светлая открытая пентатоника',
+      intervals: Object.freeze([0, 2, 4, 7, 9])
+    }),
+    dusk: Object.freeze({
+      id: 'dusk', name: 'Сумерки', description: 'тёплая минорная пентатоника',
+      intervals: Object.freeze([0, 3, 5, 7, 10])
+    }),
+    mist: Object.freeze({
+      id: 'mist', name: 'Туман', description: 'подвешенная просторная пентатоника',
+      intervals: Object.freeze([0, 2, 5, 7, 10])
+    })
+  });
+  const SCALE_CACHE = new Map();
 
   const clamp = (value, minimum = 0, maximum = 1) => Math.max(minimum, Math.min(maximum, value));
   const smoothstep = (minimum, maximum, value) => {
@@ -37,6 +43,42 @@
   const spatialPan = normalizedX => (clamp(normalizedX) * 2 - 1) * MAX_STEREO_PAN;
   const normalizedAtSemitones = semitones => clamp(semitones / (OCTAVES * 12));
   const frequencyAtSemitones = semitones => BASE_FREQUENCY * Math.pow(2, semitones / 12);
+
+  function normalizeScaleFamily(value) {
+    return typeof value === 'string' && Object.prototype.hasOwnProperty.call(SCALE_FAMILIES, value)
+      ? value
+      : DEFAULT_SCALE_FAMILY;
+  }
+
+  function parseScaleFamily(serialized) {
+    if (typeof serialized !== 'string' || !serialized) return DEFAULT_SCALE_FAMILY;
+    try {
+      const parsed = JSON.parse(serialized);
+      return normalizeScaleFamily(typeof parsed === 'string' ? parsed : parsed?.family);
+    } catch {
+      return normalizeScaleFamily(serialized);
+    }
+  }
+
+  function serializeScaleFamily(value) {
+    return JSON.stringify({ family: normalizeScaleFamily(value) });
+  }
+
+  function scaleSemitones(familyId = DEFAULT_SCALE_FAMILY) {
+    const id = normalizeScaleFamily(familyId);
+    if (SCALE_CACHE.has(id)) return SCALE_CACHE.get(id);
+    const scale = [];
+    for (let octave = 0; octave <= OCTAVES; octave += 1) {
+      for (const interval of SCALE_FAMILIES[id].intervals) {
+        const semitones = octave * 12 + interval;
+        if (semitones <= OCTAVES * 12) scale.push(semitones);
+      }
+    }
+    if (scale[scale.length - 1] !== OCTAVES * 12) scale.push(OCTAVES * 12);
+    const frozen = Object.freeze(scale);
+    SCALE_CACHE.set(id, frozen);
+    return frozen;
+  }
 
   function hasExpressivePressure(pointerType, pressure) {
     if (!Number.isFinite(pressure) || pressure <= 0) return false;
@@ -81,24 +123,27 @@
     };
   }
 
-  function nearestScaleIndex(frequency) {
+  function nearestScaleIndex(frequency, familyId) {
+    const scale = scaleSemitones(familyId);
     const semitones = 12 * Math.log2(Math.max(BASE_FREQUENCY, frequency) / BASE_FREQUENCY);
     let nearest = 0;
-    for (let index = 1; index < SCALE.length; index += 1) {
-      if (Math.abs(SCALE[index] - semitones) < Math.abs(SCALE[nearest] - semitones)) nearest = index;
+    for (let index = 1; index < scale.length; index += 1) {
+      if (Math.abs(scale[index] - semitones) < Math.abs(scale[nearest] - semitones)) nearest = index;
     }
     return nearest;
   }
 
-  function mapPitch(normalizedX, holdMilliseconds = 0, speedPerSecond = 0) {
+  function mapPitch(normalizedX, holdMilliseconds = 0, speedPerSecond = 0, familyId = DEFAULT_SCALE_FAMILY) {
+    const scaleFamily = normalizeScaleFamily(familyId);
+    const scale = scaleSemitones(scaleFamily);
     const continuous = frequencyAt(normalizedX);
-    const scaleIndex = nearestScaleIndex(continuous);
-    const target = frequencyAtSemitones(SCALE[scaleIndex]);
+    const scaleIndex = nearestScaleIndex(continuous, scaleFamily);
+    const target = frequencyAtSemitones(scale[scaleIndex]);
     const settled = smoothstep(360, 980, holdMilliseconds);
     const unhurried = 1 - smoothstep(.025, .16, Math.max(0, speedPerSecond));
     const attraction = .84 * settled * unhurried;
     const frequency = continuous * Math.pow(target / continuous, attraction);
-    return { frequency, continuous, target, attraction, scaleIndex };
+    return { frequency, continuous, target, attraction, scaleIndex, scaleFamily };
   }
 
   function precisionMotion({
@@ -143,13 +188,14 @@
     };
   }
 
-  function neighboringCurrents(scaleIndex, radius = 1) {
+  function neighboringCurrents(scaleIndex, radius = 1, familyId = DEFAULT_SCALE_FAMILY) {
+    const scale = scaleSemitones(familyId);
     const currents = [];
-    for (let index = Math.max(0, scaleIndex - radius); index <= Math.min(SCALE.length - 1, scaleIndex + radius); index += 1) {
+    for (let index = Math.max(0, scaleIndex - radius); index <= Math.min(scale.length - 1, scaleIndex + radius); index += 1) {
       currents.push({
         scaleIndex: index,
-        normalizedX: normalizedAtSemitones(SCALE[index]),
-        frequency: frequencyAtSemitones(SCALE[index]),
+        normalizedX: normalizedAtSemitones(scale[index]),
+        frequency: frequencyAtSemitones(scale[index]),
         isTarget: index === scaleIndex
       });
     }
@@ -159,6 +205,8 @@
   return Object.freeze({
     BASE_FREQUENCY,
     OCTAVES,
+    DEFAULT_SCALE_FAMILY,
+    SCALE_FAMILIES,
     ATTACK_WINDOW_MS,
     TEXTURE_BLOOM_START_MS,
     TEXTURE_BLOOM_END_MS,
@@ -178,7 +226,11 @@
     movementSpeed,
     neighboringCurrents,
     normalizedAtFrequency,
+    normalizeScaleFamily,
+    parseScaleFamily,
     precisionMotion,
+    scaleSemitones,
+    serializeScaleFamily,
     spatialPan,
     frequencyAt
   });

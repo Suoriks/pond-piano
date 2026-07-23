@@ -17,7 +17,10 @@
   const volumeRange = document.querySelector('#master-volume');
   const volumeValue = document.querySelector('#volume-value');
   const muteButton = document.querySelector('#mute-water');
+  const tuningInputs = [...document.querySelectorAll('input[name="tuning-family"]')];
+  const tuningValue = document.querySelector('#tuning-value');
   const MASTER_STORAGE_KEY = 'pond-piano.master.v1';
+  const TUNING_STORAGE_KEY = 'pond-piano.tuning.v1';
   const MAX_VOICES = 6;
   const ECHO_COOLDOWN_MS = 3200;
   const ripples = [], trails = [], splashes = [], scoreEchoes = [], pointers = new Map();
@@ -27,6 +30,7 @@
   let audio = null;
   let audioLifecycle = null;
   let masterState = loadMasterState();
+  let tuningFamily = loadTuningFamily();
   let echoSerial = 0;
   let width = 0, height = 0, dpr = 1, last = performance.now(), announced = false, scoreAnnounced = false, dynamicsAnnounced = false, textureAnnounced = false, precisionAnnounced = false, freedomAnnounced = false;
 
@@ -301,6 +305,28 @@
     catch {}
   }
 
+  function loadTuningFamily() {
+    try { return music.parseScaleFamily(localStorage.getItem(TUNING_STORAGE_KEY)); }
+    catch { return music.DEFAULT_SCALE_FAMILY; }
+  }
+
+  function storeTuningFamily() {
+    try { localStorage.setItem(TUNING_STORAGE_KEY, music.serializeScaleFamily(tuningFamily)); }
+    catch {}
+  }
+
+  function reflectTuningFamily(announce = false) {
+    const family = music.SCALE_FAMILIES[tuningFamily];
+    for (const input of tuningInputs) input.checked = input.value === tuningFamily;
+    tuningValue.value = family.name;
+    tuningValue.textContent = family.name;
+    canvas.dataset.scaleFamily = tuningFamily;
+    if (!announce) return;
+    for (const pointer of pointers.values()) pointer.currentAnnounced = false;
+    keyboard.currentAnnounced = false;
+    status.textContent = `Течение «${family.name}»: ${family.description}; свободное скольжение осталось непрерывным`;
+  }
+
   function reflectMasterState(announce = false) {
     const volume = masterState.volume;
     volumeRange.value = String(volume);
@@ -356,7 +382,16 @@
     storeMasterState();
     reflectMasterState(true);
   });
+  for (const input of tuningInputs) {
+    input.addEventListener('change', () => {
+      if (!input.checked) return;
+      tuningFamily = music.normalizeScaleFamily(input.value);
+      storeTuningFamily();
+      reflectTuningFamily(true);
+    });
+  }
   reflectMasterState(false);
+  reflectTuningFamily(false);
 
   function resize() {
     dpr = Math.min(devicePixelRatio || 1, 2);
@@ -566,7 +601,7 @@
       active.x = p.x; active.y = p.y;
       active.pressure = pressureOf(sample, active.pressureAvailable);
       active.mapping = {
-        ...music.mapPitch(active.pitchX, 0, active.motionSpeed),
+        ...music.mapPitch(active.pitchX, 0, active.motionSpeed, tuningFamily),
         precision: active.precisionAmount
       };
       const scorePressure = active.pressureAvailable ? active.pressure : active.attack;
@@ -625,7 +660,7 @@
       keyboard.lastMotion = now; keyboard.currentAnnounced = false;
       if (keyboard.sounding) {
         keyboard.distanceTraveled += Math.hypot(movement[0] * width, movement[1] * height);
-        keyboard.mapping = { ...music.mapPitch(keyboard.pitchX, 0, keyboard.motionSpeed), precision: keyboard.precisionAmount };
+        keyboard.mapping = { ...music.mapPitch(keyboard.pitchX, 0, keyboard.motionSpeed, tuningFamily), precision: keyboard.precisionAmount };
         moveVoice('keyboard', p.x, p.y, .48, keyboard.mapping.frequency);
         captureScoreSample(keyboard, p.x, p.y, now, .48);
         tryScoreResonance(keyboard, p, now);
@@ -896,7 +931,7 @@
     const idle = Math.max(0, now - contact.lastMotion);
     const decayedSpeed = contact.motionSpeed * Math.exp(-idle / 180);
     contact.mapping = {
-      ...music.mapPitch(Number.isFinite(contact.pitchX) ? contact.pitchX : x / Math.max(1, width), idle, decayedSpeed),
+      ...music.mapPitch(Number.isFinite(contact.pitchX) ? contact.pitchX : x / Math.max(1, width), idle, decayedSpeed, tuningFamily),
       precision: contact.precisionAmount || 0
     };
     if (contact.sounding) moveVoice(id, x, y, contact.pressure, contact.mapping.frequency);
@@ -916,7 +951,7 @@
     const currentStrength = Math.max(mapping?.attraction || 0, mapping?.precision || 0);
     if (!mapping || currentStrength < .025) return;
     const visibility = Math.min(1, currentStrength / .62);
-    const currents = music.neighboringCurrents(mapping.scaleIndex);
+    const currents = music.neighboringCurrents(mapping.scaleIndex, 1, mapping.scaleFamily);
     const reach = Math.min(105, height * .15);
     const hue = 157 + 24 * (1 - pointer.y / Math.max(1, height));
     const phase = reduced.matches ? 0 : now * .0012;
