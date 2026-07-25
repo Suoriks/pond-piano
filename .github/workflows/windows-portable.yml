@@ -21,10 +21,10 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -61,7 +61,7 @@ jobs:
           "artifact_name=Pond-Piano-$version-Windows-x64-$($env:GITHUB_SHA.Substring(0, 7))" >> $env:GITHUB_OUTPUT
 
       - name: Upload portable executable
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.verify.outputs.artifact_name }}
           path: |
