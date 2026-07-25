@@ -1,10 +1,20 @@
 name: Windows portable build
 
 on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: windows-portable-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-windows-x64:
@@ -28,17 +38,34 @@ jobs:
       - name: Build portable Windows executable
         run: npm run build
 
-      - name: Verify exact artifact
+      - name: Verify exact artifact and write checksum
+        id: verify
         shell: pwsh
         run: |
-          $artifact = "dist/Pond-Piano-0.1.0-Windows-x64.exe"
+          $version = node -p "require('./package.json').version"
+          $filename = "Pond-Piano-$version-Windows-x64.exe"
+          $artifact = "dist/$filename"
           if (-not (Test-Path -LiteralPath $artifact -PathType Leaf)) {
             throw "Expected artifact not found: $artifact"
           }
 
+          $executables = @(Get-ChildItem -LiteralPath dist -Filter '*.exe' -File)
+          if ($executables.Count -ne 1 -or $executables[0].Name -ne $filename) {
+            throw "Expected exactly one Windows executable named $filename"
+          }
+
+          $sha256 = (Get-FileHash -LiteralPath $artifact -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$sha256  $filename" | Set-Content -LiteralPath dist/SHA256SUMS.txt -Encoding ascii
+
+          "artifact_path=$artifact" >> $env:GITHUB_OUTPUT
+          "artifact_name=Pond-Piano-$version-Windows-x64-$($env:GITHUB_SHA.Substring(0, 7))" >> $env:GITHUB_OUTPUT
+
       - name: Upload portable executable
         uses: actions/upload-artifact@v4
         with:
-          name: Pond-Piano-0.1.0-Windows-x64
-          path: dist/Pond-Piano-0.1.0-Windows-x64.exe
+          name: ${{ steps.verify.outputs.artifact_name }}
+          path: |
+            ${{ steps.verify.outputs.artifact_path }}
+            dist/SHA256SUMS.txt
           if-no-files-found: error
+          retention-days: 90

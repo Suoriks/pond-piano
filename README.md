@@ -36,6 +36,8 @@ npm run build
 
 Результат: `dist/Pond-Piano-0.1.0-Windows-x64.exe`. Тот же путь собирает вручную запускаемый workflow **Windows portable build** в GitHub Actions. После изменения `assets/icon-512.png` Windows-иконку можно пересоздать командой `python scripts/generate-windows-icon.py` (нужен Pillow).
 
+Каждый push в `main` и каждый pull request к `main` автоматически запускает тесты и собирает новый portable EXE. Артефакт конкретного commit вместе с `SHA256SUMS.txt` хранится в workflow **Windows portable build** 90 дней; ручной запуск также остаётся доступен.
+
 ## Работа
 
 Часовой слот → одна законченная итерация → проверка → запись следующего шага. Обычные микроитерации не шумят в Telegram.
