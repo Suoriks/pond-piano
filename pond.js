@@ -4,10 +4,12 @@
   const status = document.querySelector('#status');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const music = window.PondMusic;
+  const gesture = window.PondGesture;
   const score = window.PondScore;
   const masterModel = window.PondMaster;
   const audioLifecycleFactory = window.PondAudioLifecycle;
   if (!music) throw new Error('Pond music mapping did not load');
+  if (!gesture) throw new Error('Pond gesture mapping did not load');
   if (!score) throw new Error('Pond score mapping did not load');
   if (!masterModel) throw new Error('Pond master control did not load');
   if (!audioLifecycleFactory) throw new Error('Pond audio lifecycle did not load');
@@ -32,7 +34,7 @@
   let masterState = loadMasterState();
   let tuningFamily = loadTuningFamily();
   let echoSerial = 0;
-  let width = 0, height = 0, dpr = 1, last = performance.now(), announced = false, scoreAnnounced = false, dynamicsAnnounced = false, textureAnnounced = false, precisionAnnounced = false, freedomAnnounced = false;
+  let width = 0, height = 0, dpr = 1, last = performance.now(), announced = false, scoreAnnounced = false, dynamicsAnnounced = false, textureAnnounced = false, precisionAnnounced = false, freedomAnnounced = false, eddyAnnounced = false;
 
   function pitchAt(x) {
     return music.frequencyAt(x / Math.max(1, width));
@@ -132,7 +134,43 @@
 
   function voiceNodes(voice) {
     return [voice.oscillator, voice.overtone, voice.overtoneGain, voice.filter, voice.gain, voice.undertow,
-      voice.filterDrift, voice.overtoneDrift, voice.panner, voice.reflectionSend];
+      voice.filterDrift, voice.overtoneDrift, voice.eddyOscillator, voice.eddyDepth, voice.panner, voice.reflectionSend];
+  }
+
+  function setVoiceEddy(id, expression) {
+    const voice = audio?.voices.get(id);
+    if (!voice || voice.releasing || !expression?.amount) return false;
+    const now = audio.context.currentTime;
+    if (!voice.eddyOscillator) {
+      const oscillator = audio.context.createOscillator();
+      const depth = audio.context.createGain();
+      oscillator.type = 'sine'; oscillator.frequency.value = expression.rateHz;
+      depth.gain.value = 0;
+      oscillator.connect(depth).connect(voice.gain.gain);
+      oscillator.start();
+      voice.eddyOscillator = oscillator;
+      voice.eddyDepth = depth;
+    }
+    voice.eddyOscillator.frequency.setTargetAtTime(expression.rateHz, now, .12);
+    voice.eddyDepth.gain.setTargetAtTime(expression.gainDepth, now, .08);
+    return true;
+  }
+
+  function clearVoiceEddy(id) {
+    const voice = audio?.voices.get(id);
+    if (!voice?.eddyOscillator) return;
+    const oscillator = voice.eddyOscillator, depth = voice.eddyDepth;
+    const now = audio.context.currentTime;
+    voice.eddyOscillator = null; voice.eddyDepth = null;
+    try {
+      depth.gain.setTargetAtTime(0, now, .035);
+      oscillator.stop(now + .14);
+      oscillator.addEventListener('ended', () => {
+        try { oscillator.disconnect(); depth.disconnect(); } catch {}
+      }, { once: true });
+    } catch {
+      try { oscillator.stop(); oscillator.disconnect(); depth.disconnect(); } catch {}
+    }
   }
 
   function disconnectVoice(voice) {
@@ -150,8 +188,8 @@
         voice.gain.gain.cancelScheduledValues(now);
         voice.gain.gain.setValueAtTime(.0001, now);
       } catch {}
-      for (const oscillator of [voice.oscillator, voice.overtone, voice.undertow]) {
-        try { oscillator.stop(now); } catch {}
+      for (const oscillator of [voice.oscillator, voice.overtone, voice.undertow, voice.eddyOscillator]) {
+        try { oscillator?.stop(now); } catch {}
       }
       disconnectVoice(voice);
     }
@@ -160,6 +198,7 @@
       try { canvas.releasePointerCapture?.(pointerId); } catch {}
     }
     pointers.clear();
+    canvas.dataset.eddyVoices = '0';
     keyboard.sounding = false;
     if ((reason === 'visibility-hidden' || reason === 'pagehide') && engine.context.state === 'running') {
       Promise.resolve(engine.context.suspend()).catch(() => {});
@@ -284,6 +323,7 @@
     voice.gain.gain.cancelScheduledValues(now);
     voice.gain.gain.setTargetAtTime(.0001, now, .1);
     voice.oscillator.stop(now + .48); voice.overtone.stop(now + .48); voice.undertow.stop(now + .48);
+    try { voice.eddyOscillator?.stop(now + .48); } catch {}
     balanceVoices(audio);
   }
 
@@ -514,6 +554,7 @@
       ...p, pressure, pressureAvailable, attack, splashPlayed: false, sounding, born: now, lastMotion: now, movedAt: now, motionSpeed: 0,
       pitchX: p.x / Math.max(1, width), mapping: null, precisionActive: false, precisionAmount: 0, precisionOriginX: null,
       currentAnnounced: false, sampledX: p.x, sampledY: p.y, sampledAt: now,
+      eddy: null, eddyVisual: null, eddyPitchX: null, eddyDepthY: null,
       distanceTraveled: 0, resonanceX: p.x, resonanceY: p.y, resonatedMemories: new Set(),
       scoreSamples: sounding ? [{ x: p.x / Math.max(1, width), y: p.y / Math.max(1, height), pitch: p.x / Math.max(1, width), at: now, pressure: attack }] : []
     });
@@ -550,23 +591,52 @@
         active.distanceTraveled += moved;
         const elapsed = Math.max(8, now - active.movedAt);
         active.motionSpeed = music.movementSpeed(moved, elapsed, Math.max(1, Math.min(width, height)));
+        if (!active.eddy && heldBeforeMovement >= gesture.EDDY_ARM_HOLD_MS) {
+          active.eddy = gesture.beginEddy(active.x, active.y, now);
+        }
+        const hadActiveEddy = Boolean(active.eddy?.active);
+        const eddy = active.eddy ? gesture.updateEddy(active.eddy, {
+          x: p.x, y: p.y, now, span: Math.max(1, Math.min(width, height)), speedPerSecond: active.motionSpeed
+        }) : null;
+        active.eddy = eddy?.state ?? null;
+        active.eddyVisual = active.eddy && (eddy.active || eddy.capturesMotion) ? eddy : null;
+        if (hadActiveEddy && !eddy?.active) {
+          clearVoiceEddy(event.pointerId);
+          active.eddyPitchX = null; active.eddyDepthY = null;
+        }
+        if (eddy?.activated) {
+          active.eddyPitchX = Number.isFinite(active.mapping?.frequency)
+            ? music.normalizedAtFrequency(active.mapping.frequency)
+            : active.pitchX;
+          active.eddyDepthY = active.eddy.centerY;
+          addRipple(active.eddy.centerX, active.eddy.centerY, active.pressure, .48);
+          if (!eddyAnnounced) {
+            status.textContent = 'Малый круг поднял водоворот; звук мягко дрожит, широкий взмах сразу его распустит';
+            eddyAnnounced = true;
+            textureAnnounced = true;
+          }
+        }
+        if (eddy?.active) setVoiceEddy(event.pointerId, gesture.eddyExpression(eddy.intensity, eddy.direction));
+        canvas.dataset.eddyVoices = String([...pointers.values()].filter(pointer => pointer.eddy?.active).length);
+
         if (heldBeforeMovement >= music.PRECISION_HOLD_MS && Number.isFinite(active.mapping?.frequency)) {
           active.pitchX = music.normalizedAtFrequency(active.mapping.frequency);
         }
+        const circularCapture = Boolean(eddy?.capturesMotion);
         const steering = music.precisionMotion({
           previousRawX,
           rawX: p.x / Math.max(1, width),
           pitchX: active.pitchX,
-          originRawX: active.precisionOriginX,
+          originRawX: circularCapture ? previousRawX : active.precisionOriginX,
           holdMilliseconds: heldBeforeMovement,
-          speedPerSecond: active.motionSpeed,
+          speedPerSecond: circularCapture ? Math.min(active.motionSpeed, .18) : active.motionSpeed,
           active: active.precisionActive
         });
-        active.pitchX = steering.pitchX;
-        active.precisionActive = steering.active;
-        active.precisionAmount = steering.amount;
-        active.precisionOriginX = steering.originRawX;
-        if (steering.entered && !precisionAnnounced) {
+        active.pitchX = eddy?.active && Number.isFinite(active.eddyPitchX) ? active.eddyPitchX : steering.pitchX;
+        active.precisionActive = eddy?.active || steering.active;
+        active.precisionAmount = eddy?.active ? Math.max(.72, steering.amount) : steering.amount;
+        active.precisionOriginX = eddy?.active ? previousRawX : steering.originRawX;
+        if (steering.entered && !precisionAnnounced && !eddy?.active) {
           status.textContent = 'Медленное движение ведёт высоту тонко вдоль ближайшего течения';
           precisionAnnounced = true;
         } else if (steering.released && !freedomAnnounced) {
@@ -607,7 +677,9 @@
       const scorePressure = active.pressureAvailable ? active.pressure : active.attack;
       captureScoreSample(active, p.x, p.y, now, scorePressure);
       tryScoreResonance(active, p, now);
-      moveVoice(event.pointerId, p.x, p.y, active.pressure, active.mapping.frequency);
+      const audioX = active.eddy?.active ? active.eddy.centerX : p.x;
+      const audioY = active.eddy?.active ? active.eddyDepthY : p.y;
+      moveVoice(event.pointerId, audioX, audioY, active.pressure, active.mapping.frequency);
     }
   }
 
@@ -619,6 +691,7 @@
     rememberContact(active, active.x, active.y, now, pressure);
     endVoice(event.pointerId);
     pointers.delete(event.pointerId);
+    canvas.dataset.eddyVoices = String([...pointers.values()].filter(pointer => pointer.eddy?.active).length);
   }
 
   function keyboardPoint() { return { x: keyboard.x * width, y: keyboard.y * height }; }
@@ -706,6 +779,7 @@
     const active = pointers.get(event.pointerId);
     if (active) rememberContact(active, active.x, active.y, performance.now(), active.pressure);
     endVoice(event.pointerId); pointers.delete(event.pointerId);
+    canvas.dataset.eddyVoices = String([...pointers.values()].filter(pointer => pointer.eddy?.active).length);
   });
   canvas.addEventListener('contextmenu', event => event.preventDefault());
   addEventListener('resize', resize, { passive: true });
@@ -930,17 +1004,21 @@
   function updatePitchMapping(contact, id, x, y, now) {
     const idle = Math.max(0, now - contact.lastMotion);
     const decayedSpeed = contact.motionSpeed * Math.exp(-idle / 180);
+    const eddyHoldsPitch = Boolean(contact.eddy?.active && Number.isFinite(contact.eddyPitchX));
+    const mappedX = eddyHoldsPitch ? contact.eddyPitchX : (Number.isFinite(contact.pitchX) ? contact.pitchX : x / Math.max(1, width));
     contact.mapping = {
-      ...music.mapPitch(Number.isFinite(contact.pitchX) ? contact.pitchX : x / Math.max(1, width), idle, decayedSpeed, tuningFamily),
+      ...music.mapPitch(mappedX, eddyHoldsPitch ? 0 : idle, eddyHoldsPitch ? 0 : decayedSpeed, tuningFamily),
       precision: contact.precisionAmount || 0
     };
-    if (contact.sounding) moveVoice(id, x, y, contact.pressure, contact.mapping.frequency);
+    const audioX = contact.eddy?.active ? contact.eddy.centerX : x;
+    const audioY = contact.eddy?.active && Number.isFinite(contact.eddyDepthY) ? contact.eddyDepthY : y;
+    if (contact.sounding) moveVoice(id, audioX, audioY, contact.pressure, contact.mapping.frequency);
     if (contact.mapping.attraction > .52 && !contact.currentAnnounced) {
       contact.currentAnnounced = true;
       status.textContent = 'Течение мягко удерживает высоту; движение снова освободит звук';
     }
     const texture = music.heldTexture(y / Math.max(1, height), now - contact.born);
-    if (texture.bloom > .52 && !textureAnnounced) {
+    if (texture.bloom > .52 && !textureAnnounced && !contact.eddy?.active) {
       textureAnnounced = true;
       status.textContent = 'Удерживаемая нота дышит вместе с глубинным течением';
     }
@@ -1000,6 +1078,42 @@
       ctx.lineWidth = side > 0 ? 1 : .7;
       ctx.stroke();
     }
+    ctx.restore();
+  }
+
+  function drawEddy(pointer, now) {
+    const eddy = pointer.eddy;
+    if (!eddy?.active) return;
+    const meanRadius = eddy.radiusSamples ? eddy.radiusTotal / eddy.radiusSamples * Math.max(1, Math.min(width, height)) : 18;
+    const radius = Math.max(14, Math.min(42, meanRadius));
+    const expression = gesture.eddyExpression(eddy.intensity, eddy.direction);
+    const hue = 156 + 26 * (1 - eddy.centerY / Math.max(1, height));
+    const phase = reduced.matches ? -.45 : (now - eddy.born) * expression.rateHz * Math.PI * 2 / 1000;
+
+    ctx.save();
+    ctx.translate(eddy.centerX, eddy.centerY);
+    ctx.scale(1, .48);
+    ctx.lineCap = 'round';
+    for (let strand = 0; strand < 3; strand += 1) {
+      const start = phase + strand * Math.PI * 2 / 3;
+      const sweep = expression.visualTurns * Math.PI * 1.32;
+      ctx.beginPath();
+      for (let step = 0; step <= 24; step += 1) {
+        const progress = step / 24;
+        const angle = start + sweep * progress;
+        const strandRadius = radius * (.32 + progress * .68) + strand * 1.4;
+        const x = Math.cos(angle) * strandRadius;
+        const y = Math.sin(angle) * strandRadius;
+        step ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      }
+      ctx.strokeStyle = `hsla(${hue + strand * 7} 68% ${82 - strand * 6}% / ${.18 + eddy.intensity * .16})`;
+      ctx.lineWidth = Math.max(.7, 1.45 - strand * .24);
+      ctx.stroke();
+    }
+    const eye = 2.8 + eddy.intensity * 2.4;
+    ctx.beginPath(); ctx.arc(0, 0, eye, 0, Math.PI * 2);
+    ctx.strokeStyle = `hsla(${hue + 18} 74% 86% / ${.28 + eddy.intensity * .28})`;
+    ctx.lineWidth = 1; ctx.stroke();
     ctx.restore();
   }
 
@@ -1074,6 +1188,7 @@
       for (let j = i + 1; j < soundingPointers.length; j++) drawResonance(soundingPointers[i], soundingPointers[j], now);
     }
     for (let i = ripples.length - 1; i >= 0; i--) if (!drawRipple(ripples[i], now)) ripples.splice(i, 1);
+    for (const pointer of pointers.values()) drawEddy(pointer, now);
     for (const pointer of pointers.values()) drawContact(pointer, now);
     if (keyboardVisual) drawContact(keyboardVisual, now);
     requestAnimationFrame(frame);

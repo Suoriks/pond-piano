@@ -1,11 +1,11 @@
 {
   "project": "pond-piano",
-  "phase": "shoreline-scale-currents",
-  "iteration": 18,
+  "phase": "eddy-gesture",
+  "iteration": 19,
   "status": "completed",
   "current_goal": null,
-  "last_verified": "2026-07-23: Five Node test sets, syntax for 14 JavaScript files, JSON, and diff checks passed. Headless Chromium mobile 390x844 @2x verified three 50x50 tuning pebbles, pointer and keyboard selection, persistence, zero AudioContexts from control use, one running voice after an explicit pond gesture, shell v14 with 13 cached resources, and a complete offline reload. Direct screenshot inspection passed; automated image-model inspection remained unavailable because account ID extraction failed.",
-  "next_step": "Prototype one truly water-shaped gesture: a small circle around a settled contact should create bounded tremolo and a visible eddy without breaking pitch/depth control or the broad-stroke return to free glissando.",
+  "last_verified": "2026-07-26: Six Node test sets, syntax for 16 JavaScript files, JSON, and diff checks passed. Headless Chromium mobile 390x844 @2x activated one eddy after a 650ms hold and 0.82-turn circle in one running voice with four oscillator nodes, then verified immediate broad-stroke escape without ending the voice. Shell v15 cached 14 resources including pond-gesture.js; reduced-motion and runtime/console smoke checks passed. Direct screenshot inspection passed; automated image-model inspection remained unavailable because account ID extraction failed.",
+  "next_step": "Run an alpha-readiness pass on real iPhone and Android hardware for multi-touch, latency, and circular-gesture feel. Publish v0.1.0-alpha only after Evgeniy separately approves it.",
   "platform_target": [
     "desktop",
     "linux",
@@ -16,5 +16,5 @@
   "git_sync": "synced_private_github",
   "git_remote": "https://github.com/Suoriks/pond-piano.git",
   "git_branch": "main",
-  "updated_at": "2026-07-23T07:25:00+03:00"
+  "updated_at": "2026-07-26T01:35:00+03:00"
 }
