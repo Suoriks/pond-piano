@@ -1,11 +1,11 @@
 {
   "project": "pond-piano",
-  "phase": "eddy-gesture",
+  "phase": "alpha-device-qa",
   "iteration": 19,
-  "status": "completed",
+  "status": "released",
   "current_goal": null,
-  "last_verified": "2026-07-26: Six Node test sets, syntax for 16 JavaScript files, JSON, and diff checks passed. Headless Chromium mobile 390x844 @2x activated one eddy after a 650ms hold and 0.82-turn circle in one running voice with four oscillator nodes, then verified immediate broad-stroke escape without ending the voice. Shell v15 cached 14 resources including pond-gesture.js; reduced-motion and runtime/console smoke checks passed. Direct screenshot inspection passed; automated image-model inspection remained unavailable because account ID extraction failed.",
-  "next_step": "Run an alpha-readiness pass on real iPhone and Android hardware for multi-touch, latency, and circular-gesture feel. Publish v0.1.0-alpha only after Evgeniy separately approves it.",
+  "last_verified": "2026-07-26: Public v0.1.0-alpha released from commit 06cea44 after six Node test sets, syntax checks for 16 JavaScript files, headless Chromium mobile gesture/runtime checks, direct screenshot inspection, successful Windows CI run 30177590292, and local SHA-256 verification of the downloaded 80.4 MB portable EXE.",
+  "next_step": "Run the next alpha-readiness pass on real iPhone and Android hardware for multi-touch, latency, and circular-gesture feel; tune only from observed device behavior.",
   "platform_target": [
     "desktop",
     "linux",
@@ -13,8 +13,15 @@
     "ios"
   ],
   "shell_hypothesis": "offline-first-pwa",
-  "git_sync": "synced_private_github",
+  "git_sync": "synced_public_github",
   "git_remote": "https://github.com/Suoriks/pond-piano.git",
   "git_branch": "main",
-  "updated_at": "2026-07-26T01:35:00+03:00"
+  "release": {
+    "tag": "v0.1.0-alpha",
+    "commit": "06cea44e5d00284d07a6294194740f1b470ff00a",
+    "url": "https://github.com/Suoriks/pond-piano/releases/tag/v0.1.0-alpha",
+    "windows_asset": "Pond-Piano-0.1.0-Windows-x64.exe",
+    "published_at": "2026-07-26T04:39:34+03:00"
+  },
+  "updated_at": "2026-07-26T04:41:00+03:00"
 }
