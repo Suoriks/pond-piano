@@ -5,7 +5,20 @@
   "status": "completed",
   "current_goal": null,
   "last_verified": "2026-07-26: Iteration 20 procedural water-drop attack passed six Node test sets, syntax checks for 16 JavaScript files, JSON/diff checks, and an instrumented Chromium 390x844 smoke-test: one fresh voice created exactly one extra drop oscillator, glissando created none, the drop detached after 230 ms while sustain remained, release cleared the voice, shell v16 cached offline, and direct screenshot inspection found no mobile layout regression.",
-  "next_step": "Run the alpha-readiness pass on real iPhone and Android hardware for multi-touch, latency, circular-gesture feel, and audible water-drop balance; tune only from observed device behavior.",
+  "next_step": "Run the alpha-feedback pass on real Android hardware: prove 2/3/5-finger multi-touch, independent glissando, pointer cleanup, latency and frame stability. Then prototype bounded timbre variation and one-shot wave-front collision sounds from the hypotheses in DESIGN.md.",
+  "alpha_feedback": {
+    "captured_at": "2026-07-26T13:59:00+03:00",
+    "observations": [
+      "Random short taps currently sound too similar apart from pitch.",
+      "Visible wave collisions should sometimes produce their own sound.",
+      "Android multi-touch needs real-device proof and polish."
+    ],
+    "constraints": [
+      "Keep variation coherent and gesture-derived rather than arbitrary random presets.",
+      "Collision sounds must be rate-limited, non-recursive and cheap enough for mobile.",
+      "Preserve up to six musical voices unless device measurements prove a lower limit is necessary."
+    ]
+  },
   "platform_target": [
     "desktop",
     "linux",
@@ -23,5 +36,5 @@
     "windows_asset": "Pond-Piano-0.1.0-Windows-x64.exe",
     "published_at": "2026-07-26T04:39:34+03:00"
   },
-  "updated_at": "2026-07-26T13:23:00+03:00"
+  "updated_at": "2026-07-26T13:59:00+03:00"
 }
