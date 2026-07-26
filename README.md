@@ -22,6 +22,10 @@ python3 -m http.server 4173
 
 ## Windows
 
+**[Скачать Pond Piano для Windows — portable EXE v0.1.0-alpha](https://github.com/Suoriks/pond-piano/releases/download/v0.1.0-alpha/Pond-Piano-0.1.0-Windows-x64.exe)**
+
+[Контрольная сумма SHA-256](https://github.com/Suoriks/pond-piano/releases/download/v0.1.0-alpha/SHA256SUMS.txt) · [страница релиза](https://github.com/Suoriks/pond-piano/releases/tag/v0.1.0-alpha)
+
 Портативная сборка не требует установки: запустите `Pond-Piano-0.1.0-Windows-x64.exe` и сделайте первый жест или нажмите клавишу — звук по-прежнему включается только действием пользователя. Оболочка работает без облака и отдаёт PWA только через временный локальный адрес `127.0.0.1`.
 
 EXE пока не подписан сертификатом. Windows SmartScreen может показать предупреждение; используйте файл только из доверенного артефакта проекта.
