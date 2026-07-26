@@ -1,11 +1,11 @@
 {
   "project": "pond-piano",
   "phase": "alpha-device-qa",
-  "iteration": 19,
-  "status": "released",
+  "iteration": 20,
+  "status": "completed",
   "current_goal": null,
-  "last_verified": "2026-07-26: Public v0.1.0-alpha released from commit 06cea44 after six Node test sets, syntax checks for 16 JavaScript files, headless Chromium mobile gesture/runtime checks, direct screenshot inspection, successful Windows CI run 30177590292, and local SHA-256 verification of the downloaded 80.4 MB portable EXE.",
-  "next_step": "Run the next alpha-readiness pass on real iPhone and Android hardware for multi-touch, latency, and circular-gesture feel; tune only from observed device behavior.",
+  "last_verified": "2026-07-26: Iteration 20 procedural water-drop attack passed six Node test sets, syntax checks for 16 JavaScript files, JSON/diff checks, and an instrumented Chromium 390x844 smoke-test: one fresh voice created exactly one extra drop oscillator, glissando created none, the drop detached after 230 ms while sustain remained, release cleared the voice, shell v16 cached offline, and direct screenshot inspection found no mobile layout regression.",
+  "next_step": "Run the alpha-readiness pass on real iPhone and Android hardware for multi-touch, latency, circular-gesture feel, and audible water-drop balance; tune only from observed device behavior.",
   "platform_target": [
     "desktop",
     "linux",
@@ -23,5 +23,5 @@
     "windows_asset": "Pond-Piano-0.1.0-Windows-x64.exe",
     "published_at": "2026-07-26T04:39:34+03:00"
   },
-  "updated_at": "2026-07-26T04:41:00+03:00"
+  "updated_at": "2026-07-26T13:23:00+03:00"
 }

@@ -16,6 +16,8 @@
   const PRECISION_RELEASE_SPEED = .42;
   const PRECISION_RELEASE_DISTANCE = .045;
   const PRECISION_MIN_GAIN = .24;
+  const DROP_MIN_DURATION_SECONDS = .115;
+  const DROP_MAX_DURATION_SECONDS = .16;
   const DEFAULT_SCALE_FAMILY = 'dawn';
   const SCALE_FAMILIES = Object.freeze({
     dawn: Object.freeze({
@@ -123,6 +125,21 @@
     };
   }
 
+  function waterDrop(frequency, normalizedDepth, intensity = .28) {
+    const pitch = Math.max(20, Number.isFinite(frequency) ? frequency : BASE_FREQUENCY);
+    const depth = clamp(normalizedDepth);
+    const force = clamp(intensity);
+    const durationSeconds = DROP_MIN_DURATION_SECONDS + depth * (DROP_MAX_DURATION_SECONDS - DROP_MIN_DURATION_SECONDS);
+    return {
+      durationSeconds,
+      peakGain: .012 + force * .027,
+      startFrequency: pitch * (1.58 - depth * .2),
+      dipFrequency: pitch * (.92 + depth * .03),
+      settleFrequency: pitch,
+      dipAtSeconds: durationSeconds * (.34 + depth * .06)
+    };
+  }
+
   function nearestScaleIndex(frequency, familyId) {
     const scale = scaleSemitones(familyId);
     const semitones = 12 * Math.log2(Math.max(BASE_FREQUENCY, frequency) / BASE_FREQUENCY);
@@ -218,6 +235,8 @@
     PRECISION_RELEASE_SPEED,
     PRECISION_RELEASE_DISTANCE,
     PRECISION_MIN_GAIN,
+    DROP_MIN_DURATION_SECONDS,
+    DROP_MAX_DURATION_SECONDS,
     attackIntensity,
     depthReflection,
     hasExpressivePressure,
@@ -232,6 +251,7 @@
     scaleSemitones,
     serializeScaleFamily,
     spatialPan,
+    waterDrop,
     frequencyAt
   });
 });

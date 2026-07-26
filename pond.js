@@ -134,7 +134,14 @@
 
   function voiceNodes(voice) {
     return [voice.oscillator, voice.overtone, voice.overtoneGain, voice.filter, voice.gain, voice.undertow,
-      voice.filterDrift, voice.overtoneDrift, voice.eddyOscillator, voice.eddyDepth, voice.panner, voice.reflectionSend];
+      voice.filterDrift, voice.overtoneDrift, voice.eddyOscillator, voice.eddyDepth,
+      voice.dropOscillator, voice.dropGain, voice.panner, voice.reflectionSend];
+  }
+
+  function reflectDropVoices(engine = audio) {
+    canvas.dataset.dropVoices = String(engine
+      ? [...engine.voices.values()].filter(voice => voice.dropOscillator).length
+      : 0);
   }
 
   function setVoiceEddy(id, expression) {
@@ -188,7 +195,7 @@
         voice.gain.gain.cancelScheduledValues(now);
         voice.gain.gain.setValueAtTime(.0001, now);
       } catch {}
-      for (const oscillator of [voice.oscillator, voice.overtone, voice.undertow, voice.eddyOscillator]) {
+      for (const oscillator of [voice.oscillator, voice.overtone, voice.undertow, voice.eddyOscillator, voice.dropOscillator]) {
         try { oscillator?.stop(now); } catch {}
       }
       disconnectVoice(voice);
@@ -199,6 +206,7 @@
     }
     pointers.clear();
     canvas.dataset.eddyVoices = '0';
+    reflectDropVoices(engine);
     keyboard.sounding = false;
     if ((reason === 'visibility-hidden' || reason === 'pagehide') && engine.context.state === 'running') {
       Promise.resolve(engine.context.suspend()).catch(() => {});
@@ -234,9 +242,19 @@
     const pan = music.spatialPan(x / Math.max(1, width));
     const texture = music.heldTexture(depth.normalizedDepth, music.TEXTURE_BLOOM_END_MS);
     const reflection = music.depthReflection(depth.normalizedDepth);
+    const drop = music.waterDrop(frequency, depth.normalizedDepth, attack);
+    const dropOscillator = engine.context.createOscillator();
+    const dropGain = engine.context.createGain();
     oscillator.type = 'sine'; overtone.type = 'sine'; undertow.type = 'sine'; filter.type = 'lowpass'; filter.Q.value = .7;
     oscillator.frequency.value = frequency; overtone.frequency.value = frequency * 2;
     undertow.frequency.value = texture.rateHz;
+    dropOscillator.type = 'sine';
+    dropOscillator.frequency.setValueAtTime(drop.startFrequency, now);
+    dropOscillator.frequency.exponentialRampToValueAtTime(drop.dipFrequency, now + drop.dipAtSeconds);
+    dropOscillator.frequency.exponentialRampToValueAtTime(drop.settleFrequency, now + drop.durationSeconds);
+    dropGain.gain.setValueAtTime(.0001, now);
+    dropGain.gain.exponentialRampToValueAtTime(drop.peakGain, now + .008);
+    dropGain.gain.exponentialRampToValueAtTime(.0001, now + drop.durationSeconds);
     overtoneGain.gain.value = depth.brightness;
     filter.frequency.value = depth.cutoff;
     gain.gain.setValueAtTime(.0001, now);
@@ -250,23 +268,36 @@
     if (panner) {
       panner.pan.value = pan;
       gain.connect(panner);
+      dropGain.connect(panner);
       output = panner;
+    } else {
+      dropGain.connect(engine.master);
     }
     output.connect(engine.master);
     if (reflectionSend) {
       reflectionSend.gain.value = reflection.sendGain;
       output.connect(reflectionSend).connect(engine.reflection.input);
+      if (!panner) dropGain.connect(reflectionSend);
     }
     scheduleTextureBloom(filterDrift.gain, texture.filterSweepHz, now);
     scheduleTextureBloom(overtoneDrift.gain, texture.overtonePulse, now);
-    oscillator.start(); overtone.start(); undertow.start();
+    oscillator.start(); overtone.start(); undertow.start(); dropOscillator.connect(dropGain); dropOscillator.start();
+    dropOscillator.stop(now + drop.durationSeconds + .025);
     const voice = {
       oscillator, overtone, overtoneGain, filter, gain, undertow, filterDrift, overtoneDrift, panner, reflectionSend,
+      dropOscillator, dropGain, dropEndsAt: now + drop.durationSeconds, dropIntensity: attack,
       born: now, textureDepth: depth.normalizedDepth, targetFrequency: frequency,
       targetPan: pan, attack, accentUntil: now + .32, releasing: false
     };
     engine.voices.set(id, voice);
+    reflectDropVoices(engine);
     canvas.dataset.audioVoices = String(engine.voices.size);
+    dropOscillator.addEventListener('ended', () => {
+      if (voice.dropOscillator !== dropOscillator) return;
+      try { dropOscillator.disconnect(); dropGain.disconnect(); } catch {}
+      voice.dropOscillator = null; voice.dropGain = null;
+      reflectDropVoices(engine);
+    }, { once: true });
     oscillator.addEventListener('ended', () => {
       if (engine.voices.get(id) !== voice) return;
       engine.voices.delete(id);
@@ -310,6 +341,19 @@
     voice.gain.gain.setValueAtTime(current, now);
     voice.gain.gain.exponentialRampToValueAtTime(.055 + intensity * .085, now + .026);
     voice.gain.gain.exponentialRampToValueAtTime(.063, now + .23);
+    if (voice.dropGain && now < voice.dropEndsAt - .018 && intensity > voice.dropIntensity) {
+      const drop = music.waterDrop(voice.targetFrequency, voice.textureDepth, intensity);
+      const remaining = Math.max(.018, voice.dropEndsAt - now);
+      if (typeof voice.dropGain.gain.cancelAndHoldAtTime === 'function') voice.dropGain.gain.cancelAndHoldAtTime(now);
+      else {
+        const held = Math.max(.0001, voice.dropGain.gain.value);
+        voice.dropGain.gain.cancelScheduledValues(now);
+        voice.dropGain.gain.setValueAtTime(held, now);
+      }
+      voice.dropGain.gain.exponentialRampToValueAtTime(drop.peakGain, now + Math.min(.012, remaining * .25));
+      voice.dropGain.gain.exponentialRampToValueAtTime(.0001, voice.dropEndsAt);
+      voice.dropIntensity = intensity;
+    }
     voice.attack = intensity;
     voice.accentUntil = now + .23;
     return true;
@@ -323,6 +367,7 @@
     voice.gain.gain.cancelScheduledValues(now);
     voice.gain.gain.setTargetAtTime(.0001, now, .1);
     voice.oscillator.stop(now + .48); voice.overtone.stop(now + .48); voice.undertow.stop(now + .48);
+    try { voice.dropOscillator?.stop(Math.min(now + .03, voice.dropEndsAt + .025)); } catch {}
     try { voice.eddyOscillator?.stop(now + .48); } catch {}
     balanceVoices(audio);
   }

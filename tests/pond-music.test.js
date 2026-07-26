@@ -162,4 +162,19 @@ assert.deepEqual(
   'only the per-voice send may depend on depth; the shared bus itself must stay stable'
 );
 
-console.log('pond-music: selectable pitch currents, shared precision, expressive attack, spatial place, held texture, and depth reflection verified');
+const calmShallowDrop = music.waterDrop(440, 0, calmAttack);
+const strongDeepDrop = music.waterDrop(440, 1, fastAttack);
+assert.equal(calmShallowDrop.durationSeconds, music.DROP_MIN_DURATION_SECONDS);
+assert.equal(strongDeepDrop.durationSeconds, music.DROP_MAX_DURATION_SECONDS);
+assert.ok(strongDeepDrop.durationSeconds > calmShallowDrop.durationSeconds,
+  'deep water should let the droplet settle slightly longer');
+assert.ok(strongDeepDrop.peakGain > calmShallowDrop.peakGain && strongDeepDrop.peakGain < .04,
+  'gesture intensity must brighten the droplet without overtaking the sustained voice');
+assert.ok(calmShallowDrop.startFrequency > strongDeepDrop.startFrequency,
+  'shallow water should begin with the brighter pitch contour');
+assert.ok(calmShallowDrop.dipFrequency < calmShallowDrop.settleFrequency,
+  'the transient should dip below and return to the played pitch like a water drop');
+assert.equal(music.waterDrop(440, -4, calmAttack).durationSeconds, calmShallowDrop.durationSeconds);
+assert.equal(music.waterDrop(440, 4, fastAttack).durationSeconds, strongDeepDrop.durationSeconds);
+
+console.log('pond-music: pitch currents, precision, expressive water-drop attack, spatial place, held texture, and depth reflection verified');
