@@ -177,4 +177,43 @@ assert.ok(calmShallowDrop.dipFrequency < calmShallowDrop.settleFrequency,
 assert.equal(music.waterDrop(440, -4, calmAttack).durationSeconds, calmShallowDrop.durationSeconds);
 assert.equal(music.waterDrop(440, 4, fastAttack).durationSeconds, strongDeepDrop.durationSeconds);
 
-console.log('pond-music: pitch currents, precision, expressive water-drop attack, spatial place, held texture, and depth reflection verified');
+const glassMaterial = music.waterMaterial(0);
+const livingMaterial = music.waterMaterial(.5);
+const hollowMaterial = music.waterMaterial(1);
+assert.deepEqual([glassMaterial.dominant, livingMaterial.dominant, hollowMaterial.dominant], ['glass', 'living', 'hollow']);
+assert.ok(glassMaterial.cutoffHz > livingMaterial.cutoffHz && livingMaterial.cutoffHz > hollowMaterial.cutoffHz,
+  'depth must move continuously from bright glass to a dark hollow body');
+assert.ok(glassMaterial.overtoneRatio > livingMaterial.overtoneRatio && livingMaterial.overtoneRatio > hollowMaterial.overtoneRatio,
+  'the second oscillator must change spectral relationship rather than only losing treble');
+assert.ok(glassMaterial.overtoneGain > livingMaterial.overtoneGain && livingMaterial.overtoneGain > hollowMaterial.overtoneGain);
+assert.ok(livingMaterial.filterQ > glassMaterial.filterQ && livingMaterial.filterQ > hollowMaterial.filterQ,
+  'the middle water material should have its own living resonant character');
+assert.ok(glassMaterial.attackSeconds < livingMaterial.attackSeconds && livingMaterial.attackSeconds < hollowMaterial.attackSeconds);
+assert.ok(glassMaterial.releaseSeconds < livingMaterial.releaseSeconds && livingMaterial.releaseSeconds < hollowMaterial.releaseSeconds);
+assert.ok([glassMaterial, livingMaterial, hollowMaterial].every(material =>
+  material.cutoffHz >= 700 && material.cutoffHz <= 5200 &&
+  material.overtoneRatio >= 1 && material.overtoneRatio <= 2.01 &&
+  material.overtoneGain >= .08 && material.overtoneGain <= .2 &&
+  material.levelCompensation >= .9 && material.levelCompensation <= 1.1
+), 'every material parameter must stay inside the mobile voice budget');
+
+for (let depth = 0; depth < 1; depth += .01) {
+  const here = music.waterMaterial(depth);
+  const next = music.waterMaterial(depth + .01);
+  assert.ok(Math.abs(next.cutoffHz - here.cutoffHz) < 230, 'material cutoff must not jump between hidden zones');
+  assert.ok(Math.abs(next.overtoneRatio - here.overtoneRatio) < .055, 'harmonic colour must blend rather than switch presets');
+}
+
+const downwardBias = music.initialBrushBias(4, 28, .9);
+const upwardBias = music.initialBrushBias(4, -28, .9);
+const sidewaysBias = music.initialBrushBias(28, 1, .9);
+assert.ok(downwardBias > .9 && upwardBias < -.9, 'the first vertical brush must preserve direction');
+assert.ok(Math.abs(sidewaysBias) < .05, 'horizontal pitch motion must not accidentally recolour the material');
+assert.equal(music.initialBrushBias(0, 30, 0), 0, 'a slow accidental drift must not count as an intentional brush');
+const brushedDown = music.waterMaterial(.5, downwardBias);
+const brushedUp = music.waterMaterial(.5, upwardBias);
+assert.ok(brushedDown.effectiveDepth > livingMaterial.effectiveDepth && brushedUp.effectiveDepth < livingMaterial.effectiveDepth);
+assert.ok(brushedDown.effectiveDepth - brushedUp.effectiveDepth <= music.MATERIAL_BRUSH_DEPTH * 2 + 1e-9,
+  'gesture colour stays a small bias and cannot replace the visible Y depth axis');
+
+console.log('pond-music: pitch currents, precision, coherent water materials, expressive drop attack, spatial place, held texture, and depth reflection verified');

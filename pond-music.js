@@ -18,6 +18,7 @@
   const PRECISION_MIN_GAIN = .24;
   const DROP_MIN_DURATION_SECONDS = .115;
   const DROP_MAX_DURATION_SECONDS = .16;
+  const MATERIAL_BRUSH_DEPTH = .09;
   const DEFAULT_SCALE_FAMILY = 'dawn';
   const SCALE_FAMILIES = Object.freeze({
     dawn: Object.freeze({
@@ -45,6 +46,7 @@
   const spatialPan = normalizedX => (clamp(normalizedX) * 2 - 1) * MAX_STEREO_PAN;
   const normalizedAtSemitones = semitones => clamp(semitones / (OCTAVES * 12));
   const frequencyAtSemitones = semitones => BASE_FREQUENCY * Math.pow(2, semitones / 12);
+  const blend = (weights, values) => weights.reduce((sum, weight, index) => sum + weight * values[index], 0);
 
   function normalizeScaleFamily(value) {
     return typeof value === 'string' && Object.prototype.hasOwnProperty.call(SCALE_FAMILIES, value)
@@ -137,6 +139,42 @@
       dipFrequency: pitch * (.92 + depth * .03),
       settleFrequency: pitch,
       dipAtSeconds: durationSeconds * (.34 + depth * .06)
+    };
+  }
+
+  function initialBrushBias(deltaX = 0, deltaY = 0, speedPerSecond = 0) {
+    const distance = Math.hypot(deltaX, deltaY);
+    if (!Number.isFinite(distance) || distance < .001) return 0;
+    const verticalDirection = clamp(deltaY / distance, -1, 1);
+    const intention = smoothstep(.1, .8, Math.max(0, Number.isFinite(speedPerSecond) ? speedPerSecond : 0));
+    return verticalDirection * intention;
+  }
+
+  function waterMaterial(normalizedDepth, brushBias = 0) {
+    const depth = clamp(normalizedDepth);
+    const bias = clamp(Number.isFinite(brushBias) ? brushBias : 0, -1, 1);
+    const effectiveDepth = clamp(depth + bias * MATERIAL_BRUSH_DEPTH);
+    const glass = 1 - smoothstep(.15, .5, effectiveDepth);
+    const hollow = smoothstep(.5, .88, effectiveDepth);
+    const living = Math.max(0, 1 - glass - hollow);
+    const weights = [glass, living, hollow];
+    const names = ['glass', 'living', 'hollow'];
+    const dominant = names[weights.indexOf(Math.max(...weights))];
+    return {
+      depth,
+      effectiveDepth,
+      brushBias: bias,
+      dominant,
+      glass,
+      living,
+      hollow,
+      cutoffHz: blend(weights, [5100, 2450, 760]),
+      overtoneRatio: blend(weights, [2.008, 1.502, 1.008]),
+      overtoneGain: blend(weights, [.19, .14, .09]),
+      filterQ: blend(weights, [.55, 1.35, .82]),
+      attackSeconds: blend(weights, [.032, .044, .058]),
+      releaseSeconds: blend(weights, [.42, .5, .58]),
+      levelCompensation: blend(weights, [.94, 1, 1.06])
     };
   }
 
@@ -237,10 +275,12 @@
     PRECISION_MIN_GAIN,
     DROP_MIN_DURATION_SECONDS,
     DROP_MAX_DURATION_SECONDS,
+    MATERIAL_BRUSH_DEPTH,
     attackIntensity,
     depthReflection,
     hasExpressivePressure,
     heldTexture,
+    initialBrushBias,
     mapPitch,
     movementSpeed,
     neighboringCurrents,
@@ -251,6 +291,7 @@
     scaleSemitones,
     serializeScaleFamily,
     spatialPan,
+    waterMaterial,
     waterDrop,
     frequencyAt
   });

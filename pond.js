@@ -28,7 +28,7 @@
   const ripples = [], trails = [], splashes = [], scoreEchoes = [], pointers = new Map();
   const echoCooldowns = new WeakMap();
   let memories = [];
-  const keyboard = { x: .5, y: .52, pitchX: .5, pressure: .48, sounding: false, born: 0, lastMotion: 0, motionSpeed: 0, mapping: null, precisionActive: false, precisionAmount: 0, precisionOriginX: null, scoreSamples: [], distanceTraveled: 0, resonanceX: 0, resonanceY: 0, resonatedMemories: new Set() };
+  const keyboard = { x: .5, y: .52, pitchX: .5, pressure: .48, sounding: false, born: 0, lastMotion: 0, motionSpeed: 0, mapping: null, materialBias: null, precisionActive: false, precisionAmount: 0, precisionOriginX: null, scoreSamples: [], distanceTraveled: 0, resonanceX: 0, resonanceY: 0, resonatedMemories: new Set() };
   let audio = null;
   let audioLifecycle = null;
   let masterState = loadMasterState();
@@ -42,8 +42,7 @@
 
   function depthAt(y) {
     const normalizedDepth = Math.max(0, Math.min(1, y / Math.max(1, height)));
-    const clarity = 1 - normalizedDepth;
-    return { normalizedDepth, cutoff: 520 + 4300 * clarity * clarity, brightness: .08 + clarity * .14 };
+    return { normalizedDepth };
   }
 
   function createAudioEngine() {
@@ -239,14 +238,15 @@
     const panner = typeof engine.context.createStereoPanner === 'function' ? engine.context.createStereoPanner() : null;
     const reflectionSend = engine.reflection ? engine.context.createGain() : null;
     const depth = depthAt(y);
+    const material = music.waterMaterial(depth.normalizedDepth);
     const pan = music.spatialPan(x / Math.max(1, width));
     const texture = music.heldTexture(depth.normalizedDepth, music.TEXTURE_BLOOM_END_MS);
     const reflection = music.depthReflection(depth.normalizedDepth);
     const drop = music.waterDrop(frequency, depth.normalizedDepth, attack);
     const dropOscillator = engine.context.createOscillator();
     const dropGain = engine.context.createGain();
-    oscillator.type = 'sine'; overtone.type = 'sine'; undertow.type = 'sine'; filter.type = 'lowpass'; filter.Q.value = .7;
-    oscillator.frequency.value = frequency; overtone.frequency.value = frequency * 2;
+    oscillator.type = 'sine'; overtone.type = 'sine'; undertow.type = 'sine'; filter.type = 'lowpass'; filter.Q.value = material.filterQ;
+    oscillator.frequency.value = frequency; overtone.frequency.value = frequency * material.overtoneRatio;
     undertow.frequency.value = texture.rateHz;
     dropOscillator.type = 'sine';
     dropOscillator.frequency.setValueAtTime(drop.startFrequency, now);
@@ -255,11 +255,11 @@
     dropGain.gain.setValueAtTime(.0001, now);
     dropGain.gain.exponentialRampToValueAtTime(drop.peakGain, now + .008);
     dropGain.gain.exponentialRampToValueAtTime(.0001, now + drop.durationSeconds);
-    overtoneGain.gain.value = depth.brightness;
-    filter.frequency.value = depth.cutoff;
+    overtoneGain.gain.value = material.overtoneGain;
+    filter.frequency.value = material.cutoffHz;
     gain.gain.setValueAtTime(.0001, now);
-    gain.gain.exponentialRampToValueAtTime(.055 + attack * .085, now + .045);
-    gain.gain.exponentialRampToValueAtTime(.04 + pressure * .055, now + .32);
+    gain.gain.exponentialRampToValueAtTime((.055 + attack * .085) * material.levelCompensation, now + material.attackSeconds);
+    gain.gain.exponentialRampToValueAtTime((.04 + pressure * .055) * material.levelCompensation, now + .32);
     oscillator.connect(filter); overtone.connect(overtoneGain).connect(filter);
     undertow.connect(filterDrift).connect(filter.frequency);
     undertow.connect(overtoneDrift).connect(overtoneGain.gain);
@@ -287,9 +287,13 @@
       oscillator, overtone, overtoneGain, filter, gain, undertow, filterDrift, overtoneDrift, panner, reflectionSend,
       dropOscillator, dropGain, dropEndsAt: now + drop.durationSeconds, dropIntensity: attack,
       born: now, textureDepth: depth.normalizedDepth, targetFrequency: frequency,
+      materialBias: 0, materialDepth: material.effectiveDepth, materialLevel: material.levelCompensation,
+      overtoneRatio: material.overtoneRatio, attackSeconds: material.attackSeconds, releaseSeconds: material.releaseSeconds,
       targetPan: pan, attack, accentUntil: now + .32, releasing: false
     };
     engine.voices.set(id, voice);
+    canvas.dataset.waterMaterial = material.dominant;
+    canvas.dataset.materialBias = '0.000';
     reflectDropVoices(engine);
     canvas.dataset.audioVoices = String(engine.voices.size);
     dropOscillator.addEventListener('ended', () => {
@@ -309,27 +313,43 @@
     return true;
   }
 
-  function moveVoice(id, x, y, pressure = .42, mappedFrequency = null) {
+  function moveVoice(id, x, y, pressure = .42, mappedFrequency = null, materialBias = 0) {
     const voice = audio?.voices.get(id);
     if (!voice) return;
     const now = audio.context.currentTime, frequency = mappedFrequency ?? pitchAt(x), depth = depthAt(y);
-    if (Math.abs(frequency - voice.targetFrequency) > .08) {
+    const material = music.waterMaterial(depth.normalizedDepth, materialBias);
+    const pitchChanged = Math.abs(frequency - voice.targetFrequency) > .08;
+    if (pitchChanged) {
       voice.oscillator.frequency.setTargetAtTime(frequency, now, .026);
-      voice.overtone.frequency.setTargetAtTime(frequency * 2, now, .026);
       voice.targetFrequency = frequency;
+    }
+    const overtoneFrequency = frequency * material.overtoneRatio;
+    if (pitchChanged || Math.abs(material.overtoneRatio - voice.overtoneRatio) > .0005) {
+      voice.overtone.frequency.setTargetAtTime(overtoneFrequency, now, .045);
+      voice.overtoneRatio = material.overtoneRatio;
     }
     const pan = music.spatialPan(x / Math.max(1, width));
     if (voice.panner && Math.abs(pan - voice.targetPan) > .002) {
       voice.panner.pan.setTargetAtTime(pan, now, .045);
       voice.targetPan = pan;
     }
-    voice.filter.frequency.setTargetAtTime(depth.cutoff, now, .035);
-    voice.overtoneGain.gain.setTargetAtTime(depth.brightness, now, .06);
+    voice.filter.frequency.setTargetAtTime(material.cutoffHz, now, .055);
+    voice.filter.Q.setTargetAtTime(material.filterQ, now, .08);
+    voice.overtoneGain.gain.setTargetAtTime(material.overtoneGain, now, .06);
     if (voice.reflectionSend) {
       voice.reflectionSend.gain.setTargetAtTime(music.depthReflection(depth.normalizedDepth).sendGain, now, .08);
     }
+    voice.materialBias = material.brushBias;
+    voice.materialDepth = material.effectiveDepth;
+    voice.materialLevel = material.levelCompensation;
+    voice.attackSeconds = material.attackSeconds;
+    voice.releaseSeconds = material.releaseSeconds;
+    canvas.dataset.waterMaterial = material.dominant;
+    canvas.dataset.materialBias = material.brushBias.toFixed(3);
     retargetTexture(voice, depth.normalizedDepth, now);
-    if (now >= voice.accentUntil) voice.gain.gain.setTargetAtTime(.04 + pressure * .065, now, .04);
+    if (now >= voice.accentUntil) {
+      voice.gain.gain.setTargetAtTime((.04 + pressure * .065) * material.levelCompensation, now, .05);
+    }
   }
 
   function accentVoice(id, intensity) {
@@ -339,10 +359,10 @@
     const current = Math.max(.0001, voice.gain.gain.value);
     voice.gain.gain.cancelScheduledValues(now);
     voice.gain.gain.setValueAtTime(current, now);
-    voice.gain.gain.exponentialRampToValueAtTime(.055 + intensity * .085, now + .026);
-    voice.gain.gain.exponentialRampToValueAtTime(.063, now + .23);
+    voice.gain.gain.exponentialRampToValueAtTime((.055 + intensity * .085) * voice.materialLevel, now + Math.min(.04, voice.attackSeconds));
+    voice.gain.gain.exponentialRampToValueAtTime(.063 * voice.materialLevel, now + .23);
     if (voice.dropGain && now < voice.dropEndsAt - .018 && intensity > voice.dropIntensity) {
-      const drop = music.waterDrop(voice.targetFrequency, voice.textureDepth, intensity);
+      const drop = music.waterDrop(voice.targetFrequency, voice.materialDepth, intensity);
       const remaining = Math.max(.018, voice.dropEndsAt - now);
       if (typeof voice.dropGain.gain.cancelAndHoldAtTime === 'function') voice.dropGain.gain.cancelAndHoldAtTime(now);
       else {
@@ -366,9 +386,9 @@
     voice.releasing = true;
     voice.gain.gain.cancelScheduledValues(now);
     voice.gain.gain.setTargetAtTime(.0001, now, .1);
-    voice.oscillator.stop(now + .48); voice.overtone.stop(now + .48); voice.undertow.stop(now + .48);
+    voice.oscillator.stop(now + voice.releaseSeconds); voice.overtone.stop(now + voice.releaseSeconds); voice.undertow.stop(now + voice.releaseSeconds);
     try { voice.dropOscillator?.stop(Math.min(now + .03, voice.dropEndsAt + .025)); } catch {}
-    try { voice.eddyOscillator?.stop(now + .48); } catch {}
+    try { voice.eddyOscillator?.stop(now + voice.releaseSeconds); } catch {}
     balanceVoices(audio);
   }
 
@@ -597,6 +617,7 @@
     const sounding = startVoice(event.pointerId, p.x, p.y, pressure, pitchAt(p.x), attack, engine);
     pointers.set(event.pointerId, {
       ...p, pressure, pressureAvailable, attack, splashPlayed: false, sounding, born: now, lastMotion: now, movedAt: now, motionSpeed: 0,
+      originX: p.x, originY: p.y, materialBias: null,
       pitchX: p.x / Math.max(1, width), mapping: null, precisionActive: false, precisionAmount: 0, precisionOriginX: null,
       currentAnnounced: false, sampledX: p.x, sampledY: p.y, sampledAt: now,
       eddy: null, eddyVisual: null, eddyPitchX: null, eddyDepthY: null,
@@ -636,6 +657,13 @@
         active.distanceTraveled += moved;
         const elapsed = Math.max(8, now - active.movedAt);
         active.motionSpeed = music.movementSpeed(moved, elapsed, Math.max(1, Math.min(width, height)));
+        const brushDistance = Math.hypot(p.x - active.originX, p.y - active.originY);
+        if (active.materialBias === null && now - active.born <= music.ATTACK_WINDOW_MS &&
+            brushDistance >= Math.max(8, Math.min(width, height) * .018)) {
+          active.materialBias = music.initialBrushBias(
+            p.x - active.originX, p.y - active.originY, active.motionSpeed
+          );
+        }
         if (!active.eddy && heldBeforeMovement >= gesture.EDDY_ARM_HOLD_MS) {
           active.eddy = gesture.beginEddy(active.x, active.y, now);
         }
@@ -724,7 +752,7 @@
       tryScoreResonance(active, p, now);
       const audioX = active.eddy?.active ? active.eddy.centerX : p.x;
       const audioY = active.eddy?.active ? active.eddyDepthY : p.y;
-      moveVoice(event.pointerId, audioX, audioY, active.pressure, active.mapping.frequency);
+      moveVoice(event.pointerId, audioX, audioY, active.pressure, active.mapping.frequency, active.materialBias ?? 0);
     }
   }
 
@@ -752,6 +780,11 @@
       const p = keyboardPoint();
       const moved = Math.hypot((keyboard.x - previousX) * width, (keyboard.y - previousY) * height);
       keyboard.motionSpeed = music.movementSpeed(moved, Math.max(8, heldBeforeMovement), Math.max(1, Math.min(width, height)));
+      if (keyboard.sounding && keyboard.materialBias === null && now - keyboard.born <= music.ATTACK_WINDOW_MS) {
+        keyboard.materialBias = music.initialBrushBias(
+          movement[0] * width, movement[1] * height, keyboard.motionSpeed
+        );
+      }
       if (!keyboard.sounding) {
         keyboard.pitchX = keyboard.x;
         keyboard.precisionActive = false;
@@ -779,7 +812,7 @@
       if (keyboard.sounding) {
         keyboard.distanceTraveled += Math.hypot(movement[0] * width, movement[1] * height);
         keyboard.mapping = { ...music.mapPitch(keyboard.pitchX, 0, keyboard.motionSpeed, tuningFamily), precision: keyboard.precisionAmount };
-        moveVoice('keyboard', p.x, p.y, .48, keyboard.mapping.frequency);
+        moveVoice('keyboard', p.x, p.y, .48, keyboard.mapping.frequency, keyboard.materialBias ?? 0);
         captureScoreSample(keyboard, p.x, p.y, now, .48);
         tryScoreResonance(keyboard, p, now);
         trails.push({ x: p.x, y: p.y, fromX: p.x - movement[0] * width, fromY: p.y - movement[1] * height, born: now, pressure: .48, speed: .55, hue: 152 + 30 * (1 - p.y / height) });
@@ -789,7 +822,7 @@
       event.preventDefault();
       const now = performance.now();
       keyboard.sounding = true; keyboard.born = now; keyboard.lastMotion = now; keyboard.motionSpeed = 0; keyboard.currentAnnounced = false;
-      keyboard.pitchX = keyboard.x; keyboard.mapping = null; keyboard.precisionActive = false; keyboard.precisionAmount = 0; keyboard.precisionOriginX = null;
+      keyboard.pitchX = keyboard.x; keyboard.mapping = null; keyboard.materialBias = null; keyboard.precisionActive = false; keyboard.precisionAmount = 0; keyboard.precisionOriginX = null;
       const p = keyboardPoint();
       keyboard.distanceTraveled = 0; keyboard.resonanceX = p.x; keyboard.resonanceY = p.y; keyboard.resonatedMemories = new Set();
       keyboard.scoreSamples = [{ x: keyboard.x, y: keyboard.y, pitch: keyboard.pitchX, at: now, pressure: .48 }];
@@ -1057,7 +1090,7 @@
     };
     const audioX = contact.eddy?.active ? contact.eddy.centerX : x;
     const audioY = contact.eddy?.active && Number.isFinite(contact.eddyDepthY) ? contact.eddyDepthY : y;
-    if (contact.sounding) moveVoice(id, audioX, audioY, contact.pressure, contact.mapping.frequency);
+    if (contact.sounding) moveVoice(id, audioX, audioY, contact.pressure, contact.mapping.frequency, contact.materialBias ?? 0);
     if (contact.mapping.attraction > .52 && !contact.currentAnnounced) {
       contact.currentAnnounced = true;
       status.textContent = 'Течение мягко удерживает высоту; движение снова освободит звук';

@@ -1,11 +1,11 @@
 {
   "project": "pond-piano",
-  "phase": "alpha-device-qa",
-  "iteration": 20,
+  "phase": "alpha-wave-collision-sound",
+  "iteration": 21,
   "status": "completed",
   "current_goal": null,
-  "last_verified": "2026-07-26: Iteration 20 procedural water-drop attack passed six Node test sets, syntax checks for 16 JavaScript files, JSON/diff checks, and an instrumented Chromium 390x844 smoke-test: one fresh voice created exactly one extra drop oscillator, glissando created none, the drop detached after 230 ms while sustain remained, release cleared the voice, shell v16 cached offline, and direct screenshot inspection found no mobile layout regression.",
-  "next_step": "Run the alpha-feedback pass on real Android hardware: prove 2/3/5-finger multi-touch, independent glissando, pointer cleanup, latency and frame stability. Then prototype bounded timbre variation and one-shot wave-front collision sounds from the hypotheses in DESIGN.md.",
+  "last_verified": "2026-07-27: Iteration 21 coherent water materials passed six Node test sets, syntax checks for 16 JavaScript files, JSON/diff checks, and an instrumented Chromium 390x844 Web Audio smoke-test. Shallow/middle/deep zones produced bounded distinct filter, overtone and envelope parameters; a first downward brush added a deterministic 0.995 bias; six touches added exactly 24 oscillator nodes while the seventh added none; release returned voices to zero; shell v17 reloaded offline; direct screenshot inspection found no mobile layout regression.",
+  "next_step": "Implement one-shot wave-front collision sounds: predict the first meaningful collision per live ripple pair in a pure time-based model, derive a quiet pearl response from parent pitches and collision position, enforce pair latches plus global rate/node limits, and verify no recursive waves or score entries are created. Real Android multi-touch and latency still require a device pass.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -36,5 +36,5 @@
     "windows_asset": "Pond-Piano-0.1.0-Windows-x64.exe",
     "published_at": "2026-07-26T04:39:34+03:00"
   },
-  "updated_at": "2026-07-26T13:59:00+03:00"
+  "updated_at": "2026-07-27T17:24:00+03:00"
 }
