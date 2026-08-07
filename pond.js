@@ -6,11 +6,13 @@
   const music = window.PondMusic;
   const gesture = window.PondGesture;
   const score = window.PondScore;
+  const waves = window.PondWaves;
   const masterModel = window.PondMaster;
   const audioLifecycleFactory = window.PondAudioLifecycle;
   if (!music) throw new Error('Pond music mapping did not load');
   if (!gesture) throw new Error('Pond gesture mapping did not load');
   if (!score) throw new Error('Pond score mapping did not load');
+  if (!waves) throw new Error('Pond wave mapping did not load');
   if (!masterModel) throw new Error('Pond master control did not load');
   if (!audioLifecycleFactory) throw new Error('Pond audio lifecycle did not load');
   const volumeControl = document.querySelector('.shore-control');
@@ -25,8 +27,13 @@
   const TUNING_STORAGE_KEY = 'pond-piano.tuning.v1';
   const MAX_VOICES = 6;
   const ECHO_COOLDOWN_MS = 3200;
-  const ripples = [], trails = [], splashes = [], scoreEchoes = [], pointers = new Map();
+  const COLLISION_RATE_LIMIT_MS = 230;
+  const MAX_PENDING_COLLISIONS = 8;
+  const MAX_COLLISION_VOICES = 3;
+  const ripples = [], trails = [], splashes = [], scoreEchoes = [], collisionPearls = [], pointers = new Map();
   const echoCooldowns = new WeakMap();
+  const collisionPairs = new Map();
+  const collisionTimers = new Map();
   let memories = [];
   const keyboard = { x: .5, y: .52, pitchX: .5, pressure: .48, sounding: false, born: 0, lastMotion: 0, motionSpeed: 0, mapping: null, materialBias: null, precisionActive: false, precisionAmount: 0, precisionOriginX: null, scoreSamples: [], distanceTraveled: 0, resonanceX: 0, resonanceY: 0, resonatedMemories: new Set() };
   let audio = null;
@@ -34,7 +41,11 @@
   let masterState = loadMasterState();
   let tuningFamily = loadTuningFamily();
   let echoSerial = 0;
+  let rippleSerial = 0;
+  let collisionSerial = 0;
+  let lastCollisionAt = -Infinity;
   let width = 0, height = 0, dpr = 1, last = performance.now(), announced = false, scoreAnnounced = false, dynamicsAnnounced = false, textureAnnounced = false, precisionAnnounced = false, freedomAnnounced = false, eddyAnnounced = false;
+  let collisionAnnounced = false;
 
   function pitchAt(x) {
     return music.frequencyAt(x / Math.max(1, width));
@@ -75,7 +86,7 @@
         console.warn('Water reflection is unavailable; keeping the direct voice', error);
       }
     }
-    audio = { context, master, reflection, voices: new Map() };
+    audio = { context, master, reflection, voices: new Map(), collisionVoices: new Set() };
     return audio;
   }
 
@@ -199,6 +210,17 @@
       }
       disconnectVoice(voice);
     }
+    for (const pearl of engine.collisionVoices ?? []) {
+      try { pearl.oscillator.stop(now); } catch {}
+      for (const node of pearl.nodes) {
+        try { node?.disconnect(); } catch {}
+      }
+    }
+    engine.collisionVoices?.clear();
+    for (const timer of collisionTimers.values()) clearTimeout(timer);
+    collisionTimers.clear();
+    collisionPairs.clear();
+    canvas.dataset.pearlVoices = '0';
     balanceVoices(engine);
     for (const pointerId of pointers.keys()) {
       try { canvas.releasePointerCapture?.(pointerId); } catch {}
@@ -527,8 +549,98 @@
     return 'голосов';
   }
 
-  function addRipple(x, y, pressure, strength = 1) {
-    ripples.push({ x, y, born: performance.now(), pressure, strength, hue: 152 + 30 * (1 - y / height) });
+  function disconnectCollisionVoice(engine, pearl) {
+    if (!engine.collisionVoices?.delete(pearl)) return;
+    for (const node of pearl.nodes) {
+      try { node?.disconnect(); } catch {}
+    }
+    canvas.dataset.pearlVoices = String(engine.collisionVoices.size);
+  }
+
+  function playCollisionPearl(collision) {
+    const engine = audio;
+    const visualNow = performance.now();
+    if (!engine || engine.context.state !== 'running' ||
+        engine.collisionVoices.size >= MAX_COLLISION_VOICES ||
+        visualNow - lastCollisionAt < COLLISION_RATE_LIMIT_MS) return false;
+
+    const depth = Math.max(0, Math.min(1, collision.y / Math.max(1, height)));
+    const response = music.collisionPearl(collision.parentFrequency, depth, collision.energy, tuningFamily);
+    const now = engine.context.currentTime;
+    const oscillator = engine.context.createOscillator();
+    const filter = engine.context.createBiquadFilter();
+    const gain = engine.context.createGain();
+    const panner = typeof engine.context.createStereoPanner === 'function' ? engine.context.createStereoPanner() : null;
+    const reflectionSend = engine.reflection ? engine.context.createGain() : null;
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(response.startFrequency, now);
+    oscillator.frequency.exponentialRampToValueAtTime(response.frequency, now + response.durationSeconds * .42);
+    oscillator.frequency.exponentialRampToValueAtTime(response.frequency * .985, now + response.durationSeconds);
+    filter.type = 'lowpass'; filter.frequency.value = response.cutoffHz; filter.Q.value = 1.8;
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.exponentialRampToValueAtTime(response.peakGain, now + .012);
+    gain.gain.exponentialRampToValueAtTime(.0001, now + response.durationSeconds);
+    oscillator.connect(filter).connect(gain);
+    let output = gain;
+    if (panner) {
+      panner.pan.value = music.spatialPan(collision.x / Math.max(1, width));
+      gain.connect(panner);
+      output = panner;
+    }
+    output.connect(engine.master);
+    if (reflectionSend) {
+      reflectionSend.gain.value = music.depthReflection(depth).sendGain * .52;
+      output.connect(reflectionSend).connect(engine.reflection.input);
+    }
+    const pearl = { oscillator, nodes: [oscillator, filter, gain, panner, reflectionSend] };
+    engine.collisionVoices.add(pearl);
+    canvas.dataset.pearlVoices = String(engine.collisionVoices.size);
+    canvas.dataset.peakPearlVoices = String(Math.max(
+      Number(canvas.dataset.peakPearlVoices) || 0,
+      engine.collisionVoices.size
+    ));
+    canvas.dataset.waveCollisions = String(++collisionSerial);
+    collisionPearls.push({ x: collision.x, y: collision.y, born: visualNow, energy: collision.energy,
+      hue: 165 + 24 * (1 - depth) });
+    if (collisionPearls.length > 12) collisionPearls.shift();
+    lastCollisionAt = visualNow;
+    oscillator.addEventListener('ended', () => disconnectCollisionVoice(engine, pearl), { once: true });
+    oscillator.start();
+    oscillator.stop(now + response.durationSeconds + .025);
+    if (!collisionAnnounced) {
+      status.textContent = 'Два фронта встретились; вода ответила короткой жемчужной нотой';
+      collisionAnnounced = true;
+    }
+    return true;
+  }
+
+  function scheduleWaveCollisions(ripple, now) {
+    for (const [key, expiresAt] of collisionPairs) {
+      if (expiresAt <= now) collisionPairs.delete(key);
+    }
+    const candidates = ripples
+      .map(previous => waves.predictCollision(previous, ripple, now))
+      .filter(Boolean)
+      .sort((a, b) => a.at - b.at);
+    for (const collision of candidates) {
+      if (collisionTimers.size >= MAX_PENDING_COLLISIONS) break;
+      if (collisionPairs.has(collision.key)) continue;
+      collisionPairs.set(collision.key, collision.at + 1200);
+      const timer = setTimeout(() => {
+        collisionTimers.delete(collision.key);
+        playCollisionPearl(collision);
+      }, Math.max(0, collision.at - performance.now()));
+      collisionTimers.set(collision.key, timer);
+    }
+  }
+
+  function addRipple(x, y, pressure, strength = 1, frequency = pitchAt(x)) {
+    const born = performance.now();
+    const ripple = waves.createWave({ id: ++rippleSerial, x, y, born, pressure, strength, frequency });
+    if (!ripple) return;
+    scheduleWaveCollisions(ripple, born);
+    ripples.push({ ...ripple, hue: 152 + 30 * (1 - y / height) });
+    canvas.dataset.rippleEvents = String(rippleSerial);
     if (ripples.length > 32) ripples.shift();
   }
 
@@ -549,7 +661,7 @@
     if (!startVoice(id, x, y, pressure, music.frequencyAt(memory.pitch), attack)) return false;
     scoreEchoes.push({ memory, crossing, segmentIndex: crossing.segmentIndex, born: now });
     if (scoreEchoes.length > 8) scoreEchoes.shift();
-    addRipple(x, y, pressure, .55);
+    addRipple(x, y, pressure, .55, music.frequencyAt(memory.pitch));
     setTimeout(() => endVoice(id), 420);
     return true;
   }
@@ -598,6 +710,7 @@
     captureScoreSample(contact, x, y, now, pressure, true);
     const previousMotifs = score.groupMotifs(memories).length;
     memories = score.append(memories, score.createMemory(contact.scoreSamples, now));
+    canvas.dataset.scoreMemories = String(memories.length);
     const motifCount = score.groupMotifs(memories).length;
     if (previousMotifs > 0 && motifCount > previousMotifs) {
       status.textContent = 'Пауза отделила новый мотив; вода не связывает его с предыдущим';
@@ -682,7 +795,8 @@
             ? music.normalizedAtFrequency(active.mapping.frequency)
             : active.pitchX;
           active.eddyDepthY = active.eddy.centerY;
-          addRipple(active.eddy.centerX, active.eddy.centerY, active.pressure, .48);
+          addRipple(active.eddy.centerX, active.eddy.centerY, active.pressure, .48,
+            active.mapping?.frequency ?? pitchAt(active.eddy.centerX));
           if (!eddyAnnounced) {
             status.textContent = 'Малый круг поднял водоворот; звук мягко дрожит, широкий взмах сразу его распустит';
             eddyAnnounced = true;
@@ -730,7 +844,8 @@
             active.attack = attack;
             if (active.scoreSamples[0]) active.scoreSamples[0].pressure = attack;
             if (accentVoice(event.pointerId, attack) && attack >= .5 && !active.splashPlayed) {
-              addRipple(p.x, p.y, attack, .42 + attack * .55);
+              addRipple(p.x, p.y, attack, .42 + attack * .55,
+                active.mapping?.frequency ?? pitchAt(p.x));
               addSplash(p.x, p.y, attack, p.x - active.x, p.y - active.y);
               active.splashPlayed = true;
               if (!dynamicsAnnounced) {
@@ -760,7 +875,8 @@
     const active = pointers.get(event.pointerId);
     if (!active) return;
     const now = performance.now(), pressure = active.pressureAvailable ? active.pressure : active.attack;
-    addRipple(active.x, active.y, pressure, .55);
+    addRipple(active.x, active.y, pressure, .55,
+      active.mapping?.frequency ?? pitchAt(active.x));
     rememberContact(active, active.x, active.y, now, pressure);
     endVoice(event.pointerId);
     pointers.delete(event.pointerId);
@@ -838,7 +954,8 @@
       event.preventDefault();
       const p = keyboardPoint(), now = performance.now();
       rememberContact(keyboard, p.x, p.y, now, .48);
-      keyboard.sounding = false; endVoice('keyboard'); addRipple(p.x, p.y, .48, .55);
+      keyboard.sounding = false; endVoice('keyboard');
+      addRipple(p.x, p.y, .48, .55, keyboard.mapping?.frequency ?? pitchAt(p.x));
     }
   });
   canvas.addEventListener('blur', () => {
@@ -924,6 +1041,26 @@
       ctx.strokeStyle = `hsla(${r.hue + i * 7} 70% ${78 - i * 7}% / ${fade * (.68 - i * .13)})`;
       ctx.lineWidth = Math.max(.7, 1.8 - age * .35 - i * .2); ctx.stroke();
     }
+    return true;
+  }
+
+  function drawCollisionPearl(pearl, now) {
+    const age = Math.max(0, (now - pearl.born) / 1000);
+    const life = reduced.matches ? .42 : .76;
+    if (age > life) return false;
+    const progress = age / life;
+    const fade = Math.pow(1 - progress, 1.8) * (.48 + pearl.energy * .42);
+    const radius = reduced.matches ? 5.5 : 3.5 + Math.sin(progress * Math.PI) * (5 + pearl.energy * 4);
+    const glow = ctx.createRadialGradient(pearl.x, pearl.y, 0, pearl.x, pearl.y, radius * 3.2);
+    glow.addColorStop(0, `hsla(${pearl.hue + 22} 78% 92% / ${fade})`);
+    glow.addColorStop(.22, `hsla(${pearl.hue} 72% 78% / ${fade * .48})`);
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(pearl.x, pearl.y, radius * 3.2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = `hsla(${pearl.hue + 18} 70% 94% / ${fade * .92})`;
+    ctx.beginPath();
+    ctx.ellipse(pearl.x, pearl.y, Math.max(1.2, radius * .52), Math.max(.8, radius * .28), -.28, 0, Math.PI * 2);
+    ctx.fill();
     return true;
   }
 
@@ -1266,6 +1403,9 @@
       for (let j = i + 1; j < soundingPointers.length; j++) drawResonance(soundingPointers[i], soundingPointers[j], now);
     }
     for (let i = ripples.length - 1; i >= 0; i--) if (!drawRipple(ripples[i], now)) ripples.splice(i, 1);
+    for (let i = collisionPearls.length - 1; i >= 0; i--) {
+      if (!drawCollisionPearl(collisionPearls[i], now)) collisionPearls.splice(i, 1);
+    }
     for (const pointer of pointers.values()) drawEddy(pointer, now);
     for (const pointer of pointers.values()) drawContact(pointer, now);
     if (keyboardVisual) drawContact(keyboardVisual, now);

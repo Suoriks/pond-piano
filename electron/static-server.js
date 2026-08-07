@@ -10,6 +10,7 @@ const APP_FILES = new Map([
   ['/pond-music.js', 'pond-music.js'],
   ['/pond-gesture.js', 'pond-gesture.js'],
   ['/pond-score.js', 'pond-score.js'],
+  ['/pond-waves.js', 'pond-waves.js'],
   ['/pond-master.js', 'pond-master.js'],
   ['/pond-audio-lifecycle.js', 'pond-audio-lifecycle.js'],
   ['/pond.js', 'pond.js'],

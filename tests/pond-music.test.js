@@ -162,6 +162,16 @@ assert.deepEqual(
   'only the per-voice send may depend on depth; the shared bus itself must stay stable'
 );
 
+const shallowPearl = music.collisionPearl(Math.sqrt(220 * 440), .1, .28, 'dawn');
+const deepPearl = music.collisionPearl(Math.sqrt(220 * 440), .9, .8, 'dusk');
+assert.ok(shallowPearl.peakGain >= .0045 && deepPearl.peakGain <= .0165,
+  'a collision pearl must remain much quieter than a sustained voice');
+assert.ok(shallowPearl.durationSeconds < deepPearl.durationSeconds && deepPearl.durationSeconds < .26,
+  'deep collisions may settle longer but must remain short');
+assert.ok(shallowPearl.startFrequency > shallowPearl.frequency,
+  'the pearl must fall into its derived parent pitch');
+assert.equal(deepPearl.scaleFamily, 'dusk', 'the current shoreline family must guide the pearl pitch');
+
 const calmShallowDrop = music.waterDrop(440, 0, calmAttack);
 const strongDeepDrop = music.waterDrop(440, 1, fastAttack);
 assert.equal(calmShallowDrop.durationSeconds, music.DROP_MIN_DURATION_SECONDS);
@@ -216,4 +226,4 @@ assert.ok(brushedDown.effectiveDepth > livingMaterial.effectiveDepth && brushedU
 assert.ok(brushedDown.effectiveDepth - brushedUp.effectiveDepth <= music.MATERIAL_BRUSH_DEPTH * 2 + 1e-9,
   'gesture colour stays a small bias and cannot replace the visible Y depth axis');
 
-console.log('pond-music: pitch currents, precision, coherent water materials, expressive drop attack, spatial place, held texture, and depth reflection verified');
+console.log('pond-music: pitch currents, precision, coherent water materials, expressive drop attack, collision pearls, spatial place, held texture, and depth reflection verified');

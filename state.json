@@ -1,11 +1,11 @@
 {
   "project": "pond-piano",
-  "phase": "alpha-wave-collision-sound",
-  "iteration": 21,
+  "phase": "alpha-device-pass",
+  "iteration": 22,
   "status": "completed",
   "current_goal": null,
-  "last_verified": "2026-07-27: Iteration 21 coherent water materials passed six Node test sets, syntax checks for 16 JavaScript files, JSON/diff checks, and an instrumented Chromium 390x844 Web Audio smoke-test. Shallow/middle/deep zones produced bounded distinct filter, overtone and envelope parameters; a first downward brush added a deterministic 0.995 bias; six touches added exactly 24 oscillator nodes while the seventh added none; release returned voices to zero; shell v17 reloaded offline; direct screenshot inspection found no mobile layout regression.",
-  "next_step": "Implement one-shot wave-front collision sounds: predict the first meaningful collision per live ripple pair in a pure time-based model, derive a quiet pearl response from parent pitches and collision position, enforce pair latches plus global rate/node limits, and verify no recursive waves or score entries are created. Real Android multi-touch and latency still require a device pass.",
+  "last_verified": "2026-08-08: Iteration 22 wave collisions passed seven Node test sets (10 tests), syntax checks for 18 JavaScript files, JSON/diff checks, and a real Web Audio Chromium 390x844 smoke-test. Two notes produced one bounded pearl at the predicted front intersection; its nodes returned from one to zero, ripple and score counters stayed unchanged, shell v18 reloaded offline with PondWaves, console/runtime errors stayed empty, and direct screenshot inspection confirmed a coherent mobile composition.",
+  "next_step": "Run a real-device alpha pass on Android Chrome/PWA and iPhone Safari for 2/3/5-finger independence, latency, the eddy gesture, drop/material/pearl balance, edge pointercancel and background resume; change numeric boundaries only from measured device behavior.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -36,5 +36,5 @@
     "windows_asset": "Pond-Piano-0.1.0-Windows-x64.exe",
     "published_at": "2026-07-26T04:39:34+03:00"
   },
-  "updated_at": "2026-07-27T17:24:00+03:00"
+  "updated_at": "2026-08-08T00:29:00+03:00"
 }

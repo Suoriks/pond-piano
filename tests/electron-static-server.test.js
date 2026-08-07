@@ -39,6 +39,7 @@ function request(origin, requestPath, options = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pond-piano-server-'));
   fs.writeFileSync(path.join(root, 'index.html'), '<!doctype html><title>Pond</title>');
   fs.writeFileSync(path.join(root, 'pond-master.js'), 'globalThis.PondMaster = {};');
+  fs.writeFileSync(path.join(root, 'pond-waves.js'), 'globalThis.PondWaves = {};');
   fs.writeFileSync(path.join(root, 'state.json'), '{"secret":"must-not-be-served"}');
 
   const server = createStaticServer(root);
@@ -58,6 +59,10 @@ function request(origin, requestPath, options = {}) {
     const master = await request(origin, '/pond-master.js');
     assert.equal(master.status, 200, 'the desktop shell must serve the master-control layer');
     assert.match(master.headers['content-type'], /^text\/javascript/);
+
+    const waves = await request(origin, '/pond-waves.js');
+    assert.equal(waves.status, 200, 'the desktop shell must serve the pure wave-collision layer');
+    assert.match(waves.headers['content-type'], /^text\/javascript/);
 
     assert.equal((await request(origin, '/state.json')).status, 404, 'non-shell files must never be served');
     assert.equal((await request(origin, '/..%2fstate.json')).status, 403, 'encoded separators must be rejected');

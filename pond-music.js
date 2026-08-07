@@ -142,6 +142,22 @@
     };
   }
 
+  function collisionPearl(parentFrequency, normalizedDepth, energy = .35, familyId = DEFAULT_SCALE_FAMILY) {
+    const source = Math.max(BASE_FREQUENCY, Number.isFinite(parentFrequency) ? parentFrequency : BASE_FREQUENCY);
+    const depth = clamp(normalizedDepth);
+    const force = clamp(energy);
+    const current = mapPitch(normalizedAtFrequency(source), 980, 0, familyId);
+    const frequency = current.frequency;
+    return {
+      frequency,
+      startFrequency: frequency * (1.38 - depth * .12),
+      durationSeconds: .14 + depth * .075 + force * .035,
+      peakGain: .0045 + force * .012,
+      cutoffHz: 1900 + (1 - depth) * 1800,
+      scaleFamily: current.scaleFamily
+    };
+  }
+
   function initialBrushBias(deltaX = 0, deltaY = 0, speedPerSecond = 0) {
     const distance = Math.hypot(deltaX, deltaY);
     if (!Number.isFinite(distance) || distance < .001) return 0;
@@ -277,6 +293,7 @@
     DROP_MAX_DURATION_SECONDS,
     MATERIAL_BRUSH_DEPTH,
     attackIntensity,
+    collisionPearl,
     depthReflection,
     hasExpressivePressure,
     heldTexture,

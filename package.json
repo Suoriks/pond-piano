@@ -26,6 +26,7 @@
     "pond-master.js",
     "pond-music.js",
     "pond-score.js",
+    "pond-waves.js",
     "sw.js"
   ],
   "scripts": {
@@ -63,6 +64,7 @@
       "pond-master.js",
       "pond-music.js",
       "pond-score.js",
+      "pond-waves.js",
       "sw.js",
       "assets/apple-touch-icon.png",
       "assets/icon-192.png",
