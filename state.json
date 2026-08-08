@@ -1,11 +1,11 @@
 {
   "project": "pond-piano",
   "phase": "alpha-device-pass",
-  "iteration": 22,
+  "iteration": 23,
   "status": "completed",
   "current_goal": null,
-  "last_verified": "2026-08-08: Iteration 22 wave collisions passed seven Node test sets (10 tests), syntax checks for 18 JavaScript files, JSON/diff checks, and a real Web Audio Chromium 390x844 smoke-test. Two notes produced one bounded pearl at the predicted front intersection; its nodes returned from one to zero, ripple and score counters stayed unchanged, shell v18 reloaded offline with PondWaves, console/runtime errors stayed empty, and direct screenshot inspection confirmed a coherent mobile composition.",
-  "next_step": "Run a real-device alpha pass on Android Chrome/PWA and iPhone Safari for 2/3/5-finger independence, latency, the eddy gesture, drop/material/pearl balance, edge pointercancel and background resume; change numeric boundaries only from measured device behavior.",
+  "last_verified": "2026-08-08: Iteration 23 skipping-stone release passed seven Node test sets (10 tests), syntax checks for 18 JavaScript files, JSON/diff checks, and real Web Audio Chromium 390x844 normal/reduced-motion smoke-tests. One fast straight release produced one plan and three fading contacts with peak skipVoices=2; voices and timers returned to zero, a slow stroke made no second plan, pagehide cleared a live sequence, shell v19 reloaded offline with skippingStone(), console/runtime errors stayed empty, and direct screenshot inspection confirmed a coherent decaying path without new UI chrome.",
+  "next_step": "Run a real-device alpha pass on Android Chrome/PWA and iPhone Safari for 2/3/5-finger independence, latency, the eddy and skipping-stone gestures near physical edges, drop/material/pearl/skip balance, pointercancel and background resume; change numeric boundaries only from measured device behavior.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -36,5 +36,5 @@
     "windows_asset": "Pond-Piano-0.1.0-Windows-x64.exe",
     "published_at": "2026-07-26T04:39:34+03:00"
   },
-  "updated_at": "2026-08-08T00:29:00+03:00"
+  "updated_at": "2026-08-08T05:27:00+03:00"
 }

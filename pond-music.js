@@ -158,6 +158,21 @@
     };
   }
 
+  function stoneSkip(frequency, normalizedDepth, energy = .45, index = 0) {
+    const pitch = Math.max(20, Number.isFinite(frequency) ? frequency : BASE_FREQUENCY);
+    const depth = clamp(normalizedDepth);
+    const force = clamp(energy);
+    const bounce = Math.max(0, Math.min(2, Math.trunc(Number.isFinite(index) ? index : 0)));
+    return {
+      frequency: pitch,
+      startFrequency: pitch * (1.28 - depth * .1 - bounce * .035),
+      endFrequency: pitch * (.985 - bounce * .012),
+      durationSeconds: .105 + depth * .035 + bounce * .018,
+      peakGain: .004 + force * .012,
+      cutoffHz: 1850 + (1 - depth) * 2650 - bounce * 180
+    };
+  }
+
   function initialBrushBias(deltaX = 0, deltaY = 0, speedPerSecond = 0) {
     const distance = Math.hypot(deltaX, deltaY);
     if (!Number.isFinite(distance) || distance < .001) return 0;
@@ -308,6 +323,7 @@
     scaleSemitones,
     serializeScaleFamily,
     spatialPan,
+    stoneSkip,
     waterMaterial,
     waterDrop,
     frequencyAt

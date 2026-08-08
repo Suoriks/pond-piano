@@ -172,6 +172,17 @@ assert.ok(shallowPearl.startFrequency > shallowPearl.frequency,
   'the pearl must fall into its derived parent pitch');
 assert.equal(deepPearl.scaleFamily, 'dusk', 'the current shoreline family must guide the pearl pitch');
 
+const firstSkip = music.stoneSkip(440, .18, .72, 0);
+const lastSkip = music.stoneSkip(660, .82, .35, 2);
+assert.ok(firstSkip.startFrequency > firstSkip.frequency && firstSkip.endFrequency < firstSkip.frequency,
+  'a skipping contact must settle through its visible pitch rather than become a sustained voice');
+assert.ok(lastSkip.durationSeconds > firstSkip.durationSeconds && lastSkip.durationSeconds < .2,
+  'deeper and later contacts may settle longer but must stay transient');
+assert.ok(firstSkip.peakGain > lastSkip.peakGain && firstSkip.peakGain <= .016,
+  'successive contacts must decay far below a held voice');
+assert.ok(firstSkip.cutoffHz > lastSkip.cutoffHz && lastSkip.cutoffHz >= 1500,
+  'depth and bounce order may darken the stone without losing the water click');
+
 const calmShallowDrop = music.waterDrop(440, 0, calmAttack);
 const strongDeepDrop = music.waterDrop(440, 1, fastAttack);
 assert.equal(calmShallowDrop.durationSeconds, music.DROP_MIN_DURATION_SECONDS);
@@ -226,4 +237,4 @@ assert.ok(brushedDown.effectiveDepth > livingMaterial.effectiveDepth && brushedU
 assert.ok(brushedDown.effectiveDepth - brushedUp.effectiveDepth <= music.MATERIAL_BRUSH_DEPTH * 2 + 1e-9,
   'gesture colour stays a small bias and cannot replace the visible Y depth axis');
 
-console.log('pond-music: pitch currents, precision, coherent water materials, expressive drop attack, collision pearls, spatial place, held texture, and depth reflection verified');
+console.log('pond-music: pitch currents, precision, water materials, drop/pearl/stone transients, space, held texture, and reflection verified');

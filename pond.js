@@ -30,10 +30,14 @@
   const COLLISION_RATE_LIMIT_MS = 230;
   const MAX_PENDING_COLLISIONS = 8;
   const MAX_COLLISION_VOICES = 3;
-  const ripples = [], trails = [], splashes = [], scoreEchoes = [], collisionPearls = [], pointers = new Map();
+  const SKIP_PLAN_RATE_LIMIT_MS = 240;
+  const MAX_PENDING_SKIPS = 3;
+  const MAX_SKIP_VOICES = 2;
+  const ripples = [], trails = [], splashes = [], scoreEchoes = [], collisionPearls = [], stoneFlights = [], pointers = new Map();
   const echoCooldowns = new WeakMap();
   const collisionPairs = new Map();
   const collisionTimers = new Map();
+  const skipTimers = new Set();
   let memories = [];
   const keyboard = { x: .5, y: .52, pitchX: .5, pressure: .48, sounding: false, born: 0, lastMotion: 0, motionSpeed: 0, mapping: null, materialBias: null, precisionActive: false, precisionAmount: 0, precisionOriginX: null, scoreSamples: [], distanceTraveled: 0, resonanceX: 0, resonanceY: 0, resonatedMemories: new Set() };
   let audio = null;
@@ -43,9 +47,11 @@
   let echoSerial = 0;
   let rippleSerial = 0;
   let collisionSerial = 0;
+  let skipSerial = 0;
   let lastCollisionAt = -Infinity;
+  let lastSkipPlanAt = -Infinity;
   let width = 0, height = 0, dpr = 1, last = performance.now(), announced = false, scoreAnnounced = false, dynamicsAnnounced = false, textureAnnounced = false, precisionAnnounced = false, freedomAnnounced = false, eddyAnnounced = false;
-  let collisionAnnounced = false;
+  let collisionAnnounced = false, skipAnnounced = false;
 
   function pitchAt(x) {
     return music.frequencyAt(x / Math.max(1, width));
@@ -86,7 +92,7 @@
         console.warn('Water reflection is unavailable; keeping the direct voice', error);
       }
     }
-    audio = { context, master, reflection, voices: new Map(), collisionVoices: new Set() };
+    audio = { context, master, reflection, voices: new Map(), collisionVoices: new Set(), skipVoices: new Set() };
     return audio;
   }
 
@@ -217,10 +223,22 @@
       }
     }
     engine.collisionVoices?.clear();
+    for (const skip of engine.skipVoices ?? []) {
+      try { skip.oscillator.stop(now); } catch {}
+      for (const node of skip.nodes) {
+        try { node?.disconnect(); } catch {}
+      }
+    }
+    engine.skipVoices?.clear();
     for (const timer of collisionTimers.values()) clearTimeout(timer);
     collisionTimers.clear();
     collisionPairs.clear();
+    for (const timer of skipTimers) clearTimeout(timer);
+    skipTimers.clear();
+    stoneFlights.length = 0;
     canvas.dataset.pearlVoices = '0';
+    canvas.dataset.skipVoices = '0';
+    canvas.dataset.pendingSkips = '0';
     balanceVoices(engine);
     for (const pointerId of pointers.keys()) {
       try { canvas.releasePointerCapture?.(pointerId); } catch {}
@@ -614,6 +632,90 @@
     return true;
   }
 
+  function disconnectSkipVoice(engine, skip) {
+    if (!engine.skipVoices?.delete(skip)) return;
+    for (const node of skip.nodes) {
+      try { node?.disconnect(); } catch {}
+    }
+    canvas.dataset.skipVoices = String(engine.skipVoices.size);
+  }
+
+  function playStoneSkip(contact) {
+    const engine = audio;
+    if (!engine || engine.context.state !== 'running' || engine.skipVoices.size >= MAX_SKIP_VOICES) return false;
+    const x = contact.x * width, y = contact.y * height;
+    const depth = Math.max(0, Math.min(1, contact.y));
+    const response = music.stoneSkip(music.frequencyAt(contact.x), depth, contact.energy, contact.index);
+    const now = engine.context.currentTime;
+    const oscillator = engine.context.createOscillator();
+    const filter = engine.context.createBiquadFilter();
+    const gain = engine.context.createGain();
+    const panner = typeof engine.context.createStereoPanner === 'function' ? engine.context.createStereoPanner() : null;
+    const reflectionSend = engine.reflection ? engine.context.createGain() : null;
+    oscillator.type = contact.index === 0 ? 'triangle' : 'sine';
+    oscillator.frequency.setValueAtTime(response.startFrequency, now);
+    oscillator.frequency.exponentialRampToValueAtTime(response.frequency, now + response.durationSeconds * .38);
+    oscillator.frequency.exponentialRampToValueAtTime(response.endFrequency, now + response.durationSeconds);
+    filter.type = 'lowpass'; filter.frequency.value = response.cutoffHz; filter.Q.value = 1.15;
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.exponentialRampToValueAtTime(response.peakGain, now + .008);
+    gain.gain.exponentialRampToValueAtTime(.0001, now + response.durationSeconds);
+    oscillator.connect(filter).connect(gain);
+    let output = gain;
+    if (panner) {
+      panner.pan.value = music.spatialPan(contact.x);
+      gain.connect(panner);
+      output = panner;
+    }
+    output.connect(engine.master);
+    if (reflectionSend) {
+      reflectionSend.gain.value = music.depthReflection(depth).sendGain * .38;
+      output.connect(reflectionSend).connect(engine.reflection.input);
+    }
+    const skip = { oscillator, nodes: [oscillator, filter, gain, panner, reflectionSend] };
+    engine.skipVoices.add(skip);
+    canvas.dataset.skipVoices = String(engine.skipVoices.size);
+    canvas.dataset.peakSkipVoices = String(Math.max(Number(canvas.dataset.peakSkipVoices) || 0, engine.skipVoices.size));
+    canvas.dataset.skipEvents = String(++skipSerial);
+    oscillator.addEventListener('ended', () => disconnectSkipVoice(engine, skip), { once: true });
+    oscillator.start();
+    oscillator.stop(now + response.durationSeconds + .025);
+    addRipple(x, y, .18 + contact.energy * .24, .38 + contact.energy * .24, response.frequency, false);
+    return true;
+  }
+
+  function scheduleStoneSkips(plan, now) {
+    if (!plan?.contacts?.length || now - lastSkipPlanAt < SKIP_PLAN_RATE_LIMIT_MS || skipTimers.size) return false;
+    const contacts = plan.contacts.slice(0, MAX_PENDING_SKIPS).map(contact => ({
+      ...contact,
+      x: Math.max(.03, Math.min(.97, contact.x)),
+      y: Math.max(.04, Math.min(.96, contact.y)),
+      at: now + contact.delayMs
+    }));
+    stoneFlights.push({
+      born: now,
+      origin: { x: plan.origin.x * width, y: plan.origin.y * height },
+      contacts: contacts.map(contact => ({ ...contact, x: contact.x * width, y: contact.y * height }))
+    });
+    if (stoneFlights.length > 4) stoneFlights.shift();
+    for (const contact of contacts) {
+      const timer = setTimeout(() => {
+        skipTimers.delete(timer);
+        canvas.dataset.pendingSkips = String(skipTimers.size);
+        playStoneSkip(contact);
+      }, Math.max(0, contact.at - performance.now()));
+      skipTimers.add(timer);
+    }
+    lastSkipPlanAt = now;
+    canvas.dataset.pendingSkips = String(skipTimers.size);
+    canvas.dataset.skipPlans = String((Number(canvas.dataset.skipPlans) || 0) + 1);
+    if (!skipAnnounced) {
+      status.textContent = 'Быстрый прямой отпуск послал камешек прыгать по воде; каждое касание тише предыдущего';
+      skipAnnounced = true;
+    }
+    return true;
+  }
+
   function scheduleWaveCollisions(ripple, now) {
     for (const [key, expiresAt] of collisionPairs) {
       if (expiresAt <= now) collisionPairs.delete(key);
@@ -634,11 +736,11 @@
     }
   }
 
-  function addRipple(x, y, pressure, strength = 1, frequency = pitchAt(x)) {
+  function addRipple(x, y, pressure, strength = 1, frequency = pitchAt(x), reactive = true) {
     const born = performance.now();
     const ripple = waves.createWave({ id: ++rippleSerial, x, y, born, pressure, strength, frequency });
     if (!ripple) return;
-    scheduleWaveCollisions(ripple, born);
+    if (reactive) scheduleWaveCollisions(ripple, born);
     ripples.push({ ...ripple, hue: 152 + 30 * (1 - y / height) });
     canvas.dataset.rippleEvents = String(rippleSerial);
     if (ripples.length > 32) ripples.shift();
@@ -874,13 +976,19 @@
   function end(event) {
     const active = pointers.get(event.pointerId);
     if (!active) return;
-    const now = performance.now(), pressure = active.pressureAvailable ? active.pressure : active.attack;
+    const now = eventTime(event), pressure = active.pressureAvailable ? active.pressure : active.attack;
+    const skipPlan = event.type === 'pointerup' && active.sounding
+      ? gesture.skippingStone([...active.scoreSamples, {
+        x: active.x / Math.max(1, width), y: active.y / Math.max(1, height), at: now
+      }], now, { width, height })
+      : null;
     addRipple(active.x, active.y, pressure, .55,
       active.mapping?.frequency ?? pitchAt(active.x));
     rememberContact(active, active.x, active.y, now, pressure);
     endVoice(event.pointerId);
     pointers.delete(event.pointerId);
     canvas.dataset.eddyVoices = String([...pointers.values()].filter(pointer => pointer.eddy?.active).length);
+    if (skipPlan) scheduleStoneSkips(skipPlan, now);
   }
 
   function keyboardPoint() { return { x: keyboard.x * width, y: keyboard.y * height }; }
@@ -1021,6 +1129,46 @@
         (mark.fromY + mark.y) / 2 + ny * width * side * 1.5, mark.x + nx * width * side, mark.y + ny * width * side);
       ctx.strokeStyle = `hsla(${mark.hue + side * 8} 70% 78% / ${fade * .33})`;
       ctx.lineWidth = Math.max(.6, width * .27); ctx.stroke();
+    }
+    return true;
+  }
+
+  function drawStoneFlight(flight, now) {
+    const lastContact = flight.contacts.at(-1);
+    if (!lastContact || now > lastContact.at + 360) return false;
+    if (reduced.matches) return true;
+    let from = flight.origin, startsAt = flight.born;
+    for (const contact of flight.contacts) {
+      if (now < startsAt) break;
+      const duration = Math.max(1, contact.at - startsAt);
+      const progress = Math.max(0, Math.min(1, (now - startsAt) / duration));
+      const dx = contact.x - from.x, dy = contact.y - from.y;
+      const distance = Math.max(1, Math.hypot(dx, dy));
+      const nx = -dy / distance, ny = dx / distance;
+      const arc = Math.sin(progress * Math.PI) * Math.min(13, distance * .13) * (contact.index % 2 ? -1 : 1);
+      const x = from.x + dx * progress + nx * arc;
+      const y = from.y + dy * progress + ny * arc;
+      const fade = now <= contact.at ? 1 : Math.max(0, 1 - (now - contact.at) / 180);
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(from.x, from.y);
+      ctx.quadraticCurveTo((from.x + contact.x) * .5 + nx * arc * 1.35,
+        (from.y + contact.y) * .5 + ny * arc * 1.35, contact.x, contact.y);
+      ctx.strokeStyle = `hsla(${174 + contact.index * 5} 54% 78% / ${fade * .13})`;
+      ctx.lineWidth = .75; ctx.stroke();
+      if (now <= contact.at) {
+        const angle = Math.atan2(dy, dx);
+        const glow = ctx.createRadialGradient(x, y, 0, x, y, 12);
+        glow.addColorStop(0, `hsla(${184 + contact.index * 4} 68% 91% / ${.36 + contact.energy * .28})`);
+        glow.addColorStop(1, 'transparent');
+        ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = `hsla(${172 + contact.index * 4} 45% 88% / ${.5 + contact.energy * .32})`;
+        ctx.beginPath(); ctx.ellipse(x, y, 4.8 - contact.index * .6, 1.7, angle, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+      if (now <= contact.at) return true;
+      from = contact; startsAt = contact.at;
     }
     return true;
   }
@@ -1402,6 +1550,7 @@
     for (let i = 0; i < soundingPointers.length; i++) {
       for (let j = i + 1; j < soundingPointers.length; j++) drawResonance(soundingPointers[i], soundingPointers[j], now);
     }
+    for (let i = stoneFlights.length - 1; i >= 0; i--) if (!drawStoneFlight(stoneFlights[i], now)) stoneFlights.splice(i, 1);
     for (let i = ripples.length - 1; i >= 0; i--) if (!drawRipple(ripples[i], now)) ripples.splice(i, 1);
     for (let i = collisionPearls.length - 1; i >= 0; i--) {
       if (!drawCollisionPearl(collisionPearls[i], now)) collisionPearls.splice(i, 1);

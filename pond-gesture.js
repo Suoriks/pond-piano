@@ -10,6 +10,10 @@
   const EDDY_ACTIVATION_TURNS = .55;
   const EDDY_CAPTURE_RADIANS = .42;
   const EDDY_RELEASE_SPEED = 1.35;
+  const SKIP_SAMPLE_WINDOW_MS = 180;
+  const SKIP_MIN_SPEED = .72;
+  const SKIP_MIN_STRAIGHTNESS = .86;
+  const SKIP_MIN_TRAVEL = .055;
   const TAU = Math.PI * 2;
 
   const clamp = (value, minimum = 0, maximum = 1) => Math.max(minimum, Math.min(maximum, value));
@@ -121,6 +125,62 @@
     };
   }
 
+  function skippingStone(samples, releasedAt, { width = 1, height = 1 } = {}) {
+    if (![releasedAt, width, height].every(Number.isFinite) || width <= 0 || height <= 0) return null;
+    const span = Math.min(width, height);
+    const recent = (Array.isArray(samples) ? samples : [])
+      .filter(sample => sample && [sample.x, sample.y, sample.at].every(Number.isFinite) &&
+        sample.at <= releasedAt && sample.at >= releasedAt - SKIP_SAMPLE_WINDOW_MS)
+      .map(sample => ({ x: clamp(sample.x) * width, y: clamp(sample.y) * height, at: sample.at }))
+      .sort((a, b) => a.at - b.at);
+    if (recent.length < 2 || releasedAt - recent.at(-1).at > 72) return null;
+
+    let pathLength = 0;
+    for (let index = 1; index < recent.length; index += 1) {
+      pathLength += Math.hypot(recent[index].x - recent[index - 1].x, recent[index].y - recent[index - 1].y);
+    }
+    const first = recent[0], last = recent.at(-1);
+    const dx = last.x - first.x, dy = last.y - first.y;
+    const distance = Math.hypot(dx, dy);
+    const elapsedMs = Math.max(8, releasedAt - first.at);
+    const speed = distance / span * 1000 / elapsedMs;
+    const straightness = distance / Math.max(1, pathLength);
+    if (distance / span < SKIP_MIN_TRAVEL || speed < SKIP_MIN_SPEED || straightness < SKIP_MIN_STRAIGHTNESS) return null;
+
+    const directionX = dx / distance, directionY = dy / distance;
+    const insetX = Math.min(width * .12, Math.max(12, span * .045));
+    const insetY = Math.min(height * .12, Math.max(12, span * .06));
+    const limits = [];
+    if (directionX > .001) limits.push((width - insetX - last.x) / directionX);
+    else if (directionX < -.001) limits.push((insetX - last.x) / directionX);
+    if (directionY > .001) limits.push((height - insetY - last.y) / directionY);
+    else if (directionY < -.001) limits.push((insetY - last.y) / directionY);
+    const room = Math.max(0, Math.min(...limits.filter(Number.isFinite)));
+    const travel = Math.min(room * .92, span * clamp(.17 + speed * .075, .18, .36));
+    if (travel < span * .13) return null;
+
+    const threeSkips = speed >= 1.22 && travel >= span * .23;
+    const portions = threeSkips ? [.34, .68, 1] : [.48, 1];
+    const delays = threeSkips ? [62, 148, 258] : [68, 166];
+    const energy = clamp(.34 + speed * .18, .42, .86);
+    const contacts = portions.map((portion, index) => Object.freeze({
+      x: clamp((last.x + directionX * travel * portion) / width),
+      y: clamp((last.y + directionY * travel * portion) / height),
+      delayMs: delays[index],
+      energy: energy * Math.pow(.7, index),
+      index
+    }));
+
+    return Object.freeze({
+      speed,
+      straightness,
+      directionX,
+      directionY,
+      origin: Object.freeze({ x: clamp(last.x / width), y: clamp(last.y / height) }),
+      contacts: Object.freeze(contacts)
+    });
+  }
+
   return Object.freeze({
     EDDY_ARM_HOLD_MS,
     EDDY_CANDIDATE_TIMEOUT_MS,
@@ -129,8 +189,13 @@
     EDDY_ACTIVATION_TURNS,
     EDDY_CAPTURE_RADIANS,
     EDDY_RELEASE_SPEED,
+    SKIP_SAMPLE_WINDOW_MS,
+    SKIP_MIN_SPEED,
+    SKIP_MIN_STRAIGHTNESS,
+    SKIP_MIN_TRAVEL,
     beginEddy,
     updateEddy,
-    eddyExpression
+    eddyExpression,
+    skippingStone
   });
 });
