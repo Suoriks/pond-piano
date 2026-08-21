@@ -127,18 +127,25 @@
     };
   }
 
-  function waterDrop(frequency, normalizedDepth, intensity = .28) {
+  function waterDrop(frequency, normalizedDepth, intensity = .28, material = null) {
     const pitch = Math.max(20, Number.isFinite(frequency) ? frequency : BASE_FREQUENCY);
     const depth = clamp(normalizedDepth);
     const force = clamp(intensity);
     const durationSeconds = DROP_MIN_DURATION_SECONDS + depth * (DROP_MAX_DURATION_SECONDS - DROP_MIN_DURATION_SECONDS);
+    // A quick tap is mostly this transient, so let the water material tint it:
+    // glassy shallows pluck bright and high, a hollow deep falls warmer and lower.
+    const brightness = material && Number.isFinite(material.brightness)
+      ? clamp(material.brightness, -1, 1)
+      : 0;
+    const active = .5 + brightness * .5; // 0 in hollow, 1 in glass
     return {
       durationSeconds,
-      peakGain: .012 + force * .027,
-      startFrequency: pitch * (1.58 - depth * .2),
-      dipFrequency: pitch * (.92 + depth * .03),
+      peakGain: (.012 + force * .028) * (.9 + active * .16),
+      startFrequency: pitch * (1.58 - depth * .2 + brightness * .42),
+      dipFrequency: pitch * (.92 + depth * .03 - brightness * .08),
       settleFrequency: pitch,
-      dipAtSeconds: durationSeconds * (.34 + depth * .06)
+      dipAtSeconds: durationSeconds * (.34 + depth * .06 - active * .05),
+      brightness
     };
   }
 

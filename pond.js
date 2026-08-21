@@ -282,7 +282,7 @@
     const pan = music.spatialPan(x / Math.max(1, width));
     const texture = music.heldTexture(depth.normalizedDepth, music.TEXTURE_BLOOM_END_MS);
     const reflection = music.depthReflection(depth.normalizedDepth);
-    const drop = music.waterDrop(frequency, depth.normalizedDepth, attack);
+    const drop = music.waterDrop(frequency, depth.normalizedDepth, attack, material);
     const dropOscillator = engine.context.createOscillator();
     const dropGain = engine.context.createGain();
     oscillator.type = 'sine'; overtone.type = 'sine'; undertow.type = 'sine'; filter.type = 'lowpass'; filter.Q.value = material.filterQ;
@@ -402,7 +402,9 @@
     voice.gain.gain.exponentialRampToValueAtTime((.055 + intensity * .085) * voice.materialLevel, now + Math.min(.04, voice.attackSeconds));
     voice.gain.gain.exponentialRampToValueAtTime(.063 * voice.materialLevel, now + .23);
     if (voice.dropGain && now < voice.dropEndsAt - .018 && intensity > voice.dropIntensity) {
-      const drop = music.waterDrop(voice.targetFrequency, voice.materialDepth, intensity);
+      const drop = music.waterDrop(voice.targetFrequency, voice.materialDepth, intensity, {
+        brightness: (voice.materialDepth - .5) * 2
+      });
       const remaining = Math.max(.018, voice.dropEndsAt - now);
       if (typeof voice.dropGain.gain.cancelAndHoldAtTime === 'function') voice.dropGain.gain.cancelAndHoldAtTime(now);
       else {
