@@ -1,11 +1,11 @@
 {
   "project": "pond-piano",
-  "phase": "note-shades",
-  "iteration": 26,
-  "status": "completed",
-  "current_goal": null,
-  "last_verified": "2026-08-22: Iteration 26 note shading complete. Each fresh note takes the next of three subtle tints (clear/warm/deep) of one water voice via deterministic music.noteShade by phrase note index and depth; waterMaterial(shade) nudges overtoneRatio/cutoffHz/levelCompensation only, and startVoice/moveVoice carry the shade for the note's whole lifetime. Shell v22; README/DESIGN/index aria/KAIZEN updated. Verified: both Node suites (24 tests), syntax of 18 JS files, JSON and git diff --check pass. Headless Chromium 390x844 with live Web Audio played four fresh taps then a held fifth note: audioVoices rose to 1 and stayed 1, has-played true, no console/page errors. Screenshot output/pond-piano/note-shade-26.png; vision confirmed whole mobile composition without clipping.",
-  "next_step": "Decide by real-device feel whether the deterministic three-tint cycle is pleasant or needs more variants; change numeric limits only from measured device behavior.",
+  "phase": "done",
+  "iteration": 27,
+  "status": "complete",
+  "current_goal": "Living caustic-light motes integrated: update+gather+draw wired into render loop, shell v23, package.json deduped + build-included",
+  "last_verified": "2026-08-22: KAIZEN 0027. Six Node suites (incl 5 pond-caustic tests) pass; syntax clean (20 JS); JSON + git diff --check clean. Headless Chromium 390x844 real Web Audio boots offline, canvas#pond renders, eyebrow v27, tap raises body.has-played with correct status; no console/page errors. Vision on output/pond-piano/caustic-light-27.png confirmed whole mobile composition, scattered light motes, warm glow at the note, intact shore controls, no clipping. Shell v23; package.json deduped and build includes pond-caustic.js.",
+  "next_step": "Real-device pass (Android Chrome/PWA, iPhone Safari): judge whether the living light feels gentle and non-distracting, whether warmth pools well at the note site; change warmth/radius limits only from measured device feel.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -36,5 +36,5 @@
     "windows_asset": "Pond-Piano-0.1.0-Windows-x64.exe",
     "published_at": "2026-07-26T04:39:34+03:00"
   },
-  "updated_at": "2026-08-22T18:20:00+03:00"
+  "updated_at": "2026-08-22T20:33:00+03:00"
 }

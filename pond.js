@@ -7,12 +7,14 @@
   const gesture = window.PondGesture;
   const score = window.PondScore;
   const waves = window.PondWaves;
+  const caustic = window.PondCaustic;
   const masterModel = window.PondMaster;
   const audioLifecycleFactory = window.PondAudioLifecycle;
   if (!music) throw new Error('Pond music mapping did not load');
   if (!gesture) throw new Error('Pond gesture mapping did not load');
   if (!score) throw new Error('Pond score mapping did not load');
   if (!waves) throw new Error('Pond wave mapping did not load');
+  if (!caustic) throw new Error('Pond caustic mapping did not load');
   if (!masterModel) throw new Error('Pond master control did not load');
   if (!audioLifecycleFactory) throw new Error('Pond audio lifecycle did not load');
   const volumeControl = document.querySelector('.shore-control');
@@ -38,6 +40,7 @@
   const MAX_SKIP_VOICES = 2;
   const MAX_ECHO_VOICES = 3;
   const ripples = [], trails = [], splashes = [], scoreEchoes = [], collisionPearls = [], stoneFlights = [], pointers = new Map();
+  let motes = caustic.createMotes(caustic.DEFAULT_COUNT, 7);
   const echoCooldowns = new WeakMap();
   const collisionPairs = new Map();
   const collisionTimers = new Map();
@@ -773,6 +776,8 @@
     if (!ripple) return;
     if (reactive) scheduleWaveCollisions(ripple, born);
     ripples.push({ ...ripple, hue: 152 + 30 * (1 - y / height) });
+    // Light answers where music is born: near motes gather a warmer pool.
+    motes = caustic.gatherMotes(motes, x / Math.max(1, width), y / Math.max(1, height), .2 + Math.min(.8, pressure * 1.1), caustic.WARMTH_RADIUS_01 * 1.35);
     canvas.dataset.rippleEvents = String(rippleSerial);
     if (ripples.length > 32) ripples.shift();
   }
@@ -1192,6 +1197,27 @@
     audioLifecycle.foreground();
     resize();
   });
+
+  function drawMotes(now) {
+    motes = caustic.updateMotes(motes, Math.max(0, (now - last) / 1000));
+    ctx.save();
+    for (const mote of motes) {
+      const visual = caustic.moteVisual(mote, now, reduced.matches);
+      if (visual.alpha <= .012) continue;
+      const x = visual.x * width, y = visual.y * height;
+      const radius = Math.max(.7, visual.size * Math.max(1.2, Math.min(width, height) * .0032));
+      const glow = ctx.createRadialGradient(x, y, 0, x, y, radius * 3.2);
+      glow.addColorStop(0, `hsla(${150 + visual.y * 18} 70% 92% / ${visual.alpha * .5})`);
+      glow.addColorStop(1, 'transparent');
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(x, y, radius * 3.2, 0, Math.PI * 2); ctx.fill();
+      if (visual.alpha > .05) {
+        ctx.fillStyle = `hsla(${150 + visual.y * 18} 72% 94% / ${Math.min(.8, visual.alpha)})`;
+        ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
 
   function water(now) {
     const t = now * .0001;
@@ -1624,6 +1650,7 @@
   function frame(now) {
     const dt = Math.min((now - last) / 1000, .05); last = now;
     water(now + dt);
+    drawMotes(now);
     memories = memories.filter(memory => now >= memory.born && now < memory.born + score.lifeMs(reduced.matches));
     for (const motif of score.groupMotifs(memories)) drawMotifUndercurrent(motif, now);
     for (const memory of memories) drawScoreMemory(memory, now);
