@@ -120,4 +120,16 @@ assert.equal(score.findCrossedMemory(
   { width: 390, height: 844, radiusPx: 18 }
 ), null, 'tiny pointer jitter must not count as a deliberate crossing');
 
-console.log('pond-score: bounded paths, fading, motifs, and playable path crossings verified');
+// A crossed phrase wakes as a small melodic figure of its own real anchor points.
+assert.deepEqual(score.melodyAnchors(crossingMemory, 3).map(point => point.pitch),
+  [.15, .5, .85], 'a three-anchor echo must expose evenly spaced points and end on the real final one');
+assert.deepEqual(score.melodyAnchors(crossingMemory, 3).map(point => point.y),
+  [.5, .48, .52]);
+const single = score.melodyAnchors(crossingMemory, 1);
+assert.equal(single.length, 1);
+assert.equal(single[0].x, .85, 'a one-note echo must sound only the stored final point');
+assert.ok(score.melodyAnchors(crossingMemory, 9).length <= 4, 'the echo must stay bounded to at most four distinct anchors');
+assert.deepEqual(score.melodyAnchors(null, 3), [], 'an absent memory must wake no echo');
+assert.equal(score.melodyAnchors(crossingMemory, -5)[0].x, .85, 'a broken requested maximum must fall back to the final point');
+
+console.log('pond-score: bounded paths, fading, motifs, playable path crossings, and melodic echoes verified');

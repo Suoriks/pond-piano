@@ -183,6 +183,21 @@ assert.ok(firstSkip.peakGain > lastSkip.peakGain && firstSkip.peakGain <= .016,
 assert.ok(firstSkip.cutoffHz > lastSkip.cutoffHz && lastSkip.cutoffHz >= 1500,
   'depth and bounce order may darken the stone without losing the water click');
 
+const firstEcho = music.echoNote(0.2, 0.012, 0.7, 0, 3);
+const lastEcho = music.echoNote(0.7, 0.8, 0.35, 2, 3);
+assert.equal(lastEcho.frequency, music.frequencyAt(0.7),
+  'a melodic echo must settle to its recorded pitch, not wander to a hidden key');
+assert.ok(firstEcho.startFrequency > firstEcho.frequency && lastEcho.frequency <= music.frequencyAt(0.7) * 1.5,
+  'the pluck contour must fall toward the anchor, never above its visible pitch');
+assert.ok(firstEcho.peakGain > lastEcho.peakGain && firstEcho.peakGain <= 0.1,
+  'later anchors must answer softer and stay far below any held voice');
+assert.ok(lastEcho.durationSeconds > .11 && lastEcho.durationSeconds < .28, 'every echo must stay a short pluck');
+assert.ok(firstEcho.cutoffHz > lastEcho.cutoffHz && lastEcho.cutoffHz >= 1500,
+  'depth and echo order may darken the pluck without losing it');
+assert.ok(lastEcho.delayMs > firstEcho.delayMs, 'anchors must not all fire in the same instant');
+assert.ok(music.echoNote(0.5, 9, 0.5, 0, 3).durationSeconds <= 0.35,
+  'depth must stay clamped so a durable echo cannot lengthen forever');
+
 const calmShallowDrop = music.waterDrop(440, 0, calmAttack);
 const strongDeepDrop = music.waterDrop(440, 1, fastAttack);
 assert.equal(calmShallowDrop.durationSeconds, music.DROP_MIN_DURATION_SECONDS);

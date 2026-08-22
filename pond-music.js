@@ -180,6 +180,27 @@
     };
   }
 
+  // A crossed phrase wakes as a small plucked figure: each anchor of the
+  // stored gesture sounds once, quieter and softer than the last, so the
+  // echo reads as a fading memory rather than a new performance.
+  function echoNote(pitchX, normalizedDepth, energy = .5, index = 0, total = 3) {
+    const depth = clamp(normalizedDepth);
+    const force = clamp(energy);
+    const position = Math.max(0, Math.min(1, Number.isFinite(pitchX) ? pitchX : .5));
+    const step = Math.max(0, Math.trunc(Number.isFinite(index) ? index : 0));
+    const count = Math.max(1, Math.trunc(Number.isFinite(total) ? total : 3));
+    const fade = Math.pow(.72, step); // later anchors answer more quietly
+    return {
+      frequency: frequencyAt(position),
+      startFrequency: frequencyAt(position) * (1.24 - depth * .08),
+      durationSeconds: .16 + depth * .05 + force * .03 - Math.min(step, 4) * .012,
+      peakGain: (.006 + force * .009) * fade,
+      cutoffHz: 2100 + (1 - depth) * 2400 - Math.min(step, 4) * 160,
+      delayMs: 150 + step * 130,
+      steps: clamp(count, 1)
+    };
+  }
+
   function initialBrushBias(deltaX = 0, deltaY = 0, speedPerSecond = 0) {
     const distance = Math.hypot(deltaX, deltaY);
     if (!Number.isFinite(distance) || distance < .001) return 0;
@@ -316,6 +337,7 @@
     MATERIAL_BRUSH_DEPTH,
     attackIntensity,
     collisionPearl,
+    echoNote,
     depthReflection,
     hasExpressivePressure,
     heldTexture,

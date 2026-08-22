@@ -36,11 +36,13 @@
   const SKIP_PLAN_RATE_LIMIT_MS = 240;
   const MAX_PENDING_SKIPS = 3;
   const MAX_SKIP_VOICES = 2;
+  const MAX_ECHO_VOICES = 3;
   const ripples = [], trails = [], splashes = [], scoreEchoes = [], collisionPearls = [], stoneFlights = [], pointers = new Map();
   const echoCooldowns = new WeakMap();
   const collisionPairs = new Map();
   const collisionTimers = new Map();
   const skipTimers = new Set();
+  const echoTimers = new Set();
   let memories = score.restorePhrase(loadScorePhrase(), performance.now(), epochNow());
   const keyboard = { x: .5, y: .52, pitchX: .5, pressure: .48, sounding: false, born: 0, lastMotion: 0, motionSpeed: 0, mapping: null, materialBias: null, precisionActive: false, precisionAmount: 0, precisionOriginX: null, scoreSamples: [], distanceTraveled: 0, resonanceX: 0, resonanceY: 0, resonatedMemories: new Set() };
   let audio = null;
@@ -54,7 +56,7 @@
   let lastCollisionAt = -Infinity;
   let lastSkipPlanAt = -Infinity;
   let width = 0, height = 0, dpr = 1, last = performance.now(), announced = false, scoreAnnounced = false, dynamicsAnnounced = false, textureAnnounced = false, precisionAnnounced = false, freedomAnnounced = false, eddyAnnounced = false;
-  let collisionAnnounced = false, skipAnnounced = false;
+  let collisionAnnounced = false, skipAnnounced = false, scoreEchoAnnounced = false;
 
   function pitchAt(x) {
     return music.frequencyAt(x / Math.max(1, width));
@@ -95,7 +97,7 @@
         console.warn('Water reflection is unavailable; keeping the direct voice', error);
       }
     }
-    audio = { context, master, reflection, voices: new Map(), collisionVoices: new Set(), skipVoices: new Set() };
+    audio = { context, master, reflection, voices: new Map(), collisionVoices: new Set(), skipVoices: new Set(), echoVoices: new Set() };
     return audio;
   }
 
@@ -233,15 +235,26 @@
       }
     }
     engine.skipVoices?.clear();
+    for (const echo of engine.echoVoices ?? []) {
+      try { echo.oscillator.stop(now); } catch {}
+      for (const node of echo.nodes) {
+        try { node?.disconnect(); } catch {}
+      }
+    }
+    engine.echoVoices?.clear();
     for (const timer of collisionTimers.values()) clearTimeout(timer);
     collisionTimers.clear();
     collisionPairs.clear();
     for (const timer of skipTimers) clearTimeout(timer);
     skipTimers.clear();
+    for (const timer of echoTimers) clearTimeout(timer);
+    echoTimers.clear();
     stoneFlights.length = 0;
     canvas.dataset.pearlVoices = '0';
     canvas.dataset.skipVoices = '0';
     canvas.dataset.pendingSkips = '0';
+    canvas.dataset.echoVoices = '0';
+    canvas.dataset.pendingEchoes = '0';
     balanceVoices(engine);
     for (const pointerId of pointers.keys()) {
       try { canvas.releasePointerCapture?.(pointerId); } catch {}
@@ -771,16 +784,82 @@
   }
 
   function playScoreEcho(memory, crossing, now) {
-    const id = `score-echo-${++echoSerial}`;
-    const x = memory.pitch * width, y = memory.depth * height;
-    const pressure = .2 + memory.pressure * .18;
-    const attack = .18 + memory.pressure * .16;
-    if (!startVoice(id, x, y, pressure, music.frequencyAt(memory.pitch), attack)) return false;
-    scoreEchoes.push({ memory, crossing, segmentIndex: crossing.segmentIndex, born: now });
-    if (scoreEchoes.length > 8) scoreEchoes.shift();
-    addRipple(x, y, pressure, .55, music.frequencyAt(memory.pitch));
-    setTimeout(() => endVoice(id), 420);
+    const anchors = score.melodyAnchors(memory, MAX_ECHO_VOICES);
+    if (!anchors.length) return false;
+    if (echoTimers.size >= MAX_ECHO_VOICES) return false;
+    echoSerial += anchors.length;
+    anchors.forEach((anchor, index) => {
+      const response = music.echoNote(anchor.pitch, anchor.y, .2 + memory.pressure * .3, index, anchors.length);
+      const at = now + response.delayMs;
+      const timer = setTimeout(() => {
+        echoTimers.delete(timer);
+        canvas.dataset.pendingEchoes = String(echoTimers.size);
+        playEchoNote(memory, anchor, crossing, index, response);
+      }, Math.max(0, at - performance.now()));
+      echoTimers.add(timer);
+    });
+    canvas.dataset.pendingEchoes = String(echoTimers.size);
+    canvas.dataset.melodicEchoes = String((Number(canvas.dataset.melodicEchoes) || 0) + 1);
     return true;
+  }
+
+  function playEchoNote(memory, anchor, crossing, index, response) {
+    const engine = audio;
+    if (!engine || engine.context.state !== 'running' ||
+        engine.echoVoices.size >= MAX_ECHO_VOICES) return;
+    const x = anchor.x * width, y = anchor.y * height;
+    const depth = Math.max(0, Math.min(1, anchor.y));
+    const now = engine.context.currentTime;
+    const oscillator = engine.context.createOscillator();
+    const filter = engine.context.createBiquadFilter();
+    const gain = engine.context.createGain();
+    const panner = typeof engine.context.createStereoPanner === 'function' ? engine.context.createStereoPanner() : null;
+    const reflectionSend = engine.reflection ? engine.context.createGain() : null;
+    oscillator.type = 'triangle';
+    oscillator.frequency.setValueAtTime(response.startFrequency, now);
+    oscillator.frequency.exponentialRampToValueAtTime(response.frequency, now + response.durationSeconds * .42);
+    oscillator.frequency.exponentialRampToValueAtTime(response.frequency * .992, now + response.durationSeconds);
+    filter.type = 'lowpass'; filter.frequency.value = response.cutoffHz; filter.Q.value = 1.3;
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.exponentialRampToValueAtTime(response.peakGain, now + .01);
+    gain.gain.exponentialRampToValueAtTime(.0001, now + response.durationSeconds);
+    oscillator.connect(filter).connect(gain);
+    let output = gain;
+    if (panner) {
+      panner.pan.value = music.spatialPan(anchor.x);
+      gain.connect(panner);
+      output = panner;
+    }
+    output.connect(engine.master);
+    if (reflectionSend) {
+      reflectionSend.gain.value = music.depthReflection(depth).sendGain * .46;
+      output.connect(reflectionSend).connect(engine.reflection.input);
+    }
+    const echo = { oscillator, nodes: [oscillator, filter, gain, panner, reflectionSend] };
+    engine.echoVoices.add(echo);
+    canvas.dataset.echoVoices = String(engine.echoVoices.size);
+    canvas.dataset.peakEchoVoices = String(Math.max(Number(canvas.dataset.peakEchoVoices) || 0, engine.echoVoices.size));
+    // A small non-reactive ripple marks each sounded anchor on the water.
+    addRipple(x, y, .16 + memory.pressure * .2, .34 + response.peakGain * 8, response.frequency, false);
+    if (!scoreEchoAnnounced) {
+      status.textContent = 'Жест пересёк водный след; сохранённая фраза мягко отозвалась мелодией';
+      scoreEchoAnnounced = true;
+    }
+    oscillator.addEventListener('ended', () => disconnectEchoVoice(engine, echo), { once: true });
+    oscillator.start();
+    oscillator.stop(now + response.durationSeconds + .025);
+    if (index === 0) {
+      scoreEchoes.push({ memory, crossing, segmentIndex: crossing.segmentIndex, born: performance.now() });
+      if (scoreEchoes.length > 8) scoreEchoes.shift();
+    }
+  }
+
+  function disconnectEchoVoice(engine, echo) {
+    if (!engine.echoVoices?.delete(echo)) return;
+    for (const node of echo.nodes) {
+      try { node?.disconnect(); } catch {}
+    }
+    canvas.dataset.echoVoices = String(engine.echoVoices.size);
   }
 
   function tryScoreResonance(contact, point, now) {
@@ -796,9 +875,6 @@
       width, height, radiusPx: Math.max(14, Math.min(22, Math.min(width, height) * .045)), reducedMotion: reduced.matches
     });
     if (!crossing || !playScoreEcho(crossing.memory, crossing, now)) return;
-    contact.resonatedMemories.add(crossing.memory);
-    echoCooldowns.set(crossing.memory, now);
-    status.textContent = 'Жест пересёк водный след; сохранённая нота мягко отозвалась';
   }
 
   function captureScoreSample(contact, x, y, now, pressure, force = false) {

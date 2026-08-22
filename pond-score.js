@@ -52,6 +52,23 @@
     return reducedMotion ? REDUCED_LIFE_MS : FULL_LIFE_MS;
   }
 
+  // A crossed phrase wakes as a small melodic figure: evenly spaced anchor
+  // points of the stored gesture, always ending on its real final point.
+  function melodyAnchors(memory, maximum = 3) {
+    const limit = Math.max(1, Math.min(4, Math.trunc(Number.isFinite(maximum) ? maximum : 3)));
+    const points = Array.isArray(memory?.points) ? memory.points.filter(point =>
+      point && Number.isFinite(point.x) && Number.isFinite(point.y) && Number.isFinite(point.pitch)) : [];
+    if (!points.length) return [];
+    if (points.length === 1 || limit === 1) return [points[points.length - 1]];
+    const anchors = [];
+    for (let index = 0; index < limit; index += 1) {
+      const position = Math.round(index * (points.length - 1) / (limit - 1));
+      const anchor = points[position];
+      if (anchor !== anchors[anchors.length - 1]) anchors.push(anchor);
+    }
+    return anchors;
+  }
+
   function visibility(memory, now, reducedMotion = false) {
     if (!memory || !Number.isFinite(now)) return 0;
     const age = now - memory.born;
@@ -213,6 +230,6 @@
   return Object.freeze({
     MAX_MEMORIES, MAX_POINTS, MOTIF_GAP_MS,
     createMemory, lifeMs, visibility, append, groupMotifs, findCrossedMemory,
-    serializePhrase, restorePhrase
+    melodyAnchors, serializePhrase, restorePhrase
   });
 });
