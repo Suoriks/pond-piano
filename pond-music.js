@@ -19,6 +19,10 @@
   const PRECISION_MIN_GAIN = .24;
   const DROP_MIN_DURATION_SECONDS = .115;
   const DROP_MAX_DURATION_SECONDS = .16;
+  // A fresh accent may carry one short noise splash: the sound of water
+  // receiving the drop. It rides on top of the tonal drop, never replaces it.
+  const SPLASH_MIN_DURATION_SECONDS = .1;
+  const SPLASH_MAX_DURATION_SECONDS = .17;
   const MATERIAL_BRUSH_DEPTH = .09;
   const DEFAULT_SCALE_FAMILY = 'dawn';
   const SCALE_FAMILIES = Object.freeze({
@@ -147,6 +151,23 @@
       settleFrequency: pitch,
       dipAtSeconds: durationSeconds * (.34 + depth * .06 - active * .05),
       brightness
+    };
+  }
+
+  function waterSplash(normalizedDepth, intensity = .28, material = null) {
+    const depth = clamp(normalizedDepth);
+    const force = clamp(intensity);
+    const brightness = material && Number.isFinite(material.brightness)
+      ? clamp(material.brightness, -1, 1)
+      : 0;
+    const active = .5 + brightness * .5; // 0 in hollow deep, 1 in glassy shallows
+    return {
+      durationSeconds: SPLASH_MIN_DURATION_SECONDS + depth * (SPLASH_MAX_DURATION_SECONDS - SPLASH_MIN_DURATION_SECONDS),
+      peakGain: (.014 + force * .026) * (.82 + active * .3),
+      lowHz: 320 - depth * 60 - active * 100,
+      highHz: 2100 - depth * 900 + active * 500,
+      attackSeconds: .006 + depth * .004,
+      decaySeconds: .075 + depth * .045
     };
   }
 
@@ -380,6 +401,7 @@
     stoneSkip,
     waterMaterial,
     waterDrop,
+    waterSplash,
     frequencyAt
   });
 });

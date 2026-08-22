@@ -274,3 +274,18 @@ assert.ok(tinted.levelCompensation >= .9 && tinted.levelCompensation <= 1.1,
   'a tinted shade must never leave the safe level range');
 
 console.log('pond-music: pitch currents, precision, water materials, drop/pearl/stone transients, space, held texture, reflection, and note shades verified');
+
+// A fresh accent carries one short noise splash: water receiving the drop.
+const splashShallow = music.waterSplash(0, .2);
+const splashDeep = music.waterSplash(1, .9);
+assert.ok(splashShallow.durationSeconds >= .1 && splashDeep.durationSeconds <= .17,
+  'the splash must stay a short transient inside its budget');
+assert.ok(splashDeep.durationSeconds > splashShallow.durationSeconds, 'deep water splashes slightly longer');
+assert.ok(splashDeep.peakGain > splashShallow.peakGain, 'a stronger gesture makes a louder splash');
+assert.ok(splashDeep.peakGain <= .05, 'the splash must stay well under the tonal voice level');
+assert.equal(music.waterSplash(-3, 2).durationSeconds, splashShallow.durationSeconds, 'broken inputs must clamp');
+assert.equal(music.waterSplash(4, -1).peakGain > 0, true, 'clamped inputs still produce a bounded splash');
+assert.ok(splashShallow.highHz > splashDeep.highHz && splashShallow.lowHz > splashDeep.lowHz,
+  'shallow glass stays bright, hollow deep darkens the noise');
+assert.ok(splashDeep.attackSeconds > splashShallow.attackSeconds && splashDeep.decaySeconds > splashShallow.decaySeconds,
+  'deep water receives the drop more slowly');

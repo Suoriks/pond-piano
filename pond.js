@@ -163,7 +163,25 @@
   function voiceNodes(voice) {
     return [voice.oscillator, voice.overtone, voice.overtoneGain, voice.filter, voice.gain, voice.undertow,
       voice.filterDrift, voice.overtoneDrift, voice.eddyOscillator, voice.eddyDepth,
-      voice.dropOscillator, voice.dropGain, voice.panner, voice.reflectionSend];
+      voice.dropOscillator, voice.dropGain, voice.splashSource, voice.splashLowpass,
+      voice.splashBandpass, voice.splashGain, voice.panner, voice.reflectionSend];
+  }
+
+  // One short pre-rendered noise buffer per context; the splash reads as
+  // water receiving the note, not as a sustained hiss.
+  function splashNoise(context) {
+    if (context.__pondSplashNoise) return context.__pondSplashNoise;
+    const length = Math.floor(context.sampleRate * 2);
+    const buffer = context.createBuffer(1, length, context.sampleRate);
+    const channel = buffer.getChannelData(0);
+    let previous = 0;
+    for (let index = 0; index < length; index += 1) {
+      const white = Math.random() * 2 - 1;
+      previous = previous * .82 + white * .18; // slightly softened white noise
+      channel[index] = previous * 3.2;
+    }
+    context.__pondSplashNoise = buffer;
+    return buffer;
   }
 
   function reflectDropVoices(engine = audio) {
@@ -226,6 +244,7 @@
       for (const oscillator of [voice.oscillator, voice.overtone, voice.undertow, voice.eddyOscillator, voice.dropOscillator]) {
         try { oscillator?.stop(now); } catch {}
       }
+      try { voice.splashSource?.stop(now); } catch {}
       disconnectVoice(voice);
     }
     for (const pearl of engine.collisionVoices ?? []) {
@@ -307,8 +326,23 @@
     const texture = music.heldTexture(depth.normalizedDepth, music.TEXTURE_BLOOM_END_MS);
     const reflection = music.depthReflection(depth.normalizedDepth);
     const drop = music.waterDrop(frequency, depth.normalizedDepth, attack, material);
+    const splash = music.waterSplash(depth.normalizedDepth, attack, material);
     const dropOscillator = engine.context.createOscillator();
     const dropGain = engine.context.createGain();
+    let splashSource = null, splashLowpass = null, splashBandpass = null, splashGain = null;
+    if (engine.context.createBufferSource && engine.context.createBiquadFilter) {
+      try {
+        splashSource = engine.context.createBufferSource();
+        splashSource.buffer = splashNoise(engine.context);
+        splashLowpass = engine.context.createBiquadFilter();
+        splashLowpass.type = 'lowpass';
+        splashLowpass.Q.value = .0001;
+        splashBandpass = engine.context.createBiquadFilter();
+        splashBandpass.type = 'bandpass';
+        splashBandpass.Q.value = .68;
+        splashGain = engine.context.createGain();
+      } catch { splashSource = null; }
+    }
     oscillator.type = 'sine'; overtone.type = 'sine'; undertow.type = 'sine'; filter.type = 'lowpass'; filter.Q.value = material.filterQ;
     oscillator.frequency.value = frequency; overtone.frequency.value = frequency * material.overtoneRatio;
     undertow.frequency.value = texture.rateHz;
@@ -319,6 +353,16 @@
     dropGain.gain.setValueAtTime(.0001, now);
     dropGain.gain.exponentialRampToValueAtTime(drop.peakGain, now + .008);
     dropGain.gain.exponentialRampToValueAtTime(.0001, now + drop.durationSeconds);
+    if (splashSource && splashLowpass && splashBandpass && splashGain) {
+      const splashEnd = now + splash.durationSeconds;
+      splashSource.playbackRate.value = .92 + depth.normalizedDepth * .16;
+      splashLowpass.frequency.setValueAtTime(splash.highHz, now);
+      splashLowpass.frequency.exponentialRampToValueAtTime(Math.max(120, splash.lowHz), splashEnd);
+      splashBandpass.frequency.value = Math.max(80, splash.lowHz + (splash.highHz - splash.lowHz) * .55);
+      splashGain.gain.setValueAtTime(.0001, now);
+      splashGain.gain.linearRampToValueAtTime(splash.peakGain, now + splash.attackSeconds);
+      splashGain.gain.exponentialRampToValueAtTime(.0001, splashEnd);
+    }
     overtoneGain.gain.value = material.overtoneGain;
     filter.frequency.value = material.cutoffHz;
     gain.gain.setValueAtTime(.0001, now);
@@ -333,23 +377,39 @@
       panner.pan.value = pan;
       gain.connect(panner);
       dropGain.connect(panner);
+      if (splashGain) splashGain.connect(panner);
       output = panner;
     } else {
       dropGain.connect(engine.master);
+      if (splashGain) splashGain.connect(engine.master);
     }
     output.connect(engine.master);
     if (reflectionSend) {
       reflectionSend.gain.value = reflection.sendGain;
       output.connect(reflectionSend).connect(engine.reflection.input);
       if (!panner) dropGain.connect(reflectionSend);
+      if (!panner && splashGain) splashGain.connect(reflectionSend);
     }
     scheduleTextureBloom(filterDrift.gain, texture.filterSweepHz, now);
     scheduleTextureBloom(overtoneDrift.gain, texture.overtonePulse, now);
     oscillator.start(); overtone.start(); undertow.start(); dropOscillator.connect(dropGain); dropOscillator.start();
     dropOscillator.stop(now + drop.durationSeconds + .025);
+    if (splashSource && splashLowpass && splashBandpass && splashGain) {
+      try {
+        splashSource.connect(splashLowpass).connect(splashBandpass).connect(splashGain);
+        splashSource.start(now, Math.random() * 1.1);
+        splashSource.stop(now + splash.durationSeconds + .02);
+      } catch {
+        for (const node of [splashSource, splashLowpass, splashBandpass, splashGain]) {
+          try { node?.disconnect(); } catch {}
+        }
+        splashSource = null;
+      }
+    }
     const voice = {
       oscillator, overtone, overtoneGain, filter, gain, undertow, filterDrift, overtoneDrift, panner, reflectionSend,
-      dropOscillator, dropGain, dropEndsAt: now + drop.durationSeconds, dropIntensity: attack,
+      dropOscillator, dropGain, splashSource, splashLowpass, splashBandpass, splashGain,
+      dropEndsAt: now + drop.durationSeconds, dropIntensity: attack,
       born: now, textureDepth: depth.normalizedDepth, targetFrequency: frequency,
       materialBias: 0, materialDepth: material.effectiveDepth, materialLevel: material.levelCompensation,
       overtoneRatio: material.overtoneRatio, attackSeconds: material.attackSeconds, releaseSeconds: material.releaseSeconds,
@@ -367,6 +427,16 @@
       voice.dropOscillator = null; voice.dropGain = null;
       reflectDropVoices(engine);
     }, { once: true });
+    if (splashSource) {
+      splashSource.addEventListener('ended', () => {
+        if (voice.splashSource !== splashSource) return;
+        for (const node of [splashSource, splashLowpass, splashBandpass, splashGain]) {
+          try { node?.disconnect(); } catch {}
+        }
+        voice.splashSource = null; voice.splashLowpass = null;
+        voice.splashBandpass = null; voice.splashGain = null;
+      }, { once: true });
+    }
     oscillator.addEventListener('ended', () => {
       if (engine.voices.get(id) !== voice) return;
       engine.voices.delete(id);
@@ -455,6 +525,7 @@
     voice.gain.gain.setTargetAtTime(.0001, now, .1);
     voice.oscillator.stop(now + voice.releaseSeconds); voice.overtone.stop(now + voice.releaseSeconds); voice.undertow.stop(now + voice.releaseSeconds);
     try { voice.dropOscillator?.stop(Math.min(now + .03, voice.dropEndsAt + .025)); } catch {}
+    try { voice.splashSource?.stop(now + .02); } catch {}
     try { voice.eddyOscillator?.stop(now + voice.releaseSeconds); } catch {}
     balanceVoices(audio);
   }

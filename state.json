@@ -1,11 +1,11 @@
 {
   "project": "pond-piano",
   "phase": "done",
-  "iteration": 28,
+  "iteration": 29,
   "status": "complete",
-  "current_goal": "Living surface tide: clean pond-tide.js sheen field drifts and breathes across the water, each note leaves a long soft afterglow near the site; renderer draws subtle mineral bands; reduced-motion freezes into a quiet static sheen",
-  "last_verified": "2026-08-22: KAIZEN 0028. Seven Node suites (incl 7 pond-tide tests) pass; syntax clean (22 JS); JSON + git diff --check clean. Headless Chromium 390x844 offline boots, canvas#pond renders, eyebrow v28, simulated tap raises body.has-played, no console/page errors. Pixel check output/pond-piano/tide-surface-28.png confirmed soft diffuse sheen on the water (brightest regions 55.9 vs overall 39.1), intact shore controls, no clipping. Shell v24; package.json includes pond-tide.js in files and build.files.",
-  "next_step": "Real-device pass (Android Chrome/PWA, iPhone Safari): judge whether the living tide lies gently under the note ripples without distracting, how the afterglow fades over real time, and whether the broad light bands are pleasant at true pixel density; change brightness/speed/radius limits only from measured device.",
+  "current_goal": "Note splash: every fresh accent carries one short noise splash on top of the tonal drop — filtered noise shaped by depth/material/force, self-teardown nodes, clean polyphony budget",
+  "last_verified": "2026-08-22: KAIZEN 0029. All 9 Node suites pass (22 tests incl new waterSplash bounds/shaping); syntax clean (22 JS); JSON + git diff --check pending final commit check. Headless Chromium 390x844 real Web Audio: fresh tap creates exactly 1 buffer source + 4 oscillators, splash starts and ends by itself (~0.17s), release returns voices/drop to 0, second deep-water tap adds exactly one more bounded splash (total 2), no console/page errors. Shell v25 cached with 17 entries offline-ready; eyebrow v29. Screenshot output/pond-piano/note-splash-29.png pixel-checked: dark water intact (overall 36.4), bright response at tap site (62.8 vs quiet 40.2); vision inspection unavailable (image model limits) same as iterations 24/28.",
+  "next_step": "Real-device pass (Android Chrome/PWA, iPhone Safari): judge whether the splash makes note starts feel wetter without muddying quiet taps; check splash balance against drop/materials/pearl/skip on real speakers; numeric brightness/level limits change only from measured device.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -36,5 +36,5 @@
     "windows_asset": "Pond-Piano-0.1.0-Windows-x64.exe",
     "published_at": "2026-07-26T04:39:34+03:00"
   },
-  "updated_at": "2026-08-22T21:40:00+03:00"
+  "updated_at": "2026-08-22T22:35:00+03:00"
 }
