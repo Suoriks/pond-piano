@@ -8,13 +8,14 @@
   const score = window.PondScore;
   const waves = window.PondWaves;
   const caustic = window.PondCaustic;
+  const tide = window.PondTide;
   const masterModel = window.PondMaster;
   const audioLifecycleFactory = window.PondAudioLifecycle;
   if (!music) throw new Error('Pond music mapping did not load');
   if (!gesture) throw new Error('Pond gesture mapping did not load');
   if (!score) throw new Error('Pond score mapping did not load');
   if (!waves) throw new Error('Pond wave mapping did not load');
-  if (!caustic) throw new Error('Pond caustic mapping did not load');
+  if (!tide) throw new Error('Pond tide mapping did not load');
   if (!masterModel) throw new Error('Pond master control did not load');
   if (!audioLifecycleFactory) throw new Error('Pond audio lifecycle did not load');
   const volumeControl = document.querySelector('.shore-control');
@@ -41,6 +42,8 @@
   const MAX_ECHO_VOICES = 3;
   const ripples = [], trails = [], splashes = [], scoreEchoes = [], collisionPearls = [], stoneFlights = [], pointers = new Map();
   let motes = caustic.createMotes(caustic.DEFAULT_COUNT, 7);
+  let tidalSwells = tide.createSwells(tide.DEFAULT_SWELLS, 13);
+  let tidalStirs = [];
   const echoCooldowns = new WeakMap();
   const collisionPairs = new Map();
   const collisionTimers = new Map();
@@ -776,6 +779,8 @@
     if (!ripple) return;
     if (reactive) scheduleWaveCollisions(ripple, born);
     ripples.push({ ...ripple, hue: 152 + 30 * (1 - y / height) });
+    // A note stirs the reading: the whole surface keeps a long quiet afterglow near the site.
+    tidalStirs = tide.stir(tidalStirs, x / Math.max(1, width), y / Math.max(1, height), .12 + Math.min(.5, pressure * .7));
     // Light answers where music is born: near motes gather a warmer pool.
     motes = caustic.gatherMotes(motes, x / Math.max(1, width), y / Math.max(1, height), .2 + Math.min(.8, pressure * 1.1), caustic.WARMTH_RADIUS_01 * 1.35);
     canvas.dataset.rippleEvents = String(rippleSerial);
@@ -1237,6 +1242,28 @@
     ctx.globalAlpha = 1;
   }
 
+  function drawTide(now) {
+    const tideState = tide.updateTide(tidalSwells, tidalStirs, Math.max(0, (now - last) / 1000));
+    tidalSwells = tideState.swells;
+    tidalStirs = tideState.stirs;
+    const field = tide.tideVisual(tidalSwells, tidalStirs, now, reduced.matches);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (const glow of field) {
+      const radius = Math.max(24, glow.size * Math.max(width, height));
+      const ry = radius * glow.spread;
+      const cx = glow.x * width, cy = glow.y * height;
+      const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(radius, ry));
+      const hue = Number.isFinite(glow.hue) ? glow.hue : 148 + glow.tint * 26;
+      gradient.addColorStop(0, `hsla(${hue} 44% 74% / ${glow.alpha * .5})`);
+      gradient.addColorStop(.4, `hsla(${hue + 8} 40% 62% / ${glow.alpha * .2})`);
+      gradient.addColorStop(1, 'transparent');
+      ctx.fillStyle = gradient;
+      ctx.beginPath(); ctx.ellipse(cx, cy, radius, ry, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
   function drawTrail(mark, now) {
     const age = Math.max(0, (now - mark.born) / 1000), life = reduced.matches ? .34 : 1.15;
     if (age > life) return false;
@@ -1650,6 +1677,7 @@
   function frame(now) {
     const dt = Math.min((now - last) / 1000, .05); last = now;
     water(now + dt);
+    drawTide(now);
     drawMotes(now);
     memories = memories.filter(memory => now >= memory.born && now < memory.born + score.lifeMs(reduced.matches));
     for (const motif of score.groupMotifs(memories)) drawMotifUndercurrent(motif, now);

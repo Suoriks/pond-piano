@@ -1,11 +1,11 @@
 {
   "project": "pond-piano",
   "phase": "done",
-  "iteration": 27,
+  "iteration": 28,
   "status": "complete",
-  "current_goal": "Living caustic-light motes integrated: update+gather+draw wired into render loop, shell v23, package.json deduped + build-included",
-  "last_verified": "2026-08-22: KAIZEN 0027. Six Node suites (incl 5 pond-caustic tests) pass; syntax clean (20 JS); JSON + git diff --check clean. Headless Chromium 390x844 real Web Audio boots offline, canvas#pond renders, eyebrow v27, tap raises body.has-played with correct status; no console/page errors. Vision on output/pond-piano/caustic-light-27.png confirmed whole mobile composition, scattered light motes, warm glow at the note, intact shore controls, no clipping. Shell v23; package.json deduped and build includes pond-caustic.js.",
-  "next_step": "Real-device pass (Android Chrome/PWA, iPhone Safari): judge whether the living light feels gentle and non-distracting, whether warmth pools well at the note site; change warmth/radius limits only from measured device feel.",
+  "current_goal": "Living surface tide: clean pond-tide.js sheen field drifts and breathes across the water, each note leaves a long soft afterglow near the site; renderer draws subtle mineral bands; reduced-motion freezes into a quiet static sheen",
+  "last_verified": "2026-08-22: KAIZEN 0028. Seven Node suites (incl 7 pond-tide tests) pass; syntax clean (22 JS); JSON + git diff --check clean. Headless Chromium 390x844 offline boots, canvas#pond renders, eyebrow v28, simulated tap raises body.has-played, no console/page errors. Pixel check output/pond-piano/tide-surface-28.png confirmed soft diffuse sheen on the water (brightest regions 55.9 vs overall 39.1), intact shore controls, no clipping. Shell v24; package.json includes pond-tide.js in files and build.files.",
+  "next_step": "Real-device pass (Android Chrome/PWA, iPhone Safari): judge whether the living tide lies gently under the note ripples without distracting, how the afterglow fades over real time, and whether the broad light bands are pleasant at true pixel density; change brightness/speed/radius limits only from measured device.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -36,5 +36,5 @@
     "windows_asset": "Pond-Piano-0.1.0-Windows-x64.exe",
     "published_at": "2026-07-26T04:39:34+03:00"
   },
-  "updated_at": "2026-08-22T20:33:00+03:00"
+  "updated_at": "2026-08-22T21:40:00+03:00"
 }
