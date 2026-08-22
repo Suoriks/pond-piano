@@ -1,11 +1,11 @@
 {
   "project": "pond-piano",
-  "phase": "melodic-echo",
-  "iteration": 25,
+  "phase": "note-shades",
+  "iteration": 26,
   "status": "completed",
   "current_goal": null,
-  "last_verified": "2026-08-22: Iteration 25 melodic echo complete. Score resonance now wakes a bounded staggered series of up to 3 own anchor points of the crossed phrase (score.melodyAnchors + music.echoNote) as soft decaying plucks, each with a small non-reactive ripple; retireAudioEngine clears echoTimers/echoVoices and dataset counters. Shell v21; README/DESIGN/index aria/KAIZEN updated. Verified: ten Node suites (new melodic-anchor and echo assertions), syntax of 18 JS files, JSON and git diff --check pass. Headless Chromium 390x844 with live Web Audio played a slow horizontal phrase then a vertical cross: scoreMemories grew to 2, melodicEchoes=1, peak simultaneous echo voices 2 (<=3), pending timers and echo voices returned to 0 on clean teardown, and status confirmed the phrase answered as a melody. Screenshot output/pond-piano/melodic-echo-25.png.",
-  "next_step": "Real-device pass on Android Chrome/PWA and iPhone Safari: 2/3/5-finger independence, latency, pointercancel, background resume, and a real phrase-crossing echo; change numeric limits only from measured device behavior.",
+  "last_verified": "2026-08-22: Iteration 26 note shading complete. Each fresh note takes the next of three subtle tints (clear/warm/deep) of one water voice via deterministic music.noteShade by phrase note index and depth; waterMaterial(shade) nudges overtoneRatio/cutoffHz/levelCompensation only, and startVoice/moveVoice carry the shade for the note's whole lifetime. Shell v22; README/DESIGN/index aria/KAIZEN updated. Verified: both Node suites (24 tests), syntax of 18 JS files, JSON and git diff --check pass. Headless Chromium 390x844 with live Web Audio played four fresh taps then a held fifth note: audioVoices rose to 1 and stayed 1, has-played true, no console/page errors. Screenshot output/pond-piano/note-shade-26.png; vision confirmed whole mobile composition without clipping.",
+  "next_step": "Decide by real-device feel whether the deterministic three-tint cycle is pleasant or needs more variants; change numeric limits only from measured device behavior.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -36,5 +36,5 @@
     "windows_asset": "Pond-Piano-0.1.0-Windows-x64.exe",
     "published_at": "2026-07-26T04:39:34+03:00"
   },
-  "updated_at": "2026-08-22T17:20:00+03:00"
+  "updated_at": "2026-08-22T18:20:00+03:00"
 }

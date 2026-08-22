@@ -5,6 +5,7 @@
 })(typeof globalThis === 'object' ? globalThis : this, () => {
   const BASE_FREQUENCY = 130.81278265; // C3
   const OCTAVES = 3;
+  const SHADE_CYCLE = 3;
   const ATTACK_WINDOW_MS = 240;
   const TEXTURE_BLOOM_START_MS = 620;
   const TEXTURE_BLOOM_END_MS = 3600;
@@ -149,6 +150,26 @@
     };
   }
 
+  // A fresh note takes the next subtle shade in a fixed cycle so repeated
+  // taps stay recognisably the same gesture but never ring as one identical
+  // oscillator. Fully deterministic: only the phrase's note count and depth
+  // decide the colour, with no presets, no randomness and no immediate repeat.
+  function noteShade(phraseIndex, normalizedDepth = 0.5) {
+    const depth = clamp(normalizedDepth);
+    const order = Math.max(0, Math.trunc(Number.isFinite(phraseIndex) ? phraseIndex : 0));
+    const tint = order % SHADE_CYCLE;
+    const clear = tint === 0;
+    const deep = tint === 2;
+    return Object.freeze({
+      tint,
+      depth,
+      overtoneBias: clear ? .035 : deep ? -.03 : 0,
+      gainLift: clear ? 1.03 : deep ? .96 : 1,
+      cutoffTone: clear ? 1.06 : deep ? .92 : 1,
+      label: clear ? 'clear' : deep ? 'deep' : 'neutral'
+    });
+  }
+
   function collisionPearl(parentFrequency, normalizedDepth, energy = .35, familyId = DEFAULT_SCALE_FAMILY) {
     const source = Math.max(BASE_FREQUENCY, Number.isFinite(parentFrequency) ? parentFrequency : BASE_FREQUENCY);
     const depth = clamp(normalizedDepth);
@@ -209,7 +230,7 @@
     return verticalDirection * intention;
   }
 
-  function waterMaterial(normalizedDepth, brushBias = 0) {
+  function waterMaterial(normalizedDepth, brushBias = 0, shade = null) {
     const depth = clamp(normalizedDepth);
     const bias = clamp(Number.isFinite(brushBias) ? brushBias : 0, -1, 1);
     const effectiveDepth = clamp(depth + bias * MATERIAL_BRUSH_DEPTH);
@@ -217,6 +238,9 @@
     const hollow = smoothstep(.5, .88, effectiveDepth);
     const living = Math.max(0, 1 - glass - hollow);
     const weights = [glass, living, hollow];
+    const overtoneBias = shade?.overtoneBias ?? 0;
+    const gainLift = shade?.gainLift ?? 1;
+    const cutoffTone = shade?.cutoffTone ?? 1;
     const names = ['glass', 'living', 'hollow'];
     const dominant = names[weights.indexOf(Math.max(...weights))];
     return {
@@ -227,13 +251,13 @@
       glass,
       living,
       hollow,
-      cutoffHz: blend(weights, [5100, 2450, 760]),
-      overtoneRatio: blend(weights, [2.008, 1.502, 1.008]),
+      cutoffHz: blend(weights, [5100, 2450, 760]) * cutoffTone,
+      overtoneRatio: blend(weights, [2.008, 1.502, 1.008]) + overtoneBias,
       overtoneGain: blend(weights, [.19, .14, .09]),
       filterQ: blend(weights, [.55, 1.35, .82]),
       attackSeconds: blend(weights, [.032, .044, .058]),
       releaseSeconds: blend(weights, [.42, .5, .58]),
-      levelCompensation: blend(weights, [.94, 1, 1.06])
+      levelCompensation: blend(weights, [.94, 1, 1.06]) * gainLift
     };
   }
 
@@ -345,6 +369,7 @@
     mapPitch,
     movementSpeed,
     neighboringCurrents,
+    noteShade,
     normalizedAtFrequency,
     normalizeScaleFamily,
     parseScaleFamily,

@@ -252,4 +252,25 @@ assert.ok(brushedDown.effectiveDepth > livingMaterial.effectiveDepth && brushedU
 assert.ok(brushedDown.effectiveDepth - brushedUp.effectiveDepth <= music.MATERIAL_BRUSH_DEPTH * 2 + 1e-9,
   'gesture colour stays a small bias and cannot replace the visible Y depth axis');
 
-console.log('pond-music: pitch currents, precision, water materials, drop/pearl/stone transients, space, held texture, and reflection verified');
+const shade0 = music.noteShade(0, .2);
+const shade1 = music.noteShade(1, .2);
+const shade2 = music.noteShade(2, .2);
+const shade3 = music.noteShade(3, .2);
+assert.equal(shade0.tint, 0); assert.equal(shade1.tint, 1); assert.equal(shade2.tint, 2);
+assert.equal(shade3.tint, 0, 'the shade cycle must repeat fully deterministically');
+assert.ok(shade0.label !== shade1.label && shade1.label !== shade2.label && shade2.label !== shade0.label,
+  'successive clear, warm and deep notes must be distinguishable');
+assert.ok(shade0.gainLift > shade1.gainLift && shade2.gainLift < shade1.gainLift,
+  'a clear note may lift level, a deep note must sit a hair lower');
+assert.ok(shade0.cutoffTone > shade2.cutoffTone, 'a clear shade keeps more treble than a deep one');
+assert.deepEqual(music.noteShade(-3, .5), music.noteShade(0, .5), 'a broken index must fall back like the first note');
+assert.equal(music.noteShade(3, 9).depth, 1, 'depth must stay clamped inside the shade model');
+// The shading must stay a small deterministic tint within the voice budget.
+const tinted = music.waterMaterial(.5, 0, shade0);
+const base = music.waterMaterial(.5);
+assert.ok(Math.abs(tinted.overtoneRatio - base.overtoneRatio) <= .05, 'shade must nudge the harmonic, not replace it');
+assert.ok(Math.abs(tinted.cutoffHz - base.cutoffHz) < 260, 'shade may tint the cutoff within the budget');
+assert.ok(tinted.levelCompensation >= .9 && tinted.levelCompensation <= 1.1,
+  'a tinted shade must never leave the safe level range');
+
+console.log('pond-music: pitch currents, precision, water materials, drop/pearl/stone transients, space, held texture, reflection, and note shades verified');

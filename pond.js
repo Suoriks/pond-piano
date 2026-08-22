@@ -57,6 +57,7 @@
   let lastSkipPlanAt = -Infinity;
   let width = 0, height = 0, dpr = 1, last = performance.now(), announced = false, scoreAnnounced = false, dynamicsAnnounced = false, textureAnnounced = false, precisionAnnounced = false, freedomAnnounced = false, eddyAnnounced = false;
   let collisionAnnounced = false, skipAnnounced = false, scoreEchoAnnounced = false;
+  let phraseNoteIndex = 0;
 
   function pitchAt(x) {
     return music.frequencyAt(x / Math.max(1, width));
@@ -280,7 +281,7 @@
     }
   }
 
-  function startVoice(id, x, y, pressure = .42, frequency = pitchAt(x), attack = pressure, engine = audio) {
+  function startVoice(id, x, y, pressure = .42, frequency = pitchAt(x), attack = pressure, engine = audio, shadeIndex = 0) {
     if (!engine || engine.context.state === 'closed' || engine.voices.has(id) || engine.voices.size >= MAX_VOICES) return false;
     const now = engine.context.currentTime;
     const oscillator = engine.context.createOscillator();
@@ -294,7 +295,8 @@
     const panner = typeof engine.context.createStereoPanner === 'function' ? engine.context.createStereoPanner() : null;
     const reflectionSend = engine.reflection ? engine.context.createGain() : null;
     const depth = depthAt(y);
-    const material = music.waterMaterial(depth.normalizedDepth);
+    const shade = music.noteShade(shadeIndex, depth.normalizedDepth);
+    const material = music.waterMaterial(depth.normalizedDepth, 0, shade);
     const pan = music.spatialPan(x / Math.max(1, width));
     const texture = music.heldTexture(depth.normalizedDepth, music.TEXTURE_BLOOM_END_MS);
     const reflection = music.depthReflection(depth.normalizedDepth);
@@ -345,7 +347,8 @@
       born: now, textureDepth: depth.normalizedDepth, targetFrequency: frequency,
       materialBias: 0, materialDepth: material.effectiveDepth, materialLevel: material.levelCompensation,
       overtoneRatio: material.overtoneRatio, attackSeconds: material.attackSeconds, releaseSeconds: material.releaseSeconds,
-      targetPan: pan, attack, accentUntil: now + .32, releasing: false
+      targetPan: pan, attack, accentUntil: now + .32, releasing: false,
+      shade
     };
     engine.voices.set(id, voice);
     canvas.dataset.waterMaterial = material.dominant;
@@ -373,7 +376,7 @@
     const voice = audio?.voices.get(id);
     if (!voice) return;
     const now = audio.context.currentTime, frequency = mappedFrequency ?? pitchAt(x), depth = depthAt(y);
-    const material = music.waterMaterial(depth.normalizedDepth, materialBias);
+    const material = music.waterMaterial(depth.normalizedDepth, materialBias, voice.shade);
     const pitchChanged = Math.abs(frequency - voice.targetFrequency) > .08;
     if (pitchChanged) {
       voice.oscillator.frequency.setTargetAtTime(frequency, now, .026);
@@ -921,7 +924,8 @@
     const pressure = pressureOf(event, pressureAvailable);
     const attack = music.attackIntensity({ pressure, pressureAvailable });
     const engine = audioLifecycle.activateFromGesture();
-    const sounding = startVoice(event.pointerId, p.x, p.y, pressure, pitchAt(p.x), attack, engine);
+    const sounding = startVoice(event.pointerId, p.x, p.y, pressure, pitchAt(p.x), attack, engine, phraseNoteIndex);
+    if (sounding) phraseNoteIndex += 1;
     pointers.set(event.pointerId, {
       ...p, pressure, pressureAvailable, attack, splashPlayed: false, sounding, born: now, lastMotion: now, movedAt: now, motionSpeed: 0,
       originX: p.x, originY: p.y, materialBias: null,
@@ -1143,7 +1147,8 @@
       keyboard.distanceTraveled = 0; keyboard.resonanceX = p.x; keyboard.resonanceY = p.y; keyboard.resonatedMemories = new Set();
       keyboard.scoreSamples = [{ x: keyboard.x, y: keyboard.y, pitch: keyboard.pitchX, at: now, pressure: .48 }];
       const engine = audioLifecycle.activateFromGesture();
-      keyboard.sounding = startVoice('keyboard', p.x, p.y, .48, pitchAt(p.x), .48, engine);
+      keyboard.sounding = startVoice('keyboard', p.x, p.y, .48, pitchAt(p.x), .48, engine, phraseNoteIndex);
+      if (keyboard.sounding) phraseNoteIndex += 1;
       if (!keyboard.sounding) keyboard.scoreSamples = [];
       addRipple(p.x, p.y, .48);
       document.body.classList.add('has-played'); status.textContent = 'Звук воды звучит; стрелками меняйте высоту и глубину';
