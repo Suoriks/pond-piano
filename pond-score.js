@@ -152,8 +152,67 @@
     return closest ? Object.freeze(closest) : null;
   }
 
+  function serializePhrase(memories, nowPerf, nowEpoch) {
+    const stamped = Number.isFinite(nowPerf) ? nowPerf : 0;
+    const epoch = Number.isFinite(nowEpoch) ? nowEpoch : 0;
+    const visible = (Array.isArray(memories) ? memories : [])
+      .filter(memory => memory && Number.isFinite(memory.born) &&
+        Number.isFinite(memory.startedAt) && stamped - memory.born > 0 &&
+        stamped - memory.born < FULL_LIFE_MS)
+      .slice(-MAX_MEMORIES);
+    if (!visible.length) return null;
+    return JSON.stringify({
+      v: 1,
+      savedAt: epoch,
+      memories: visible.map(memory => ({
+        born: epoch - Math.max(0, stamped - memory.born),
+        startedAt: epoch - Math.max(0, stamped - memory.startedAt),
+        durationMs: memory.durationMs,
+        pitch: memory.pitch,
+        depth: memory.depth,
+        pressure: memory.pressure,
+        points: memory.points.map(point => ({
+          x: point.x, y: point.y, pitch: point.pitch,
+          at: epoch - Math.max(0, stamped - point.at), pressure: point.pressure
+        }))
+      }))
+    });
+  }
+
+  function restorePhrase(serialized, nowPerf, nowEpoch) {
+    const stamped = Number.isFinite(nowPerf) ? nowPerf : 0;
+    const epoch = Number.isFinite(nowEpoch) ? nowEpoch : 0;
+    if (typeof serialized !== 'string' || !serialized) return [];
+    let parsed;
+    try { parsed = JSON.parse(serialized); } catch { return []; }
+    if (!parsed || parsed.v !== 1 || !Array.isArray(parsed.memories)) return [];
+    return parsed.memories
+      .filter(memory => memory && Number.isFinite(memory.born) && Number.isFinite(memory.startedAt))
+      .map(memory => {
+        const points = (Array.isArray(memory.points) ? memory.points : [])
+          .filter(point => point && Number.isFinite(point.x) && Number.isFinite(point.y))
+          .map(point => Object.freeze({
+            x: clamp(point.x), y: clamp(point.y),
+            pitch: clamp(Number.isFinite(point.pitch) ? point.pitch : point.x),
+            at: stamped - Math.max(0, epoch - (Number.isFinite(point.at) ? point.at : epoch)),
+            pressure: clamp(Number.isFinite(point.pressure) ? point.pressure : .42)
+          }));
+        return Object.freeze({
+          startedAt: stamped - Math.max(0, epoch - memory.startedAt),
+          born: stamped - Math.max(0, epoch - memory.born),
+          durationMs: Math.max(80, Math.min(8000, Number.isFinite(memory.durationMs) ? memory.durationMs : 80)),
+          pitch: clamp(Number.isFinite(memory.pitch) ? memory.pitch : (points.at(-1)?.pitch ?? .5)),
+          depth: clamp(Number.isFinite(memory.depth) ? memory.depth : (points.at(-1)?.y ?? .5)),
+          pressure: clamp(Number.isFinite(memory.pressure) ? memory.pressure : .42),
+          points
+        });
+      })
+      .filter(memory => { const age = stamped - memory.born; return Number.isFinite(age) && age > 0 && age < FULL_LIFE_MS; });
+  }
+
   return Object.freeze({
     MAX_MEMORIES, MAX_POINTS, MOTIF_GAP_MS,
-    createMemory, lifeMs, visibility, append, groupMotifs, findCrossedMemory
+    createMemory, lifeMs, visibility, append, groupMotifs, findCrossedMemory,
+    serializePhrase, restorePhrase
   });
 });

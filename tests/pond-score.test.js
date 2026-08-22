@@ -41,6 +41,33 @@ assert.equal(precisionMemory.pitch, .59, 'the score must remember the finely con
 const note = (startedAt, releasedAt, x = .5) => score.createMemory([
   { x, y: .5, at: startedAt, pressure: .4 }
 ], releasedAt);
+
+// Phrase survives reload: serialize against epoch wall-clock, restore into the new run's perf clock.
+const savedPerf = 50000, savedEpoch = 1700000000000;
+const phraseMemories = [
+  score.createMemory([{ x: .2, y: .5, at: 49000, pressure: .4 }], 49500),
+  score.createMemory([{ x: .62, y: .72, at: 49600, pressure: .6 }], 49900)
+];
+const serialized = score.serializePhrase(phraseMemories, savedPerf, savedEpoch);
+assert.equal(typeof serialized, 'string');
+const restored = score.restorePhrase(serialized, 5000, savedEpoch + 5000);
+assert.equal(restored.length, 2, 'a saved phrase must come back after reload');
+assert.equal(restored[1].born, -100, 'the phrase was released 100ms before save, so on the new run it lands just before origin');
+assert.equal(restored[0].born, -500, 'the older phrase lands earlier on the new timeline');
+assert.equal(score.visibility(restored[1], 5000), 1, 'a phrase released moments before reload must be fully readable on the new run');
+const stayVisible = score.visibility(restored[1], 10000);
+assert.ok(stayVisible > 0 && stayVisible < 1, 'a phrase right after restart must still be readable and fading');
+assert.equal(restored[1].pitch, .62, 'restored sounding pitch survives');
+assert.equal(restored[1].depth, .72, 'restored depth survives');
+const midRestored = score.restorePhrase(serialized, 12000, savedEpoch + 12000);
+assert.equal(midRestored.length, 2, 'a mid-life phrase must still restore');
+const staleRestored = score.restorePhrase(serialized, 50000, savedEpoch + score.lifeMs() + 1000);
+assert.equal(staleRestored.length, 0, 'an expired phrase must not reappear');
+assert.deepEqual(score.restorePhrase('not json', 5000, savedEpoch), [], 'damaged stored phrase must fall back safely');
+assert.deepEqual(score.restorePhrase('', 5000, savedEpoch), []);
+assert.equal(score.serializePhrase([], 1000, 1), null, 'no visible memories means nothing worth persisting');
+
+
 const motifs = score.groupMotifs([
   note(100, 400, .2),
   note(620, 850, .4),

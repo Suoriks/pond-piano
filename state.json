@@ -1,11 +1,11 @@
 {
   "project": "pond-piano",
-  "phase": "alpha-device-pass",
-  "iteration": 23,
+  "phase": "phrase-memory",
+  "iteration": 24,
   "status": "completed",
   "current_goal": null,
-  "last_verified": "2026-08-08: Iteration 23 skipping-stone release passed seven Node test sets (10 tests), syntax checks for 18 JavaScript files, JSON/diff checks, and real Web Audio Chromium 390x844 normal/reduced-motion smoke-tests. One fast straight release produced one plan and three fading contacts with peak skipVoices=2; voices and timers returned to zero, a slow stroke made no second plan, pagehide cleared a live sequence, shell v19 reloaded offline with skippingStone(), console/runtime errors stayed empty, and direct screenshot inspection confirmed a coherent decaying path without new UI chrome.",
-  "next_step": "Run a real-device alpha pass on Android Chrome/PWA and iPhone Safari for 2/3/5-finger independence, latency, the eddy and skipping-stone gestures near physical edges, drop/material/pearl/skip balance, pointercancel and background resume; change numeric boundaries only from measured device behavior.",
+  "last_verified": "2026-08-22: Iteration 24 phrase-survives-reload. One Node test set (10 tests) plus syntax check for 18 JS files passed; new assertions cover a two-gesture startup round-trip, birth on the new perf timeline, a freshly-restored phrase staying visible and fading, expiry dropping at lifeMs, corrupted/empty strings falling back, and an empty score persisting nothing. JSON and git diff checks pass; headless Chromium 390x844 boots the shell without errors and renders canvas, eyebrow v24, and three radio tuning targets.",
+  "next_step": "Real-device pass on Android Chrome/PWA and iPhone Safari: 2/3/5-finger independence, eddy and skipping-stone near physical edges, pointercancel, background resume, and now also confirm a phrase stays visible after the app is swapped away and reopens, then keeps aging correctly; change numeric limits only from measured device behavior.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [

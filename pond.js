@@ -25,6 +25,9 @@
   const tuningValue = document.querySelector('#tuning-value');
   const MASTER_STORAGE_KEY = 'pond-piano.master.v1';
   const TUNING_STORAGE_KEY = 'pond-piano.tuning.v1';
+  const SCORE_STORAGE_KEY = 'pond-piano.score.v1';
+  const SCORE_HYDRATE_MAX_AGE_MS = 3600000;
+  const epochNow = () => Date.now();
   const MAX_VOICES = 6;
   const ECHO_COOLDOWN_MS = 3200;
   const COLLISION_RATE_LIMIT_MS = 230;
@@ -38,7 +41,7 @@
   const collisionPairs = new Map();
   const collisionTimers = new Map();
   const skipTimers = new Set();
-  let memories = [];
+  let memories = score.restorePhrase(loadScorePhrase(), performance.now(), epochNow());
   const keyboard = { x: .5, y: .52, pitchX: .5, pressure: .48, sounding: false, born: 0, lastMotion: 0, motionSpeed: 0, mapping: null, materialBias: null, precisionActive: false, precisionAmount: 0, precisionOriginX: null, scoreSamples: [], distanceTraveled: 0, resonanceX: 0, resonanceY: 0, resonatedMemories: new Set() };
   let audio = null;
   let audioLifecycle = null;
@@ -462,6 +465,16 @@
     catch {}
   }
 
+  function loadScorePhrase() {
+    try { return localStorage.getItem(SCORE_STORAGE_KEY); }
+    catch { return null; }
+  }
+
+  function storeScorePhrase() {
+    try { localStorage.setItem(SCORE_STORAGE_KEY, score.serializePhrase(memories, performance.now(), epochNow())); }
+    catch {}
+  }
+
   function reflectTuningFamily(announce = false) {
     const family = music.SCALE_FAMILIES[tuningFamily];
     for (const input of tuningInputs) input.checked = input.value === tuningFamily;
@@ -815,6 +828,7 @@
     const previousMotifs = score.groupMotifs(memories).length;
     memories = score.append(memories, score.createMemory(contact.scoreSamples, now));
     canvas.dataset.scoreMemories = String(memories.length);
+    storeScorePhrase();
     const motifCount = score.groupMotifs(memories).length;
     if (previousMotifs > 0 && motifCount > previousMotifs) {
       status.textContent = 'Пауза отделила новый мотив; вода не связывает его с предыдущим';
