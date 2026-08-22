@@ -289,3 +289,22 @@ assert.ok(splashShallow.highHz > splashDeep.highHz && splashShallow.lowHz > spla
   'shallow glass stays bright, hollow deep darkens the noise');
 assert.ok(splashDeep.attackSeconds > splashShallow.attackSeconds && splashDeep.decaySeconds > splashShallow.decaySeconds,
   'deep water receives the drop more slowly');
+
+// The drop is seen as it is heard: a small corona that follows note depth and force.
+const sprayShallow = music.dropSpray(.5, 0, 0, .2);
+const sprayDeep = music.dropSpray(.5, 1, 0, .9);
+assert.ok(sprayShallow.rays.length >= 3 && sprayShallow.rays.length <= 8, 'spray stays one bounded ray set');
+assert.equal(
+  music.dropSpray(.5, 0, 0, .9).rays.length,
+  music.dropSpray(.5, 1, 0, .9).rays.length,
+  'ray count follows force, not depth'
+);
+assert.ok(sprayShallow.rays[0].life > sprayDeep.rays[0].life, 'shallow drops linger, deep folds fast');
+assert.ok(Math.abs(sprayShallow.rays[0].dy) > Math.abs(sprayDeep.rays[0].dy), 'shallow throws higher, deep sits low');
+assert.ok(sprayShallow.rays[0].light > sprayDeep.rays[0].light, 'shallow glass sparks brighter');
+assert.ok(sprayDeep.rays[0].size > sprayShallow.rays[0].size, 'deep crown spreads wider');
+assert.equal(music.dropSpray(-2, 4, 5, 9).rays.length, sprayDeep.rays.length,
+  'broken inputs must clamp into a bounded ray set');
+assert.ok(music.dropSpray(.5, .5, 1, .2).rays.every(ray =>
+  Number.isFinite(ray.dx) && Number.isFinite(ray.dy) && Number.isFinite(ray.size) && ray.size > 0),
+  'every ray must be finite and positive');

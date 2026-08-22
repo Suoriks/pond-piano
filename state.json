@@ -1,11 +1,11 @@
 {
   "project": "pond-piano",
   "phase": "done",
-  "iteration": 29,
+  "iteration": 30,
   "status": "complete",
-  "current_goal": "Note splash: every fresh accent carries one short noise splash on top of the tonal drop — filtered noise shaped by depth/material/force, self-teardown nodes, clean polyphony budget",
-  "last_verified": "2026-08-22: KAIZEN 0029. All 9 Node suites pass (22 tests incl new waterSplash bounds/shaping); syntax clean (22 JS); JSON + git diff --check pending final commit check. Headless Chromium 390x844 real Web Audio: fresh tap creates exactly 1 buffer source + 4 oscillators, splash starts and ends by itself (~0.17s), release returns voices/drop to 0, second deep-water tap adds exactly one more bounded splash (total 2), no console/page errors. Shell v25 cached with 17 entries offline-ready; eyebrow v29. Screenshot output/pond-piano/note-splash-29.png pixel-checked: dark water intact (overall 36.4), bright response at tap site (62.8 vs quiet 40.2); vision inspection unavailable (image model limits) same as iterations 24/28.",
-  "next_step": "Real-device pass (Android Chrome/PWA, iPhone Safari): judge whether the splash makes note starts feel wetter without muddying quiet taps; check splash balance against drop/materials/pearl/skip on real speakers; numeric brightness/level limits change only from measured device.",
+  "current_goal": "Drop visible as it sounds: every fresh accent births a small visible splash corona that honestly follows note depth (shallow thin bright spark, deep warm wide crown), gesture force, and entry angle; bounded ray set plus reduced-motion; sound layer untouched",
+  "last_verified": "2026-08-22: KAIZEN 0030. All 9 Node suites pass (22 tests incl new dropSpray bounds/shaping); syntax clean (22 JS); JSON + git diff --check clean. Headless Chromium 390x844 real Web Audio: fresh tap births a visible corona (coronaEvents=1) and the audio splash (buffersCreated=1), voice running + has-played set; deep tap also births a corona; no console/page errors. Shell v26; eyebrow 30. Screenshots output/pond-piano/note-corona-shallow-30.png and note-shift-deep-30.png pixel-checked: both tap sites show bright corona above dark water (62 vs overall ~36); vision inspection unavailable (image model limits) like 24/28/29.",
+  "next_step": "Real-device pass (Android Chrome/PWA, iPhone Safari): judge whether the corona lies gently under the note ripples and how distinct shallow vs deep taps are at true pixel density; change radius/brightness/spread limits only from measured device.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -36,5 +36,5 @@
     "windows_asset": "Pond-Piano-0.1.0-Windows-x64.exe",
     "published_at": "2026-07-26T04:39:34+03:00"
   },
-  "updated_at": "2026-08-22T22:35:00+03:00"
+  "updated_at": "2026-08-22T22:50:00+03:00"
 }

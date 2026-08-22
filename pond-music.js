@@ -171,6 +171,38 @@
     };
   }
 
+  // The drop must be seen as it is heard: a small splash corona
+  // that honestly follows the note. Shallow water throws a thin bright
+  // spark straight up; a deep note folds into a wide warm crown. Direction
+  // of entry only cants the spray a little — the drop itself falls down.
+  function dropSpray(normalizedX, normalizedY, directionX = 0, intensity = .28) {
+    const depth = clamp(normalizedY);
+    const force = clamp(intensity);
+    const tiltX = clamp(Number.isFinite(directionX) ? directionX : 0, -1, 1);
+    const spread = .42 + depth * 1.05;           // shallow: tight spear; deep: broad crown
+    const hop = 1.18 - depth * .5;               // shallow leaps higher, deep sits low
+    const travel = (6 + force * 11) * (1.3 - depth * .55);
+    const life = .5 - depth * .42;               // shallow lingers, deep folds fast
+    const count = Math.round(3 + force * 5);     // 3 .. 8 rays, one bounded set
+    const baseAngle = -Math.PI / 2 + tiltX * .85; // mostly upward, cradled by motion
+    const rays = [];
+    for (let index = 0; index < count; index += 1) {
+      const pro = count === 1 ? 0 : index / (count - 1) - .5;
+      const angle = baseAngle + pro * spread;
+      const reach = travel * (.72 + (index % 3) * .16);
+      const light = .3 + (1 - depth) * .62;      // shallow sparks are brighter
+      rays.push({
+        dx: Math.cos(angle) * reach,
+        dy: Math.sin(angle) * reach * hop,
+        size: (1.05 + depth * 1.6) * (1 + force * .6),
+        life: life * (.8 + (index % 2) * .18),
+        light
+      });
+    }
+    return { normalizedX: clamp(normalizedX), depth, force, rays };
+  }
+
+
   // A fresh note takes the next subtle shade in a fixed cycle so repeated
   // taps stay recognisably the same gesture but never ring as one identical
   // oscillator. Fully deterministic: only the phrase's note count and depth
@@ -402,6 +434,7 @@
     waterMaterial,
     waterDrop,
     waterSplash,
+    dropSpray,
     frequencyAt
   });
 });

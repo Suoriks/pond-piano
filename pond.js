@@ -41,6 +41,7 @@
   const MAX_SKIP_VOICES = 2;
   const MAX_ECHO_VOICES = 3;
   const ripples = [], trails = [], splashes = [], scoreEchoes = [], collisionPearls = [], stoneFlights = [], pointers = new Map();
+  const coronas = [];
   let motes = caustic.createMotes(caustic.DEFAULT_COUNT, 7);
   let tidalSwells = tide.createSwells(tide.DEFAULT_SWELLS, 13);
   let tidalStirs = [];
@@ -867,6 +868,16 @@
     if (splashes.length > 14) splashes.shift();
   }
 
+  // A fresh accent shows the drop as it is heard: a small corona whose
+  // shape, brightness and reach honestly follow note depth and force.
+  function spawnDropCorona(x, y, intensity, directionX = 0) {
+    const spray = music.dropSpray(x / Math.max(1, width), y / Math.max(1, height), directionX, intensity);
+    if (!spray?.rays?.length) return;
+    coronas.push({ x, y, spray, born: performance.now() });
+    if (coronas.length > 6) coronas.shift();
+    canvas.dataset.coronaEvents = String(coronas.length);
+  }
+
   function playScoreEcho(memory, crossing, now) {
     const anchors = score.melodyAnchors(memory, MAX_ECHO_VOICES);
     if (!anchors.length) return false;
@@ -1017,6 +1028,7 @@
       scoreSamples: sounding ? [{ x: p.x / Math.max(1, width), y: p.y / Math.max(1, height), pitch: p.x / Math.max(1, width), at: now, pressure: attack }] : []
     });
     addRipple(p.x, p.y, attack);
+    spawnDropCorona(p.x, p.y, attack);
     document.body.classList.add('has-played');
     const chordSize = [...pointers.values()].filter(pointer => pointer.sounding).length;
     if (!sounding) status.textContent = `Пруд удерживает до ${MAX_VOICES} голосов; отпустите касание для следующей ноты`;
@@ -1232,6 +1244,7 @@
       if (keyboard.sounding) phraseNoteIndex += 1;
       if (!keyboard.sounding) keyboard.scoreSamples = [];
       addRipple(p.x, p.y, .48);
+      spawnDropCorona(p.x, p.y, .48);
       document.body.classList.add('has-played'); status.textContent = 'Звук воды звучит; стрелками меняйте высоту и глубину';
     }
   });
@@ -1431,6 +1444,32 @@
     ctx.ellipse(pearl.x, pearl.y, Math.max(1.2, radius * .52), Math.max(.8, radius * .28), -.28, 0, Math.PI * 2);
     ctx.fill();
     return true;
+  }
+
+  function drawCorona(corona, now) {
+    const { x, y, spray } = corona;
+    const age = Math.max(0, (now - corona.born) / 1000);
+    const hue = 152 + 30 * (1 - y / height);
+    const warm = Math.min(1, spray.depth * 1.4);       // deep water sits deeper and warmer
+    const brightHue = hue - warm * 4;                    // shallow stays herbal, deep folds amber
+    let alive = false;
+    for (const ray of spray.rays) {
+      const life = ray.life;
+      if (age > life) continue;
+      alive = true;
+      const progress = age / life;
+      const fade = (1 - progress) * (0.5 + ray.light * .3) * (reduced.matches ? .5 : 1);
+      const reach = ray.size * (reduced.matches ? .5 : fade * .85);
+      const rx = x + ray.dx * progress;
+      const ry = y + ray.dy * progress;
+      ctx.save();
+      ctx.fillStyle = `hsla(${brightHue} 84% ${82 + ray.light * 8}% / ${Math.max(0, fade) * .5})`;
+      ctx.beginPath();
+      ctx.ellipse(rx, ry, Math.max(.7, reach * .6), Math.max(.5, reach * .42), Math.atan2(ray.dy, ray.dx), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    return alive;
   }
 
   function drawSplash(splash, now) {
@@ -1756,6 +1795,7 @@
     for (let i = scoreEchoes.length - 1; i >= 0; i--) if (!drawScoreEcho(scoreEchoes[i], now)) scoreEchoes.splice(i, 1);
     for (let i = trails.length - 1; i >= 0; i--) if (!drawTrail(trails[i], now)) trails.splice(i, 1);
     for (let i = splashes.length - 1; i >= 0; i--) if (!drawSplash(splashes[i], now)) splashes.splice(i, 1);
+    for (let i = coronas.length - 1; i >= 0; i--) if (!drawCorona(coronas[i], now)) coronas.splice(i, 1);
 
     for (const [id, pointer] of pointers) {
       if (pointer.sounding) updatePitchMapping(pointer, id, pointer.x, pointer.y, now);
