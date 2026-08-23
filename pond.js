@@ -681,6 +681,35 @@
     ctx.beginPath(); ctx.arc(end.x * width, end.y * height + drift, 3.1, 0, Math.PI * 2);
     ctx.fillStyle = `hsla(${hue} 62% 80% / ${visible * .4})`;
     ctx.fill();
+    // A circling line is readable on the water itself: a warm point travels
+    // the contour while the line breathes. Panel open or closed, the loop
+    // state stays visible; reduced motion keeps a still mark and no breath.
+    if (loopingLine === line) {
+      const probe = score.loopProbe(line, now, reduced.matches);
+      if (probe) {
+        const travel = pointAlongContour(line.points, probe.progress, drift);
+        // A genuinely warm amber mark: it must read as motion over the cool
+        // dark water, not just a greener echo of the ink line.
+        const warmHue = 38 + Math.round(line.depth * 12);
+        const pulse = .62 + probe.breath * .38;
+        ctx.save();
+        ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+        traceMemoryPath(line.points, drift);
+        ctx.strokeStyle = `hsla(${warmHue} 58% 70% / ${visible * (.12 + probe.breath * .14)})`;
+        ctx.lineWidth = 1.4 + probe.breath * 1.2; ctx.stroke();
+        ctx.restore();
+        const radius = 2.4 + probe.breath * 1.2;
+        const glow = ctx.createRadialGradient(travel.x, travel.y, 0, travel.x, travel.y, radius * 4.6);
+        glow.addColorStop(0, `hsla(${warmHue} 84% 80% / ${visible * pulse})`);
+        glow.addColorStop(.25, `hsla(${warmHue} 70% 66% / ${visible * pulse * .3})`);
+        glow.addColorStop(1, 'transparent');
+        ctx.fillStyle = glow;
+        ctx.beginPath(); ctx.arc(travel.x, travel.y, radius * 4.6, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(travel.x, travel.y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${warmHue} 88% 82% / ${visible * pulse})`;
+        ctx.fill();
+      }
+    }
     ctx.restore();
   }
 
@@ -1912,6 +1941,32 @@
     }
     const lastPoint = points.at(-1);
     ctx.lineTo(lastPoint.x * width, lastPoint.y * height + drift);
+  }
+
+  // A point traveling the full contour: progress 0..1 walks the polyline by
+  // cumulative arc length so the warm mark moves evenly even when points are
+  // unevenly spaced.
+  function pointAlongContour(points, progress, drift = 0) {
+    if (!Array.isArray(points) || points.length < 2) return null;
+    const segments = [];
+    let total = 0;
+    for (let index = 0; index < points.length - 1; index += 1) {
+      const a = points[index], b = points[index + 1];
+      const length = Math.hypot((b.x - a.x) * width, (b.y - a.y) * height);
+      segments.push({ a, b, length });
+      total += length;
+    }
+    if (total <= 0) return { x: points[0].x * width, y: points[0].y * height + drift };
+    let remaining = (progress % 1) * total;
+    for (const segment of segments) {
+      if (remaining <= segment.length) {
+        const t = segment.length ? remaining / segment.length : 0;
+        return { x: (segment.a.x + (segment.b.x - segment.a.x) * t) * width, y: (segment.a.y + (segment.b.y - segment.a.y) * t) * height + drift };
+      }
+      remaining -= segment.length;
+    }
+    const last = points.at(-1);
+    return { x: last.x * width, y: last.y * height + drift };
   }
 
   function drawScoreMemory(memory, now) {

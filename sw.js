@@ -1,4 +1,4 @@
-const CACHE = 'pond-piano-shell-v29';
+const CACHE = 'pond-piano-shell-v30';
 // Iteration 0032: the diary phrase can be set to quietly circulate.
 const SHELL = [
   './',

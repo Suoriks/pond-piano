@@ -283,6 +283,22 @@
     return passes;
   }
 
+  // A looping line is readable on the water itself: one warm point travels
+  // the contour while the whole line breathes gently, so the circling state
+  // survives even when the diary panel is closed. Reduced motion keeps a
+  // still point and no breath (feedback stays, motion goes). Expired or
+  // broken lines produce no probe.
+  function loopProbe(line, now = 0, reducedMotion = false, options = {}) {
+    if (!line || !Array.isArray(line.points) || line.points.length < 2 || !Number.isFinite(now)) return null;
+    const visible = inkVisibility(line, now, reducedMotion);
+    if (visible <= 0) return null;
+    const travelMs = Math.max(800, Math.min(12000, Number.isFinite(options.travelMs) ? options.travelMs : 3600));
+    const breathMs = Math.max(400, Math.min(8000, Number.isFinite(options.breathMs) ? options.breathMs : 2600));
+    const travelPhase = reducedMotion ? 0 : (((now % travelMs) + travelMs) % travelMs) / travelMs;
+    const breath = reducedMotion ? 0 : Math.sin((((now % breathMs) + breathMs) % breathMs) / breathMs * Math.PI * 2) * .5 + .5;
+    return Object.freeze({ progress: travelPhase, breath, visible });
+  }
+
   function restorePhrase(serialized, nowPerf, nowEpoch) {
     const stamped = Number.isFinite(nowPerf) ? nowPerf : 0;
     const epoch = Number.isFinite(nowEpoch) ? nowEpoch : 0;
@@ -319,6 +335,6 @@
     createMemory, lifeMs, visibility, append, groupMotifs, findCrossedMemory,
     melodyAnchors, serializePhrase, restorePhrase,
     MAX_INK, INK_LIFE_MS, phraseInk, appendPhraseInk, inkLifeMs, inkVisibility, pourableInk,
-    LOOP_FIRST_DELAY_MS, LOOP_PASS_GAP_MS, MAX_LOOP_PASSES, loopSchedule
+    LOOP_FIRST_DELAY_MS, LOOP_PASS_GAP_MS, MAX_LOOP_PASSES, loopSchedule, loopProbe
   });
 });

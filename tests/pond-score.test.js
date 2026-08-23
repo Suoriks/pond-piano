@@ -193,6 +193,25 @@ assert.equal(score.melodyAnchors(crossingMemory, -5)[0].x, .85, 'a broken reques
   assert.ok(short.length < schedule.length, 'an older line loops fewer times');
   const quiet = score.loopSchedule({ ...entry, born: loopNow - 2000 }, loopNow, 3, true);
   assert.ok(quiet.length <= 3 && quiet.length <= schedule.length, 'reduced motion keeps the loop quieter');
+
+  // A circling line must be readable on the water itself: one warm point
+  // travels the contour while the line breathes. Reduced motion keeps a
+  // still point and no breath, and expired lines get no probe.
+  const young = { ...entry, born: 5000 };
+  const probe = score.loopProbe(young, 7000);
+  assert.ok(probe, 'a visible looping line must have a live probe');
+  assert.ok(probe.progress >= 0 && probe.progress <= 1, 'the traveling point stays on the contour');
+  assert.ok(probe.breath >= 0 && probe.breath <= 1, 'breath stays in a bounded range');
+  const secondProbe = score.loopProbe(young, 7000 + 3600);
+  assert.ok(Math.abs(secondProbe.progress - probe.progress) < .02, 'the point returns to the same place each tour');
+  const calmProbe = score.loopProbe(young, 7000, true);
+  assert.equal(calmProbe.progress, 0, 'reduced motion freezes the traveling point');
+  assert.equal(calmProbe.breath, 0, 'reduced motion silences the breath');
+  assert.equal(score.loopProbe(young, young.born + score.inkLifeMs() + 1), null,
+    'an expired line has no loop probe');
+  assert.equal(score.loopProbe(null, 7000), null, 'an absent line has no loop probe');
+  assert.equal(score.loopProbe({ ...entry, points: [entry.points[0]] }, 7000), null,
+    'a degenerate one-point line has no loop probe');
 }
 
-console.log('pond-score: bounded paths, fading, motifs, playable path crossings, melodic echoes, and the quiet ink diary verified');
+console.log('pond-score: bounded paths, fading, motifs, playable path crossings, melodic echoes, the quiet ink diary, and the visible loop probe verified');
