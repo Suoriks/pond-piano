@@ -46,3 +46,45 @@ test('pair latches have stable order and wave lifetime stays bounded', () => {
   assert.ok(waves.isAlive(a, waves.lifeMs(a) - 1));
   assert.equal(waves.isAlive(a, waves.lifeMs(a)), false);
 });
+
+test('collision glint is a bounded flare that follows depth and energy', () => {
+  const glint = waves.collisionGlint(.8, 1, 380, 0);
+  assert.equal(glint.life, waves.GLINT_LIFE_MS);
+  assert.ok(glint.progress > 0 && glint.progress < 1);
+  assert.ok(glint.fade > 0);
+  assert.ok(glint.radius > 0);
+  assert.equal(glint.alpha, glint.fade);
+
+  const shallowWeak = waves.collisionGlint(.2, 0, 190, 0);
+  const deepStrong = waves.collisionGlint(1, 1, 190, 0);
+  assert.ok(deepStrong.fade > shallowWeak.fade, 'stronger meeting throws a brighter flare');
+  assert.ok(deepStrong.radius > shallowWeak.radius, 'deeper water spreads the flare wider');
+  assert.ok(deepStrong.warmth > shallowWeak.warmth, 'deep folds amber, shallow stays herbal');
+});
+
+test('collision glint ends exactly on schedule and handles broken clocks', () => {
+  const finished = waves.collisionGlint(.5, .5, 2000, 1000);
+  assert.equal(finished.age, waves.GLINT_LIFE_MS);
+  assert.equal(finished.progress, 1);
+  assert.equal(finished.fade, 0);
+  assert.equal(finished.radius, 0);
+  assert.equal(finished.alpha, 0);
+
+  const broken = waves.collisionGlint(NaN, NaN, NaN, NaN);
+  assert.ok(Number.isFinite(broken.fade));
+  assert.ok(Number.isFinite(broken.radius));
+  assert.ok(Number.isFinite(broken.warmth));
+  assert.equal(broken.age, 0);
+
+  const beforeBirth = waves.collisionGlint(.5, .5, 100, 300);
+  assert.equal(beforeBirth.age, 0, 'a glint cannot age before it is born');
+  assert.equal(beforeBirth.fade, 0);
+});
+
+test('reduced motion keeps a calm still glow with no expansion', () => {
+  const calm = waves.collisionGlint(.9, 1, 300, 0, true);
+  const lively = waves.collisionGlint(.9, 1, 300, 0, false);
+  assert.ok(calm.radius < lively.radius, 'reduced motion must not expand the flare');
+  assert.ok(calm.alpha < lively.alpha, 'reduced motion keeps the glow quieter');
+  assert.ok(calm.fade > 0 && calm.alpha > 0, 'but the answer still shows on the water');
+});

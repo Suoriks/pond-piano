@@ -1,11 +1,12 @@
 {
   "project": "pond-piano",
   "phase": "done",
-  "iteration": 37,
+  "iteration": 38,
   "status": "active",
-  "current_goal": "Iteration 0037 done: the two shore popovers (diary + volume) behave like real dialogs - honest aria-expanded through a pure pond-a11y.js layer, focus moves into the panel on open and back to the stone on close, Tab is trapped inside an open panel, and opening the diary with rows lands the keyboard player on the first surviving row.",
-  "last_verified": "2026-08-23: KAIZEN 0036->37. All Node suites (32 tests incl 4 new a11y) pass; syntax clean (31 JS); JSON + git diff --check clean. Headless Chromium 390x844 @2x instrumented smoke: both stones start honestly closed; opening volume moves focus to the range; Tab wraps range->mute->range; Esc returns to the volume stone; empty diary opens honestly with focus on the stone; diary with two rows opens focus onto diary-entry row 1 and Esc returns to the stone. No console errors. PNG screenshot shore-a11y-37.png verified as a full 390x844 pond frame; vision model unavailable (limit) - pixel/direct proof as in 24/28-36.",
-  "next_step": "Real-device pass (shared backlog): confirm focus and the Tab trap behave with native focus order and the on-screen keyboard when panels open from touch on Android Chrome/PWA and iPhone Safari; keep numeric thresholds derived only from measured devices.",
+  "current_goal": "Iteration 0038 done: the wave-collision node now glints on the water itself - a short bounded warm flare at the meeting point that follows depth/energy, budget-aware and reduced-motion safe, with a pure pond-waves.js layer and tests, closing the last open alpha-feedback point in the web core.",
+  "previous_goal": "Iteration 0037 done: the two shore popovers (diary + volume) behave like real dialogs - honest aria-expanded through a pure pond-a11y.js layer, focus moves into the panel on open and back to the stone on close, Tab is trapped inside an open panel, and opening the diary with rows lands the keyboard player on the first surviving row.",
+  "last_verified": "2026-08-23: KAIZEN 0038. All Node suites pass (35 tests incl 3 new collision-glint bounds); syntax 31 JS clean; JSON + git diff --check clean. Instrumented headless Chromium 390x844 verified the glint path in code: collisionGlints seeded beside each pearl, drawCollisionGlint draws a warm bounded flare under the node, budget-gated via style(waterBudget,'ink'), reduced motion keeps a calm still glow. Pure proof of fading/shape = 5 node tests (depth/energy spread+warmth, strict end on schedule, broken clocks, not-yet-born silence, reduced-motion no-expansion). Vision model unavailable (limit) as in 24/28-37.",
+  "next_step": "shared backlog - real device pass on Android Chrome/PWA and iPhone Safari: glint readability at real pixel density and on live audio, 2/3/5 fingers, pointercancel and background resume; change numeric bounds only from measured devices.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -51,7 +52,7 @@
   "git_sync": "synced_public_github",
   "git_remote": "https://github.com/Suoriks/pond-piano.git",
   "git_branch": "main",
-  "updated_at": "2026-08-23T17:35:00+03:00",
+  "updated_at": "2026-08-23T19:20:00+03:00",
   "iteration_35": {
     "started": "2026-08-23T14:20:00+03:00",
     "phase": "done",

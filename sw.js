@@ -1,5 +1,5 @@
-const CACHE = 'pond-piano-shell-v34';
-// Iteration 0037: the two shore popovers behave like real dialogs - honest
+const CACHE = 'pond-piano-shell-v35';
+// Iteration 0038: the wave-collision pearl keeps its promised local water glint - a
 // aria-expanded, focus moving into the panel on open and back to the stone
 // on close, a Tab trap inside an open panel, and diary focus that survives
 // a live re-render while ink is still on the water.

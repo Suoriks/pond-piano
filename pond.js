@@ -55,7 +55,7 @@
   const MAX_SKIP_VOICES = 2;
   const MAX_ECHO_VOICES = 3;
   const MAX_PENDING_POURS = 6;
-  const ripples = [], trails = [], splashes = [], scoreEchoes = [], collisionPearls = [], stoneFlights = [], pointers = new Map();
+  const ripples = [], trails = [], splashes = [], scoreEchoes = [], collisionPearls = [], collisionGlints = [], stoneFlights = [], pointers = new Map();
   const coronas = [], pourEchoes = [], pouredInk = [];
   let motes = caustic.createMotes(caustic.DEFAULT_COUNT, 7);
   let tidalSwells = tide.createSwells(tide.DEFAULT_SWELLS, 13);
@@ -1345,6 +1345,8 @@
     collisionPearls.push({ x: collision.x, y: collision.y, born: visualNow, energy: collision.energy,
       hue: 165 + 24 * (1 - depth) });
     if (collisionPearls.length > 12) collisionPearls.shift();
+    collisionGlints.push({ x: collision.x, y: collision.y, born: visualNow, energy: collision.energy, depth });
+    if (collisionGlints.length > 6) collisionGlints.shift();
     lastCollisionAt = visualNow;
     oscillator.addEventListener('ended', () => disconnectCollisionVoice(engine, pearl), { once: true });
     oscillator.start();
@@ -2076,6 +2078,27 @@
     return true;
   }
 
+  // The shower of the meeting: the collision also throws a short bounded
+  // flare of light on the water itself, resting right on the node (under the
+  // pearl) and following depth/energy. Budget-aware: it yields to the same
+  // eased tide the shell measures, and reduced motion keeps a calm still
+  // glow with no expansion. Pure timing/colour comes from pond-waves.
+  function drawCollisionGlint(glint, now) {
+    const tideGate = budget.style(waterBudget, 'ink');
+    if (tideGate <= 0.02) return true; // keep the lifetime ticking, stay quiet
+    const flare = waves.collisionGlint(glint.energy, glint.depth, now, glint.born, reduced.matches);
+    if (flare.alpha <= 0 || flare.radius <= 0) return flare.progress < 1;
+    const pxRadius = flare.radius * Math.max(18, Math.min(30, Math.min(width, height) * .05));
+    const light = flare.alpha;
+    const glow = ctx.createRadialGradient(glint.x, glint.y, 0, glint.x, glint.y, pxRadius * 2.6);
+    glow.addColorStop(0, `hsla(${165 + 30 * flare.warmth} 80% 90% / ${light})`);
+    glow.addColorStop(.4, `hsla(${165 + 26 * flare.warmth} 74% 84% / ${light * .5})`);
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(glint.x, glint.y, pxRadius * 2.6, 0, Math.PI * 2); ctx.fill();
+    return flare.progress < 1;
+  }
+
   function drawCorona(corona, now) {
     const { x, y, spray } = corona;
     const age = Math.max(0, (now - corona.born) / 1000);
@@ -2479,6 +2502,9 @@
     }
     for (let i = stoneFlights.length - 1; i >= 0; i--) if (!drawStoneFlight(stoneFlights[i], now)) stoneFlights.splice(i, 1);
     for (let i = ripples.length - 1; i >= 0; i--) if (!drawRipple(ripples[i], now)) ripples.splice(i, 1);
+    for (let i = collisionGlints.length - 1; i >= 0; i--) {
+      if (!drawCollisionGlint(collisionGlints[i], now)) collisionGlints.splice(i, 1);
+    }
     for (let i = collisionPearls.length - 1; i >= 0; i--) {
       if (!drawCollisionPearl(collisionPearls[i], now)) collisionPearls.splice(i, 1);
     }

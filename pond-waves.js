@@ -45,6 +45,39 @@
     return [String(a?.id), String(b?.id)].sort().join('|');
   }
 
+  const GLINT_LIFE_MS = 760;
+
+  // A wave meeting answers with one quiet pearl *and a local glint on the
+  // water itself*: a bounded soft radial flare at the collision node. Pure
+  // timing and colour only, so the browser layer can draw it without the
+  // audio engine or the score layer. Reduced motion keeps a calm still glow
+  // (no expansion) that still curls away on the same short schedule. Broken
+  // clocks and absent events stay bounded.
+  function collisionGlint(energy = .35, depth = .5, now = 0, born = 0, reducedMotion = false) {
+    const force = clamp(Number.isFinite(energy) ? energy : .35);
+    const at = Number.isFinite(now) ? now : 0;
+    const start = Number.isFinite(born) ? born : at;
+    const age = Math.min(Math.max(0, at - start), GLINT_LIFE_MS);
+    if (age >= GLINT_LIFE_MS) {
+      return Object.freeze({ age, life: GLINT_LIFE_MS, progress: 1, fade: 0, radius: 0, alpha: 0 });
+    }
+    if (age <= 0) {
+      // Not born yet: the water has not answered; keep the node silent.
+      return Object.freeze({ age: 0, life: GLINT_LIFE_MS, progress: 0, fade: 0, radius: 0, alpha: 0, warmth: .72 });
+    }
+    const progress = age / GLINT_LIFE_MS;
+    // Rise fast, then curl off; a strong meeting throws a wider warmer pool.
+    const fade = Math.pow(1 - progress, 1.6) * (.45 + force * .4);
+    const depthValue = clamp(Number.isFinite(depth) ? depth : .5);
+    const spread = reducedMotion ? .34 : .55 + force * .3 + progress * (depthValue * .45);
+    return Object.freeze({
+      age, life: GLINT_LIFE_MS, progress, fade,
+      radius: spread,
+      alpha: reducedMotion ? fade * .8 : fade,
+      warmth: .72 + depthValue * .5  // shallow stays herbal, deep folds amber
+    });
+  }
+
   function predictCollision(a, b, now = Math.max(a?.born ?? 0, b?.born ?? 0)) {
     if (!a || !b || a.id === b.id || ![now, a.x, a.y, b.x, b.y].every(Number.isFinite)) return null;
     const beginsAt = Math.max(now, a.born, b.born);
@@ -97,6 +130,8 @@
     pairKey,
     predictCollision,
     radiusAt,
-    speed
+    speed,
+    GLINT_LIFE_MS,
+    collisionGlint
   });
 });
