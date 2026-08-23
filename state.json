@@ -4,7 +4,7 @@
   "iteration": 35,
   "status": "active",
   "current_goal": "Iteration 0035 done: the pond invites its first gesture itself - a breathing light ring on the water plus a quiet 'Коснитесь воды' line show that the water wakes from touch; after the first sound (pointer or keyboard) the invitation fades and never returns, remembered locally across reloads.",
-  "last_verified": "2026-08-23: KAIZEN 0035. All Node suites (23 tests incl invitation bounds) pass; syntax clean (24 JS); JSON + git diff --check clean. Headless Chromium 390x844 @2x: fresh pond shows line + breathing ring (inviteAlpha 0.612->0.337 half-cycle), pixel proof of breath (ring patch delta 60.8 vs 0.1 control); first gesture kills both (inviteAlpha=0, localStorage=played, has-played), reload keeps them dead, no console errors. Vision model unavailable (limit) - PNG screenshots verified by direct pixel probe: ring patch 279.8 vs 113.0 quiet water same frame; after play 147.0 (background). eye 35; shell v32.",
+  "last_verified": "2026-08-23: KAIZEN 0035. All Node suites (23 tests incl invitation bounds) pass; syntax clean (24 JS); JSON + git diff --check clean. Headless Chromium 390x844 @2x: fresh pond shows line + breathing ring (inviteAlpha 0.612->0.337 half-cycle), pixel proof of breath (ring patch delta 60.8 vs 0.1 control); first gesture kills both (inviteAlpha=0, localStorage=played, has-played), reload keeps them dead, no console errors. Vision model unavailable (limit) - PNG screenshots verified by direct pixel probe: ring patch 279.8 vs 113.0 quiet water same frame; after play 147.0 (background). eye 35; shell v32. Windows CI green on final sync commit: run 32637050977 (2m20s).",
   "next_step": "Real-device pass remains the shared backlog; for the invitation add: ring readability under real ripple and no fight with the phone status bar/address bar.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
@@ -51,7 +51,7 @@
   "git_sync": "synced_public_github",
   "git_remote": "https://github.com/Suoriks/pond-piano.git",
   "git_branch": "main",
-  "updated_at": "2026-08-23T14:47:00+03:00",
+  "updated_at": "2026-08-23T14:52:00+03:00",
   "iteration_35": {
     "started": "2026-08-23T14:20:00+03:00",
     "phase": "done",
