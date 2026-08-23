@@ -400,6 +400,32 @@
     };
   }
 
+  // A carried scroll must stay readable even when it never meets a
+  // clipboard: one bounded summary turns any parsed scroll - freshly
+  // built or read back from pasted text - into the same quiet human
+  // lines the shore leaf displays, plus plain numbers for probes.
+  function scrollSummary(scroll) {
+    if (!scroll || scroll.kind !== 'pond-phrase-scroll' ||
+        !Array.isArray(scroll.path) || scroll.path.length < 2) return null;
+    const points = scroll.path.filter(point =>
+      point && Number.isFinite(point.x) && Number.isFinite(point.y));
+    if (points.length < 2) return null;
+    const pitch = Math.round(clamp(Number.isFinite(scroll.pitch) ? scroll.pitch : points.at(-1).x) * 100);
+    const depth = Math.round(clamp(Number.isFinite(scroll.depth) ? scroll.depth : points.at(-1).y) * 100);
+    const durationMs = Math.max(80, Math.min(8000,
+      Number.isFinite(scroll.durationMs) ? Math.round(scroll.durationMs) : 1200));
+    const family = typeof scroll.family === 'string' && FAMILY_KEYS[scroll.family]
+      ? FAMILY_KEYS[scroll.family] : 'dawn';
+    return Object.freeze({
+      lines: Object.freeze([
+        `Фраза: контур из ${points.length} точек`,
+        `высота ${pitch} · глубина ${depth} · ход ${(durationMs / 1000).toFixed(1)} с · течение ${family}`
+      ]),
+      points: points.length,
+      pitch, depth, durationMs, family
+    });
+  }
+
   // The pond must invite the first gesture itself: one quiet breathing ring
   // of light on the water plus a soft text line, both fading forever once
   // the water has actually sounded. Pure timing only — persistence and the
@@ -464,6 +490,6 @@
     MAX_INK, INK_LIFE_MS, phraseInk, appendPhraseInk, inkLifeMs, inkVisibility, pourableInk,
     LOOP_FIRST_DELAY_MS, LOOP_PASS_GAP_MS, MAX_LOOP_PASSES, loopSchedule, loopProbe,
     INVITE_BREATH_MS, INVITE_RING_MS, invitation,
-    phraseScroll, phraseScrollText, parseScrollText, inkFromScroll
+    phraseScroll, phraseScrollText, parseScrollText, inkFromScroll, scrollSummary
   });
 });

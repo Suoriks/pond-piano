@@ -195,6 +195,31 @@ h1 { margin: 0; font: 400 clamp(24px, 4vw, 44px)/1.05 Georgia, serif; letter-spa
 .diary-take:focus-visible { outline: 3px solid #dae7b4; outline-offset: 2px; }
 .diary-take:active { filter: brightness(1.25); }
 .diary-empty { margin: 2px 2px 0; color: #aebfae; font-size: 12.5px; opacity: .85; }
+/* A lifted phrase rests on a small paper leaf right inside the diary panel:
+   its carried text stays readable, and one touch seats it back on the water,
+   so leaving and returning close their circle without a clipboard. */
+.diary-leaf {
+  margin: 10px 2px 0;
+  padding: 9px 10px 10px;
+  border-radius: 14px;
+  background: linear-gradient(168deg, rgba(226, 236, 205, .13), rgba(214, 228, 196, .07));
+  border: 1px solid rgba(206, 224, 182, .34);
+}
+.diary-leaf[hidden] { display: none; }
+.leaf-text { margin: 0; color: #dce8c8; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.leaf-return {
+  margin-top: 8px;
+  min-height: 44px;
+  width: 100%;
+  border-radius: 11px;
+  border: 1px solid rgba(198, 224, 182, .5);
+  background: rgba(58, 84, 66, .5);
+  color: #e4efcf;
+  font-size: 13px;
+}
+.leaf-return:hover { border-color: rgba(214, 234, 186, .58); filter: brightness(1.12); transform: translateY(-1px); }
+.leaf-return:focus-visible { outline: 3px solid #dae7b4; outline-offset: 2px; }
+.leaf-return:active { filter: brightness(1.25); }
 .diary-return {
   width: 100%; min-height: 44px; margin-top: 8px; padding: 8px 12px;
   color: #dcead1; font: 600 12px/1.2 inherit; cursor: pointer;

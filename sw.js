@@ -1,8 +1,7 @@
-const CACHE = 'pond-piano-shell-v39';
-// Iteration 0041: a finished phrase can leave the pond as a compact
-// self-contained string. The diary's third action lifts one ink line into
-// the clipboard — its path contour, sounding pitch, depth, duration and
-// chosen current — so the music travels off the surface.
+const CACHE = 'pond-piano-shell-v40';
+// Iteration 0043: a lifted phrase rests on a small paper leaf inside the
+// diary panel — its carried scroll text stays readable, and one touch
+// seats it back on the water, clipboard or not.
 const SHELL = [
   './',
   './index.html',

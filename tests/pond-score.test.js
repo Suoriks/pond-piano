@@ -310,3 +310,36 @@ assert.equal(score.melodyAnchors(crossingMemory, -5)[0].x, .85, 'a broken reques
 }
 
 console.log('pond-score: bounded paths, fading, motifs, playable path crossings, melodic echoes, the quiet ink diary, the visible loop probe, the first-gesture invitation, the transportable phrase scroll, and the return home validated');
+
+// A carried scroll must be readable at a glance: one bounded summary turns
+// any parsed scroll into the same human lines the shore leaf will display.
+{
+  const mem = score.createMemory([
+    { x: .18, y: .28, at: 500, pressure: .36 },
+    { x: .4, y: .44, at: 700, pressure: .4 },
+    { x: .62, y: .52, at: 900, pressure: .46 },
+    { x: .85, y: .6, at: 1150, pressure: .5 }
+  ], 1500);
+  const fresh = score.phraseScroll(score.phraseInk(mem), 'mist');
+  const pasted = score.parseScrollText(score.phraseScrollText(fresh));
+  for (const scroll of [fresh, pasted]) {
+    const summary = score.scrollSummary(scroll);
+    assert.ok(summary, 'a real scroll makes a summary');
+    assert.equal(summary.lines.length, 2, 'the leaf carries two quiet lines');
+    assert.ok(summary.lines[0].includes('контур'), 'the first line names the contour');
+    assert.ok(summary.lines[1].includes('высота') && summary.lines[1].includes('глубина') &&
+      summary.lines[1].includes('ход') && summary.lines[1].includes('течение'),
+      'the second line carries the essence');
+    assert.ok(summary.lines.every(line => line.length <= 90), 'no leaf line grows unwieldy');
+    assert.equal(summary.family, 'mist', 'the chosen current is named');
+    assert.equal(typeof summary.points, 'number', 'the contour size is counted');
+  }
+  assert.equal(score.scrollSummary(pasted).lines.join('\n'), score.scrollSummary(fresh).lines.join('\n'),
+    'a round-tripped scroll reads exactly like the fresh one');
+  assert.equal(score.scrollSummary(null), null, 'an absent scroll has no summary');
+  assert.equal(score.scrollSummary({ kind: 'other', path: [{ x: .1, y: .1 }, { x: .2, y: .2 }] }),
+    null, 'a foreign fragment has no summary');
+  assert.equal(score.scrollSummary({ ...fresh, path: [] }), null, 'an empty contour has no summary');
+  const wild = score.scrollSummary({ ...fresh, durationMs: 999999 });
+  assert.ok(wild.durationMs <= 8000, 'a wild duration is calmed for the reader');
+}

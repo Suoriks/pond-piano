@@ -36,6 +36,8 @@
   const diaryList = document.querySelector('#diary-list');
   const diaryEmpty = document.querySelector('#diary-empty');
   const diaryCount = document.querySelector('#diary-count');
+  const diaryLeaf = document.querySelector('#diary-leaf');
+  const leafText = document.querySelector('#leaf-text');
   const tuningInputs = [...document.querySelectorAll('input[name="tuning-family"]')];
   const tuningValue = document.querySelector('#tuning-value');
   const MASTER_STORAGE_KEY = 'pond-piano.master.v1';
@@ -72,6 +74,8 @@
   const pourTimers = new Set();
   const loopPassTimers = new Set();
   let loopingLine = null;
+  // A lifted phrase rests on the shore leaf until the water takes it back.
+  let heldLeafScroll = null;
   let loopPassesFired = 0;
   let loopEchoesScheduled = 0;
   let memories = score.restorePhrase(loadScorePhrase(), performance.now(), epochNow());
@@ -312,6 +316,7 @@
     pourTimers.clear();
     pourEchoes.length = 0;
     stopPourLoop();
+    hideDiaryLeaf();
     stoneFlights.length = 0;
     canvas.dataset.pearlVoices = '0';
     canvas.dataset.skipVoices = '0';
@@ -846,6 +851,8 @@
     const focusedInside = diaryPanel.contains(document.activeElement);
     const focusedAction = focusedInside ? document.activeElement : null;
     const focusedCirculate = focusedAction?.classList?.contains('diary-loop') ?? false;
+    const focusedLeaf = focusedInside && focusedAction instanceof HTMLButtonElement &&
+      focusedAction.id === 'leaf-return' && !diaryLeaf.hidden;
     const focusedRow = focusedAction?.closest?.('.diary-row') ?? null;
     const focusedBorn = focusedRow?.dataset?.born ?? null;
     diaryList.textContent = '';
@@ -909,12 +916,22 @@
     }
     diaryEmpty.hidden = lines.length !== 0;
     diaryList.hidden = lines.length === 0;
+    // A lifted phrase rests on its own little leaf between the list and the
+    // return stone; it belongs to no row, so a list rebuild never takes it
+    // away - only the water taking the phrase back does.
+    if (!heldLeafScroll || !score.scrollSummary(heldLeafScroll)) hideDiaryLeaf();
     diaryStone.setAttribute('aria-label', `Дневник пруда: ${lines.length} ${lines.length === 1 ? 'строка' : lines.length >= 2 && lines.length <= 4 ? 'строки' : 'строк'} на воде`);
     diaryControl.classList.toggle('has-lines', lines.length > 0);
     // Restore the keyboard player after a live re-render: same row, same
     // action. A vanished row (expired ink) returns focus to the stone so
     // the player is never dropped silently.
     if (focusedInside) {
+      if (focusedLeaf && diaryLeaf && !diaryLeaf.hidden) {
+        // The player was standing on the leaf: hand them straight back to
+        // its action instead of dropping them onto the stone.
+        leafReturn?.focus();
+        return;
+      }
       const retained = [...diaryList.children].find(row => row?.dataset?.born === focusedBorn);
       if (retained) {
         const restored = focusedCirculate
@@ -927,6 +944,37 @@
     }
   }
 
+  // The leaf lives only until the phrase comes home: one small paper rest
+  // on the shore, cleaned quietly when the water takes the phrase back.
+  function hideDiaryLeaf() {
+    heldLeafScroll = null;
+    if (diaryLeaf) diaryLeaf.hidden = true;
+    if (leafText) leafText.textContent = '';
+  }
+
+  // One shared landing for any carried scroll - lifted from the clipboard
+  // or straight off the leaf: re-seat it as fresh ink with a new birth,
+  // persist the diary, and tell the reader the phrase came home. Broken
+  // input lands nowhere instead of quietly corrupting the diary.
+  function seatReturnedText(scroll) {
+    if (!scroll) return false;
+    const entry = score.inkFromScroll(scroll, performance.now());
+    if (!entry) return false;
+    const updated = score.appendPhraseInk(phraseInk, entry, performance.now(), score.inkLifeMs(reduced.matches));
+    if (updated === phraseInk) return false;
+    phraseInk = updated;
+    // The water has taken the phrase home: put the leaf away first, so a
+    // live panel refresh honestly returns focus to the shore stone.
+    hideDiaryLeaf();
+    const summary = score.scrollSummary(scroll);
+    storePhraseDiary();
+    reflectDiaryCount();
+    if (diaryOpen) syncDiaryPanel();
+    status.textContent = `Фраза вернулась на воду: контур из ${summary ? summary.points : Number(scroll.length) || '?'} точек с высотой ${Math.round((Number(scroll.pitch) || 0) * 100)}`;
+    pourAnnounced = true;
+    return true;
+  }
+
   // Order the diary panel's interactive controls for keyboard travel: the
   // row actions first, then each row's circulate stone, then nothing else.
   function diaryPanelControls() {
@@ -935,6 +983,12 @@
       for (const child of row.children) {
         if (child instanceof HTMLButtonElement) controls.push(child);
       }
+    }
+    // The leaf's action sits visually between the rows and the return
+    // stone, so keyboard travel follows what the eye reads.
+    if (diaryLeaf && !diaryLeaf.hidden) {
+      const leafAction = document.querySelector('#leaf-return');
+      if (leafAction instanceof HTMLButtonElement) controls.push(leafAction);
     }
     const returned = document.querySelector('#diary-return');
     if (returned instanceof HTMLButtonElement) controls.push(returned);
@@ -1132,11 +1186,21 @@
     // phrase is visible to an instrumented smoke without depending on the
     // host clipboard.
     canvas.dataset.scrollText = text;
+    // The phrase itself rests on a small paper leaf right in the diary
+    // panel: its carried text stays readable, and one touch seats it back
+    // on the water without ever meeting the host clipboard.
+    const summary = score.scrollSummary(scroll);
+    if (summary && leafText && diaryLeaf) {
+      leafText.textContent = summary.lines.join('\n');
+      heldLeafScroll = scroll;
+      diaryLeaf.hidden = false;
+      try { leafText.scrollIntoView?.({ block: 'nearest', behavior: reduced.matches ? 'auto' : 'smooth' }); } catch {}
+    }
     const copied = () => {
       try {
         navigator.clipboard?.writeText(text).then(() => {
           canvas.dataset.lastScroll = String(Date.now());
-          status.textContent = `Фраза покинула пруд: контур из ${scroll.length} точек с высотой ${Math.round(scroll.pitch * 100)} и глубиной ${Math.round(scroll.depth * 100)} скопирован — можно вставить куда угодно`;
+          status.textContent = `Фраза покинула пруд: контур из ${summary ? summary.points : scroll.length} точек с высотой ${Math.round(scroll.pitch * 100)} и глубиной ${Math.round(scroll.depth * 100)} записан на лист в дневнике — можно вставить куда угодно`;
           pourAnnounced = true;
         }).catch(() => announceScrollFallback(text));
       } catch { announceScrollFallback(text); }
@@ -1161,17 +1225,7 @@
         pourAnnounced = true;
         return;
       }
-      const entry = score.inkFromScroll(scroll, performance.now());
-      if (!entry) return;
-      const before = phraseInk.length;
-      phraseInk = score.appendPhraseInk(phraseInk, entry, performance.now(), score.inkLifeMs(reduced.matches));
-      if (phraseInk.length !== before) {
-        storePhraseDiary();
-        reflectDiaryCount();
-        if (diaryOpen) syncDiaryPanel();
-        status.textContent = `Фраза из буфера вернулась на воду: контур из ${scroll.length} точек с высотой ${Math.round(scroll.pitch * 100)}`;
-        pourAnnounced = true;
-      }
+      seatReturnedText(scroll);
     }).catch(() => {
       status.textContent = 'В буфере нет фразы пруда — скопируйте её кнопкой «Забрать»';
       pourAnnounced = true;
@@ -1255,6 +1309,10 @@
   const diaryReturn = document.querySelector('#diary-return');
   if (diaryReturn instanceof HTMLButtonElement) {
     diaryReturn.addEventListener('click', () => returnPhraseFromClipboard());
+  }
+  const leafReturn = document.querySelector('#leaf-return');
+  if (leafReturn instanceof HTMLButtonElement) {
+    leafReturn.addEventListener('click', () => seatReturnedText(heldLeafScroll));
   }
   diaryControl.addEventListener('focusout', () => {
     requestAnimationFrame(() => {
