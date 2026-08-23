@@ -59,6 +59,10 @@
   const skipTimers = new Set();
   const echoTimers = new Set();
   const pourTimers = new Set();
+  const loopPassTimers = new Set();
+  let loopingLine = null;
+  let loopPassesFired = 0;
+  let loopEchoesScheduled = 0;
   let memories = score.restorePhrase(loadScorePhrase(), performance.now(), epochNow());
   let phraseInk = loadPhraseDiary();
   let diaryOpen = false;
@@ -292,6 +296,7 @@
     for (const timer of pourTimers) clearTimeout(timer);
     pourTimers.clear();
     pourEchoes.length = 0;
+    stopPourLoop();
     stoneFlights.length = 0;
     canvas.dataset.pearlVoices = '0';
     canvas.dataset.skipVoices = '0';
@@ -299,6 +304,8 @@
     canvas.dataset.echoVoices = '0';
     canvas.dataset.pendingEchoes = '0';
     canvas.dataset.pendingPours = '0';
+    canvas.dataset.loopingLine = '0';
+    canvas.dataset.loopPasses = '0';
     balanceVoices(engine);
     for (const pointerId of pointers.keys()) {
       try { canvas.releasePointerCapture?.(pointerId); } catch {}
@@ -732,6 +739,8 @@
     diaryCount.textContent = String(lines.length);
     diaryList.textContent = '';
     for (const line of lines) {
+      const row = document.createElement('div');
+      row.className = 'diary-row';
       const item = document.createElement('button');
       item.type = 'button';
       item.className = 'diary-entry';
@@ -743,7 +752,36 @@
       item.setAttribute('aria-label', `Вылить эту фразу обратно на воду: мягкое мелодическое эхо от её контура (около x ${x}, y ${y})`);
       item.style.setProperty('--ink-hue', String(hue));
       item.addEventListener('click', () => pourInkEntry(line));
-      diaryList.appendChild(item);
+      row.appendChild(item);
+
+      // A second little stone lets the phrase keep circling while its ink
+      // is still on the water: a quiet repeating echo, one loop at a time.
+      const circulate = document.createElement('button');
+      circulate.type = 'button';
+      circulate.className = 'diary-loop';
+      circulate.textContent = 'Кружить';
+      circulate.style.setProperty('--ink-hue', String(hue));
+      const loopingThisLine = loopingLine === line;
+      circulate.setAttribute('aria-pressed', String(loopingThisLine));
+      circulate.setAttribute('aria-label', loopingThisLine
+        ? 'Остановить круговорот этой фразы'
+        : `Запустить тихий круговорот этой фразы, пока её чернила ещё на воде (около x ${x}, y ${y})`);
+      circulate.classList.toggle('is-looping', loopingThisLine);
+      circulate.disabled = !loopingThisLine && loopingLine !== null;
+      circulate.addEventListener('click', () => {
+        if (loopingLine === line) {
+          stopPourLoop(false);
+          canvas.dataset.loopingLine = '0';
+          canvas.dataset.loopPasses = '0';
+          status.textContent = 'Фраза из дневника больше не кружит по воде';
+          pourAnnounced = true;
+          syncDiaryPanel();
+        } else {
+          startPourLoop(line);
+        }
+      });
+      row.appendChild(circulate);
+      diaryList.appendChild(row);
     }
     diaryEmpty.hidden = lines.length !== 0;
     diaryList.hidden = lines.length === 0;
@@ -836,6 +874,87 @@
     startPourEcho(line);
     canvas.dataset.pendingPours = String(pourTimers.size);
     setDiaryPanelOpen(false);
+  }
+
+  // The same gentle echo, but as a repeating circulation: the stored phrase
+  // keeps coming back while its ink is still on the water. One global loop at
+  // a time, each pass uses the shared echo-voice budget, and the whole thing
+  // ends the moment the ink fades, the line disappears, or audio is retired.
+  function pourLoopPass(line, pass) {
+    const now = performance.now();
+    if (!line || score.inkVisibility(line, now, reduced.matches) <= .02) {
+      if (loopingLine === line) stopPourLoop();
+      return;
+    }
+    if (!audio || audio.context.state !== 'running' || engineEchoBusy(MAX_ECHO_VOICES)) return;
+    const pseudo = {
+      ...line, startedAt: line.born,
+      points: line.points.map((point, index) => ({
+        x: point.x, y: point.y, pitch: point.x,
+        pressure: Number.isFinite(point.pressure) ? point.pressure : line.pressure,
+        at: line.born + index
+      }))
+    };
+    const anchors = score.melodyAnchors(pseudo, MAX_ECHO_VOICES);
+    if (!anchors.length) { stopPourLoop(); return; }
+    const quieter = .82 + pass * .05;
+    anchors.forEach((anchor, index) => {
+      const response = music.echoNote(anchor.pitch, anchor.y, (.1 + line.pressure * .16) / quieter, index, anchors.length);
+      const at = now + response.delayMs;
+      const timer = setTimeout(() => {
+        pourTimers.delete(timer);
+        canvas.dataset.pendingPours = String(pourTimers.size);
+        playPourNote(line, anchor, index, response, true);
+      }, Math.max(0, at - performance.now()));
+      pourTimers.add(timer);
+    });
+    loopPassesFired += 1;
+    canvas.dataset.loopPasses = String(loopPassesFired);
+    startPourEcho(line);
+    if (!pourAnnounced) {
+      status.textContent = 'Фраза из дневника теперь тихо кружит по воде';
+      pourAnnounced = true;
+    }
+  }
+
+  function engineEchoBusy(limit = MAX_ECHO_VOICES) {
+    return (audio?.echoVoices?.size ?? 0) >= limit;
+  }
+
+  function startPourLoop(line) {
+    if (loopingLine === line && loopPassTimers.size > 0) return;
+    stopPourLoop(false);
+    const now = performance.now();
+    if (score.inkVisibility(line, now, reduced.matches) <= .02) { syncDiaryPanel(); return; }
+    loopingLine = line;
+    loopPassesFired = 0;
+    loopEchoesScheduled = 0;
+    const schedule = score.loopSchedule(line, now, score.MAX_LOOP_PASSES, reduced.matches);
+    canvas.dataset.loopingLine = '1';
+    canvas.dataset.loopPasses = '0';
+    for (const pass of schedule) {
+      const timer = setTimeout(() => {
+        loopPassTimers.delete(timer);
+        pourLoopPass(line, pass.pass);
+      }, Math.max(0, pass.at - (performance.now() - now)));
+      loopPassTimers.add(timer);
+    }
+    if (loopPassTimers.size) {
+      status.textContent = 'Фраза из дневника начала тихо кружить по воде';
+      pourAnnounced = true;
+      setDiaryPanelOpen(false);
+    }
+  }
+
+  function stopPourLoop(reflect = true) {
+    for (const timer of loopPassTimers) clearTimeout(timer);
+    loopPassTimers.clear();
+    loopingLine = null;
+    if (reflect) {
+      canvas.dataset.loopingLine = '0';
+      canvas.dataset.loopPasses = '0';
+      if (diaryOpen) syncDiaryPanel();
+    }
   }
 
   function reflectTuningFamily(announce = false) {

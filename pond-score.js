@@ -259,6 +259,30 @@
       .sort((a, b) => a.born - b.born);
   }
 
+  const LOOP_FIRST_DELAY_MS = 900;
+  const LOOP_PASS_GAP_MS = 1500;
+  const MAX_LOOP_PASSES = 6;
+
+  // A poured phrase may quietly keep circling while its ink still holds:
+  // a bounded schedule of passes over the same anchors, each later pass
+  // arriving wider apart (triangular spacing keeps the circulation
+  // breathing instead of metronomic), that never outlives the line's
+  // visibility. Broken input and expired lines produce no schedule.
+  function loopSchedule(line, now = 0, maximumPasses = MAX_LOOP_PASSES, reducedMotion = false) {
+    if (!line || !Array.isArray(line.points) || line.points.length < 2 || !Number.isFinite(now)) return [];
+    const life = inkLifeMs(reducedMotion);
+    const remaining = life - Math.max(0, now - line.born);
+    if (!Number.isFinite(remaining) || remaining <= 0) return [];
+    const cap = Math.max(1, Math.min(8, Math.trunc(Number.isFinite(maximumPasses) ? maximumPasses : MAX_LOOP_PASSES)));
+    const passes = [];
+    for (let index = 0; index < cap; index += 1) {
+      const at = LOOP_FIRST_DELAY_MS + LOOP_PASS_GAP_MS * index * (index + 1) / 2;
+      if (at > remaining) break;
+      passes.push(Object.freeze({ pass: index, at }));
+    }
+    return passes;
+  }
+
   function restorePhrase(serialized, nowPerf, nowEpoch) {
     const stamped = Number.isFinite(nowPerf) ? nowPerf : 0;
     const epoch = Number.isFinite(nowEpoch) ? nowEpoch : 0;
@@ -294,6 +318,7 @@
     MAX_MEMORIES, MAX_POINTS, MOTIF_GAP_MS,
     createMemory, lifeMs, visibility, append, groupMotifs, findCrossedMemory,
     melodyAnchors, serializePhrase, restorePhrase,
-    MAX_INK, INK_LIFE_MS, phraseInk, appendPhraseInk, inkLifeMs, inkVisibility, pourableInk
+    MAX_INK, INK_LIFE_MS, phraseInk, appendPhraseInk, inkLifeMs, inkVisibility, pourableInk,
+    LOOP_FIRST_DELAY_MS, LOOP_PASS_GAP_MS, MAX_LOOP_PASSES, loopSchedule
   });
 });

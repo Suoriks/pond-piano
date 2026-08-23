@@ -3,9 +3,9 @@
   "phase": "done",
   "iteration": 32,
   "status": "active",
-  "current_goal": "Iteration 0031 done: the pond keeps a quiet diary - every finished phrase is one fading ink line on the water; the diary stone counts readable lines and pours any of them back as a gentle melodic echo; purely offline, bounded storage (8 lines, ~54s ink life), no backend",
-  "last_verified": "2026-08-23: KAIZEN 0031. All 9 Node suites pass (22 tests incl new ink-diary bounds/lifecycle/pourable order); syntax clean (22 JS); JSON + git diff --check clean. Headless Chromium 390x844 @2x full path: fresh pond empty (inkLines=0, stored none); one finished phrase -> exactly one ink line, badge/aria '1', pixel band over ink brighter than water (173 vs 77); panel lists one entry, pour closes panel, pouredEchoes=1, status announced echo, after 2.6s echoVoices=0 + pendingPours=0; reload restores the young line (inkLines=1); aged diary file lets go cleanly (badge back to 0). No console/page errors. Shell v27; eyebrow 31. Screenshots output/pond-piano/pond-diary-ink-31.png and pond-diary-panel-31.png; vision inspection unavailable (image model limits) like 24/28-30.",
-  "next_step": "Real-device pass (Android Chrome/PWA, iPhone Safari): judge ink readability under ripples at true pixel density, diary stone and list-entry touch targets, pour-back behavior on live sound; change radius/brightness/touch sizes only from measured device.",
+  "current_goal": "Iteration 0032 done: the diary stone can keep a poured phrase circling - a quiet repeating loop over its own anchors with growing pauses, one global loop, shared three-voice echo budget, no score writes, and it dies with its ink line.",
+  "last_verified": "2026-08-23: KAIZEN 0032. All 22 Node tests pass across 9 suites (incl loopSchedule bounds); syntax clean (22 JS); JSON + git diff --check clean. Headless Chromium 390x844 @2x full path green: fresh pond empty; one finished phrase -> exactly one ink line + badge 1; pixel band over ink 118 vs quiet water 93; diary panel renders pour + circulate pebble buttons per row; starting loop closes panel, status announced, first pass fired <=3.5s (loopPasses>=1), echo voices stayed <=3 and drained to 0 between passes, second scheduled pass arrived; stop button cleared loopingLine; reload kept the young line with no stale loop state. No console/page errors. Shell v29; eyebrow 32. Screenshots output/pond-piano/pond-diary-loop-32.png + pond-diary-panel-loop-32.png; vision inspection confirmed glowing phrase trace on organic water and correct two-button rows.",
+  "next_step": "Real-device pass (Android Chrome/PWA, iPhone Safari) covering diary + circulation together: ink readability under true ripples, pebble button touch targets under a finger, loop behavior on backgrounding; adjust numbers only from measured device.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -19,30 +19,24 @@
       "Preserve up to six musical voices unless device measurements prove a lower limit is necessary."
     ]
   },
-  "platform_target": [
-    "desktop",
-    "linux",
-    "android",
-    "ios"
-  ],
+  "platform_target": ["desktop", "linux", "android", "ios"],
   "shell_hypothesis": "offline-first-pwa",
-  "iteration_31": {
-    "started": "2026-08-23T03:30:00+03:00",
-    "finished": "2026-08-23T07:35:00+03:00",
+  "iteration_32": {
+    "started": "2026-08-23T09:17:00+03:00",
+    "finished": "2026-08-23T11:35:00+03:00",
     "phase": "done",
     "plan": [
-      "pond-score.js: finish pure diary layer (phraseInk, appendPhraseInk, inkVisibility, pourableInk)",
-      "tests: pure-layer bounds/lifecycle coverage for the diary",
-      "pond.js: record ink at storeScorePhrase, draw under ripples in frame(), history stone + panel, pour-back path",
-      "index.html + pond.css: accessible history stone and listbox panel; sw v27; README/eyebrow 31",
-      "verify: node tests, syntax, JSON, git diff --check, headless Chromium smoke + screenshot"
+      "resume half-done working tree from previous run (loop-pour code present, unverified)",
+      "pond-score.js loopSchedule + tests; pond.js circulate button + pourLoopPass/start/stop",
+      "verify: node tests, syntax, JSON, git diff --check, headless Chromium smoke + screenshots"
     ],
     "verified": [
       "node tests: 22 pass across 9 suites",
       "syntax check: 22 JS files clean",
       "JSON validity + git diff --check clean",
-      "headless Chromium end-to-end diary flow green, no console errors",
-      "pixel check: band over ink 173 vs water 77 mean channel sum"
+      "headless Chromium end-to-end loop-pour flow green, no console errors",
+      "pixel check: band over ink 118 vs quiet water 93 mean channel sum",
+      "vision inspection of both screenshots passed"
     ],
     "next_step": "done; real-device pass remains for the shared device-pass backlog"
   },
@@ -56,5 +50,5 @@
     "windows_asset": "Pond-Piano-0.1.0-Windows-x64.exe",
     "published_at": "2026-07-26T04:39:34+03:00"
   },
-  "updated_at": "2026-08-23T07:35:00+03:00"
+  "updated_at": "2026-08-23T11:35:00+03:00"
 }

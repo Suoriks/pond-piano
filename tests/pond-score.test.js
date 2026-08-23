@@ -175,6 +175,24 @@ assert.equal(score.melodyAnchors(crossingMemory, -5)[0].x, .85, 'a broken reques
   assert.deepEqual(pourable.map(line => line.born), [dissolving.born, fresh.born],
     'only still-visible lines can be poured back, oldest first');
   assert.equal(score.pourableInk(null, 0).length, 0);
+
+  // The pouring loop: a still-visible line may keep circling a few quiet
+  // passes, always inside its own ink life, and nothing broken loops.
+  const loopNow = 5000;
+  const schedule = score.loopSchedule({ ...entry, born: loopNow - 2000 }, loopNow);
+  assert.ok(Array.isArray(schedule) && schedule.length > 0, 'a young line gets a bounded loop schedule');
+  assert.ok(schedule.length <= score.MAX_LOOP_PASSES, 'the loop never exceeds its cap');
+  for (const pass of schedule) {
+    assert.ok(pass.at > 0 && pass.at < score.INK_LIFE_MS, 'every pass stays inside the ink life');
+    assert.equal(pass.pass, schedule.indexOf(pass), 'passes come in order');
+  }
+  assert.deepEqual(score.loopSchedule(null, loopNow), [], 'an absent line never loops');
+  assert.deepEqual(score.loopSchedule({ ...entry, born: 100 }, score.INK_LIFE_MS + 101), [],
+    'an already-expired line has no passes');
+  const short = score.loopSchedule({ ...entry, born: loopNow - (score.INK_LIFE_MS - 200) }, loopNow);
+  assert.ok(short.length < schedule.length, 'an older line loops fewer times');
+  const quiet = score.loopSchedule({ ...entry, born: loopNow - 2000 }, loopNow, 3, true);
+  assert.ok(quiet.length <= 3 && quiet.length <= schedule.length, 'reduced motion keeps the loop quieter');
 }
 
 console.log('pond-score: bounded paths, fading, motifs, playable path crossings, melodic echoes, and the quiet ink diary verified');
