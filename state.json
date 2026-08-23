@@ -5,7 +5,7 @@
   "status": "active",
   "current_goal": "Iteration 0043 done: a lifted phrase rests on a shore leaf. Right after 'Забрать', the diary panel shows a small paper leaf carrying the scroll text itself plus one 'Вернуть на воду' button, so leaving and returning close their circle without depending on the host clipboard. Pure scrollSummary() in pond-score.js renders bounded human lines from any parsed scroll; the leaf's action seats phrases through the same return path as the clipboard.",
   "previous_goal": "Iteration 0042 done: a phrase that left the pond can come home. The diary gains a return stone in the panel: it reads a pasted scroll back from the clipboard, re-seats it as fresh ink with a new birth, and lays it back on the water where it ages and dissolves like any other. Pure parseScrollText/inkFromScroll layer in pond-score.js with round-trip tests; no network, no audio engine, no DOM.",
-  "last_verified": "2026-08-24 (0043): 47 node tests pass across suites (incl new scrollSummary asserts); syntax 37 JS clean; JSON + git diff --check clean. Instrumented headless Chromium 390x844: take shows a real leaf ('Фраза: контур из 22 точек / высота 64 · глубина 49 · ход 1.1 с · течение dawn'), Tab travels leaf<->return stone, leaf click seats the phrase back (inkLines 1->2, status announces it), clipboard path still works beside it (2->3); no console errors. Screenshots output/pond-piano/shore-leaf-open-43.png + shore-leaf-43.png; pixel probe confirms the light paper band over dark water (61/75/62 vs 23/60/58); vision model unavailable (limit).",
+  "last_verified": "2026-08-24 (0043): 47 node tests pass across suites (incl new scrollSummary asserts); syntax 37 JS clean; JSON + git diff --check clean. Instrumented headless Chromium 390x844: take shows a real leaf ('Фраза: контур из 22 точек / высота 64 · глубина 49 · ход 1.1 с · течение dawn'), Tab travels leaf<->return stone, leaf click seats the phrase back (inkLines 1->2, status announces it), clipboard path still works beside it (2->3); no console errors. Screenshots output/pond-piano/shore-leaf-open-43.png + shore-leaf-43.png; pixel probe confirms the light paper band over dark water (61/75/62 vs 23/60/58); vision model unavailable (limit). Windows CI run 32667988930 green (2m08s), artifact Pond-Piano-0.1.0-Windows-x64-1dcf8d0.",
   "next_step": "shared backlog: real device pass on Android Chrome/PWA and iPhone Safari; now includes leaf readability and touch target on a live screen plus leaf behavior through device rotation.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
@@ -52,7 +52,7 @@
   "git_sync": "synced_public_github",
   "git_remote": "https://github.com/Suoriks/pond-piano.git",
   "git_branch": "main",
-  "updated_at": "2026-08-24T00:53:00+03:00",
+  "updated_at": "2026-08-24T01:00:00+03:00",
   "iteration_40": {
     "started": "2026-08-23T21:50:00+03:00",
     "finished": "2026-08-23T22:25:00+03:00",
