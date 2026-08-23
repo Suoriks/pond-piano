@@ -48,10 +48,10 @@
     ],
     "next_step": "done; real-device pass remains as the shared backlog, now with 0034 shell readiness folded in"
   },
-  "git_sync": "pending_push",
+  "git_sync": "synced_public_github",
   "git_remote": "https://github.com/Suoriks/pond-piano.git",
   "git_branch": "main",
-  "updated_at": "2026-08-23T14:40:00+03:00",
+  "updated_at": "2026-08-23T14:47:00+03:00",
   "iteration_35": {
     "started": "2026-08-23T14:20:00+03:00",
     "phase": "done",
