@@ -339,6 +339,67 @@
     return `Пруд-пианино · фраза\nконтур: ${contour}\nвысота ${Math.round(scroll.pitch * 100)} · глубина ${Math.round(scroll.depth * 100)} · ход ${(scroll.durationMs / 1000).toFixed(1)} с · течение ${scroll.family}`;
   }
 
+  const FAMILY_KEYS = Object.freeze({ dawn: 'dawn', dusk: 'dusk', mist: 'mist', 'рассвет': 'dawn', 'сумерки': 'dusk', 'туман': 'mist' });
+  const TAG_RE = /^пруд-пианино\s*·\s*фраза\s*$/i;
+  const CONTOUR_RE = /^контур\s*:\s*(.+)$/;
+  const ESSENCE_RE = /высота\s+(\d+)\s*·\s*глубина\s+(\d+)\s*·\s*ход\s+([\d.]+)\s*с\s*·\s*течение\s+(\S+)/;
+
+  // The inverse of phraseScrollText: a pasted human line is read back into
+  // a pure scroll shape, bounded and immune to damage. Unknown names, missing
+  // contour points or malformed lines produce no scroll instead of garbage.
+  function parseScrollText(text) {
+    if (typeof text !== 'string' || !text.trim()) return null;
+    const lines = text.split(/\r?\n/).map(line => line.trim());
+    if (!lines.some(line => TAG_RE.test(line))) return null;
+    const contourLine = lines.find(line => CONTOUR_RE.test(line));
+    const essenceLine = lines.find(line => ESSENCE_RE.test(line));
+    if (!contourLine || !essenceLine) return null;
+    const points = [];
+    for (const token of contourLine.match(CONTOUR_RE)[1].split('·')) {
+      const [xRaw, yRaw] = token.trim().split(/\s+/);
+      const x = Number(xRaw), y = Number(yRaw);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+      points.push(Object.freeze({ x: clamp(x), y: clamp(y), pressure: .42 }));
+    }
+    if (points.length < 2) return null;
+    const essence = essenceLine.match(ESSENCE_RE);
+    const familyKey = essence[4].trim().toLowerCase();
+    const family = FAMILY_KEYS[familyKey] ?? 'dawn';
+    const durationMs = Math.max(80, Math.min(8000, Math.round(Number(essence[3]) * 1000)));
+    return Object.freeze({
+      kind: 'pond-phrase-scroll',
+      v: 2,
+      path: Object.freeze(points),
+      pitch: round3(Math.max(0, Math.min(1, Number(essence[1]) / 100))),
+      depth: round3(Math.max(0, Math.min(1, Number(essence[2]) / 100))),
+      durationMs,
+      pressure: .42,
+      family,
+      length: points.length
+    });
+  }
+
+  // Turn a parsed scroll back into a fresh read-ink entry so a phrase that
+  // left the pond can come home: the carried contour is re-seated as a new
+  // line with a fresh birth time, ready to age and dissolve like any other.
+  function inkFromScroll(scroll, now = 0) {
+    if (!scroll || scroll.kind !== 'pond-phrase-scroll' || !Array.isArray(scroll.path) || scroll.path.length < 2) return null;
+    const stamp = Number.isFinite(now) ? now : 0;
+    const points = scroll.path
+      .filter(point => point && Number.isFinite(point.x) && Number.isFinite(point.y))
+      .map(point => Object.freeze({ x: clamp(point.x), y: clamp(point.y), pressure: .42 }));
+    if (points.length < 2) return null;
+    const last = points.at(-1);
+    return {
+      born: stamp,
+      durationMs: Math.max(80, Math.min(8000, Number.isFinite(scroll.durationMs) ? Math.round(scroll.durationMs) : 1200)),
+      depth: clamp(Number.isFinite(scroll.depth) ? scroll.depth : last.y),
+      pressure: .42,
+      pitch: clamp(Number.isFinite(scroll.pitch) ? scroll.pitch : last.x),
+      points: points.map(point => Object.freeze(point))
+    };
+  }
+
   // The pond must invite the first gesture itself: one quiet breathing ring
   // of light on the water plus a soft text line, both fading forever once
   // the water has actually sounded. Pure timing only — persistence and the
@@ -403,6 +464,6 @@
     MAX_INK, INK_LIFE_MS, phraseInk, appendPhraseInk, inkLifeMs, inkVisibility, pourableInk,
     LOOP_FIRST_DELAY_MS, LOOP_PASS_GAP_MS, MAX_LOOP_PASSES, loopSchedule, loopProbe,
     INVITE_BREATH_MS, INVITE_RING_MS, invitation,
-    phraseScroll, phraseScrollText
+    phraseScroll, phraseScrollText, parseScrollText, inkFromScroll
   });
 });

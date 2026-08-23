@@ -277,4 +277,36 @@ assert.equal(score.melodyAnchors(crossingMemory, -5)[0].x, .85, 'a broken reques
   assert.ok(Number.isFinite(score.invitation(NaN).alpha), 'broken clocks stay bounded');
 }
 
-console.log('pond-score: bounded paths, fading, motifs, playable path crossings, melodic echoes, the quiet ink diary, the visible loop probe, the first-gesture invitation, and the transportable phrase scroll verified');
+// The scroll is not a one-way exit: a pasted phrase is read home and
+// re-seated as a fresh ink line, ready to age and dissolve like any other.
+{
+  const mem = score.createMemory([
+    { x: .2, y: .3, at: 1000, pressure: .38 },
+    { x: .35, y: .42, at: 1200, pressure: .42 },
+    { x: .5, y: .5, at: 1400, pressure: .48 },
+    { x: .72, y: .63, at: 1700, pressure: .5 },
+    { x: .88, y: .55, at: 2000, pressure: .4 }
+  ], 2100);
+  const inkEntry = score.phraseInk(mem);
+  const out = score.phraseScroll(inkEntry, 'dusk');
+  const text = score.phraseScrollText(out);
+  const back = score.parseScrollText(text);
+  assert.ok(back, 'a real scroll text must parse back');
+  assert.equal(back.kind, 'pond-phrase-scroll', 'the parsed fragment is still a pond phrase');
+  assert.equal(back.length, out.length, 'the parsed scroll keeps its point count');
+  assert.equal(back.family, 'dusk', 'the chosen current survives the round trip');
+  assert.ok(Math.abs(back.pitch - out.pitch) < .001, 'the sounding pitch survives the round trip');
+  assert.ok(Math.abs(back.depth - out.depth) < .001, 'the depth survives the round trip');
+  assert.equal(back.durationMs, out.durationMs, 'the duration survives the round trip');
+  const home = score.inkFromScroll(back, 5000);
+  assert.ok(home, 'the parsed scroll must make a fresh ink line');
+  assert.equal(home.born, 5000, 'the returned line is born at its landing instant');
+  assert.equal(home.points.length, out.length, 'the returned line carries the same contour');
+  assert.equal(home.pitch, back.pitch, 'the returned line keeps the sounding pitch');
+  assert.equal(score.parseScrollText(null), null, 'an absent line has no scroll');
+  assert.equal(score.parseScrollText('не фраза'), null, 'unknown text produces no scroll');
+  assert.equal(score.inkFromScroll({ kind: 'other' }, 5), null, 'a foreign scroll makes no ink');
+  assert.equal(score.inkFromScroll({ kind: 'pond-phrase-scroll', path: [] }, 5), null, 'an empty contour makes no ink');
+}
+
+console.log('pond-score: bounded paths, fading, motifs, playable path crossings, melodic echoes, the quiet ink diary, the visible loop probe, the first-gesture invitation, the transportable phrase scroll, and the return home validated');

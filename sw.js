@@ -1,4 +1,4 @@
-const CACHE = 'pond-piano-shell-v38';
+const CACHE = 'pond-piano-shell-v39';
 // Iteration 0041: a finished phrase can leave the pond as a compact
 // self-contained string. The diary's third action lifts one ink line into
 // the clipboard — its path contour, sounding pitch, depth, duration and

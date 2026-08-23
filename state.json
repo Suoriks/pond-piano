@@ -1,12 +1,12 @@
 {
   "project": "pond-piano",
   "phase": "done",
-  "iteration": 41,
+  "iteration": 42,
   "status": "active",
-  "current_goal": "Iteration 0041 done: a finished phrase can leave the pond. The diary gains a third action per row: Zabrat lifts one ink line into the clipboard as a compact self-contained scroll (path contour, sounding pitch, depth, duration, chosen current) with a live status. Pure phraseScroll/phraseScrollText layer in pond-score.js with tests; no network, no audio engine, no DOM.",
-  "previous_goal": "Iteration 0040 done: repeated short taps are plainly separable on the ear (dropScale-driven droplet transients per note shade).",
-  "last_verified": "2026-08-23 (0041): 48 node tests pass across 13 suites (6 new phrase-scroll asserts); syntax 36 JS clean; JSON + git diff --check clean. Instrumented headless Chromium: diary row shows third Zabrat button, click lifts the real scroll text (Pond-Piano phrase, contour, pitch 64, depth 49, flow 1.1s, dawn), lastScroll set, status announces the phrase left the pond; no console errors. Screenshot output/pond-piano/scroll-take-41.png; vision verified organic water + open diary with 3 action buttons.",
-  "next_step": "shared backlog: real device pass on Android Chrome/PWA and iPhone Safari; now confirms the diary pane (rows + three actions) fits a live speaker, and that the copied scroll reads when pasted into a note or chat.",
+  "current_goal": "Iteration 0042 done: a phrase that left the pond can come home. The diary gains a return stone in the panel: it reads a pasted scroll back from the clipboard, re-seats it as fresh ink with a new birth, and lays it back on the water where it ages and dissolves like any other. Pure parseScrollText/inkFromScroll layer in pond-score.js with round-trip tests; no network, no audio engine, no DOM.",
+  "previous_goal": "Iteration 0041 done: a finished phrase can leave the pond...",
+  "last_verified": "2026-08-23 (0042): 47 node tests pass across suites (incl 13 new scroll-return asserts); syntax 36 JS clean; JSON + git diff --check clean. Instrumented headless Chromium 390x844: diary row has 3 actions, take lifts a real scroll, return stone reads it back (inkLines 1->2), status announces the phrase returned to water; no console errors. Screenshot output/pond-piano/scroll-return-42.png; pixel probe confirmed the green return stone at the panel bottom edge; vision model unavailable (limit).",
+  "next_step": "shared backlog: real device pass on Android Chrome/PWA and iPhone Safari; also prove on a live device that pasting a scroll into a note and returning it works, and that the return stone stays readable in the narrow diary panel.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -52,7 +52,7 @@
   "git_sync": "synced_public_github",
   "git_remote": "https://github.com/Suoriks/pond-piano.git",
   "git_branch": "main",
-  "updated_at": "2026-08-23T22:25:00+03:00",
+  "updated_at": "2026-08-23T23:40:00+03:00",
   "iteration_40": {
     "started": "2026-08-23T21:50:00+03:00",
     "finished": "2026-08-23T22:25:00+03:00",
@@ -180,5 +180,23 @@
       "screenshot output/pond-piano/scroll-take-41.png direct inspection: diary panel open, row carries three buttons, water organic and full-bleed; cramped phrase wrapping in the narrow panel is a pre-existing trait, not this iteration"
     ],
     "next_step": "done; the shared device-pass backlog now includes the diary pane (rows + Zabrat) and pasting the scroll on a real device"
+  },
+  "iteration_42": {
+    "started": "2026-08-23T23:17:00+03:00",
+    "finished": "2026-08-23T23:40:00+03:00",
+    "phase": "done",
+    "plan": [
+      "add pure parseScrollText + inkFromScroll to pond-score.js with tests",
+      "browser: diary return stone reads the clipboard scroll back as fresh ink + status",
+      "diaryPanelControls includes return; sw.js v39, eyebrow 42, README sentence",
+      "verify node suite, syntax, JSON, git diff, headless smoke + screenshot",
+      "KAIZEN 0042, commit one iteration, push main"
+    ],
+    "verified": [
+      "node tests: 47 pass across suites (13 new scroll-return asserts); syntax 36 JS clean; JSON + git diff --check clean",
+      "instrumented headless Chromium 390x844: diary row has 3 actions, take lifts a real scroll; return stone reads it back, inkLines 1->2, status announces returned to water; no console errors",
+      "screenshot output/pond-piano/scroll-return-42.png; pixel probe confirmed the green return stone at the panel bottom edge; vision model unavailable (limit), unpacked by direct probe as in 24/28-41"
+    ],
+    "next_step": "done; the shared device-pass backlog now includes pasting a scroll into a note and returning it on a live device, plus return-stone readability in the narrow diary panel"
   }
 }

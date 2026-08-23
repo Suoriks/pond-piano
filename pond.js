@@ -936,6 +936,8 @@
         if (child instanceof HTMLButtonElement) controls.push(child);
       }
     }
+    const returned = document.querySelector('#diary-return');
+    if (returned instanceof HTMLButtonElement) controls.push(returned);
     return controls;
   }
 
@@ -1142,6 +1144,40 @@
     copied();
   }
 
+  // The scroll is not a one-way exit: a phrase that left the pond can come
+  // home. This reads the carried text back into a pure scroll, re-seats it
+  // as a fresh ink line with a new birth, persists the diary, and tells the
+  // reader the pond received it. Broken or unknown text announces a gentle
+  // refusal instead of silently dropping a phrase.
+  function returnPhraseFromClipboard() {
+    const read = () => {
+      try { return navigator.clipboard.readText().then(text => { globalThis.__returnedText = text; return text; }); }
+      catch { return Promise.resolve(); }
+    };
+    read().then(text => {
+      const scroll = score.parseScrollText(typeof text === 'string' ? text : '');
+      if (!scroll) {
+        status.textContent = 'В буфере нет фразы пруда — скопируйте её кнопкой «Забрать», а потом верните';
+        pourAnnounced = true;
+        return;
+      }
+      const entry = score.inkFromScroll(scroll, performance.now());
+      if (!entry) return;
+      const before = phraseInk.length;
+      phraseInk = score.appendPhraseInk(phraseInk, entry, performance.now(), score.inkLifeMs(reduced.matches));
+      if (phraseInk.length !== before) {
+        storePhraseDiary();
+        reflectDiaryCount();
+        if (diaryOpen) syncDiaryPanel();
+        status.textContent = `Фраза из буфера вернулась на воду: контур из ${scroll.length} точек с высотой ${Math.round(scroll.pitch * 100)}`;
+        pourAnnounced = true;
+      }
+    }).catch(() => {
+      status.textContent = 'В буфере нет фразы пруда — скопируйте её кнопкой «Забрать»';
+      pourAnnounced = true;
+    });
+  }
+
   function announceScrollFallback(text) {
     try {
       const textarea = document.createElement('textarea');
@@ -1216,6 +1252,10 @@
   // Buttons already fire click on Enter/Space; expanded honesty and the
   // focus move happen inside setVolumePanelOpen on that same click path.
   diaryStone.addEventListener('click', () => setDiaryPanelOpen(!diaryOpen));
+  const diaryReturn = document.querySelector('#diary-return');
+  if (diaryReturn instanceof HTMLButtonElement) {
+    diaryReturn.addEventListener('click', () => returnPhraseFromClipboard());
+  }
   diaryControl.addEventListener('focusout', () => {
     requestAnimationFrame(() => {
       if (!diaryControl.contains(document.activeElement)) setDiaryPanelOpen(false);

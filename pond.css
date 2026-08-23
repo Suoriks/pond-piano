@@ -195,6 +195,17 @@ h1 { margin: 0; font: 400 clamp(24px, 4vw, 44px)/1.05 Georgia, serif; letter-spa
 .diary-take:focus-visible { outline: 3px solid #dae7b4; outline-offset: 2px; }
 .diary-take:active { filter: brightness(1.25); }
 .diary-empty { margin: 2px 2px 0; color: #aebfae; font-size: 12.5px; opacity: .85; }
+.diary-return {
+  width: 100%; min-height: 44px; margin-top: 8px; padding: 8px 12px;
+  color: #dcead1; font: 600 12px/1.2 inherit; cursor: pointer;
+  border: 1px solid rgba(198, 224, 182, .3);
+  border-radius: 46% 54% 52% 48% / 54% 46% 52% 48%;
+  background: linear-gradient(150deg, hsla(96 38% 26% / .55), hsla(96 40% 12% / .7));
+  transition: border-color .18s ease, filter .18s ease, transform .18s ease;
+}
+.diary-return:hover { border-color: rgba(214, 234, 186, .58); filter: brightness(1.12); transform: translateY(-1px); }
+.diary-return:focus-visible { outline: 3px solid #dae7b4; outline-offset: 2px; }
+.diary-return:active { filter: brightness(1.25); }
 @media (max-width: 420px) {
   .tuning-control { left: max(12px, env(safe-area-inset-left)); bottom: max(11px, env(safe-area-inset-bottom)); }
   .shore-control { right: max(14px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); }
