@@ -1,6 +1,7 @@
-const CACHE = 'pond-piano-shell-v32';
-// Iteration 0035: the pond invites its first gesture — breathing ring + line,
-// gone forever after the first play.
+const CACHE = 'pond-piano-shell-v33';
+// Iteration 0036: the water spends its frame budget honestly - a measured
+// p95 step-down of ripple rings, motes, tide and ink under load, then a quiet
+// recovery during idle. Audio voices stay untouched.
 const SHELL = [
   './',
   './index.html',
@@ -11,6 +12,7 @@ const SHELL = [
   './pond-waves.js',
   './pond-caustic.js',
   './pond-tide.js',
+  './pond-budget.js',
   './pond-master.js',
   './pond-audio-lifecycle.js',
   './pond.js',

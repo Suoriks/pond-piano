@@ -1,9 +1,9 @@
 {
   "project": "pond-piano",
   "phase": "done",
-  "iteration": 35,
+  "iteration": 36,
   "status": "active",
-  "current_goal": "Iteration 0035 done: the pond invites its first gesture itself - a breathing light ring on the water plus a quiet 'Коснитесь воды' line show that the water wakes from touch; after the first sound (pointer or keyboard) the invitation fades and never returns, remembered locally across reloads.",
+  "current_goal": "Iteration 0036 done: the water spends its frame budget honestly - a measured p95 cost, easing down ripple rings, mote density, tide swells and a slight ink dim under sustained load, then unwinding during easy stretches so the full look returns; the six audio voices are never touched.",
   "last_verified": "2026-08-23: KAIZEN 0035. All Node suites (23 tests incl invitation bounds) pass; syntax clean (24 JS); JSON + git diff --check clean. Headless Chromium 390x844 @2x: fresh pond shows line + breathing ring (inviteAlpha 0.612->0.337 half-cycle), pixel proof of breath (ring patch delta 60.8 vs 0.1 control); first gesture kills both (inviteAlpha=0, localStorage=played, has-played), reload keeps them dead, no console errors. Vision model unavailable (limit) - PNG screenshots verified by direct pixel probe: ring patch 279.8 vs 113.0 quiet water same frame; after play 147.0 (background). eye 35; shell v32. Windows CI green on final sync commit: run 32637050977 (2m20s).",
   "next_step": "Real-device pass remains the shared backlog; for the invitation add: ring readability under real ripple and no fight with the phone status bar/address bar.",
   "alpha_feedback": {
@@ -51,7 +51,7 @@
   "git_sync": "synced_public_github",
   "git_remote": "https://github.com/Suoriks/pond-piano.git",
   "git_branch": "main",
-  "updated_at": "2026-08-23T14:52:00+03:00",
+  "updated_at": "2026-08-23T15:32:25+03:00",
   "iteration_35": {
     "started": "2026-08-23T14:20:00+03:00",
     "phase": "done",
@@ -74,5 +74,26 @@
     ],
     "next_step": "done; device-pass backlog updated with invitation readability check",
     "finished": "2026-08-23T14:40:00+03:00"
+  },
+  "iteration_36": {
+    "started": "2026-08-23T15:26:37+03:00",
+    "finished": "2026-08-23T15:32:25+03:00",
+    "phase": "done",
+    "plan": [
+      "new pure layer pond-budget.js: measure p95 frame cost over a window, degrade quality in steps when over budget, recover when sustained idle low cost",
+      "pond-budget.test.js: budget thresholds, degrade/stable-ignore/recover rules, reduced-motion floor, honor original intended level",
+      "hook into pond.js draw loop: budget.step(costMs) before render, apply ripple/motes/tide/ink styles per current quality",
+      "index.html + sw.js shell v33 + package.json add pond-budget.js; README one sentence",
+      "verify: node suites, syntax, JSON, git diff --check, headless smoke with budget-reduction pixel probe",
+      "bump eyebrow to 36; KAIZEN 0036; commit one iteration and push to main"
+    ],
+    "verified": [
+      "node tests: 28 pass across 10 suites (incl 6 new pond-budget asserts: calm start, no single-frame drop, sustained-load degradation, reduced-motion floor, easy-stretch recovery, unknown-family calm)",
+      "syntax: 28 JS files clean",
+      "JSON validity + git diff --check clean",
+      "headless Chromium 390x844 smoke: budget layer wired (budgetFrameMs measured 0.20 before, 0.50 after a short ripple gesture; budgetStep=0 on a fast desktop renderer with no errors), shell stays calm under a note",
+      "budget logic proven in pure layer unit tests, since a fast desktop renderer legitimately stays under the p95 budget; real-device tone stays the measured source of truth"
+    ],
+    "next_step": "real device pass: on Android/iOS measure actual p95 frame cost and confirm the eased steps engage and recover; keep thresholds derived only from measured devices"
   }
 }

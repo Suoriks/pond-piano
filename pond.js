@@ -9,6 +9,7 @@
   const waves = window.PondWaves;
   const caustic = window.PondCaustic;
   const tide = window.PondTide;
+  const budget = window.PondBudget;
   const masterModel = window.PondMaster;
   const audioLifecycleFactory = window.PondAudioLifecycle;
   if (!music) throw new Error('Pond music mapping did not load');
@@ -24,6 +25,7 @@
   const volumeRange = document.querySelector('#master-volume');
   const volumeValue = document.querySelector('#volume-value');
   const muteButton = document.querySelector('#mute-water');
+  const waterBudget = budget.create({ floorMs: 6 });
   const diaryControl = document.querySelector('#diary-control');
   const diaryStone = document.querySelector('#diary-stone');
   const diaryPanel = document.querySelector('#diary-panel');
@@ -723,14 +725,18 @@
   function drawInkLine(line, now) {
     const visible = score.inkVisibility(line, now, reduced.matches);
     if (visible <= 0 || !Array.isArray(line.points) || line.points.length < 2) return;
+    // Ink is cheap polyline work, so the budget only softens it faintly on
+    // the deepest steps rather than sacrificing the diary's legibility.
+    const inkStyle = budget.style(waterBudget, 'ink');
+    const inkDim = .82 + .18 * inkStyle;
     const drift = reduced.matches ? 0 : Math.sin(now * .0003 + line.born * .0009) * 1.6;
     const hue = 158 + 26 * (1 - line.depth);
     ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     traceMemoryPath(line.points, drift);
-    ctx.strokeStyle = `hsla(${hue} 46% 60% / ${visible * .13})`;
+    ctx.strokeStyle = `hsla(${hue} 46% 60% / ${visible * .13 * inkDim})`;
     ctx.lineWidth = 6; ctx.stroke();
     traceMemoryPath(line.points, drift);
-    ctx.strokeStyle = `hsla(${hue} 60% 76% / ${visible * .34})`;
+    ctx.strokeStyle = `hsla(${hue} 60% 76% / ${visible * .34 * inkDim})`;
     ctx.lineWidth = 1.1; ctx.stroke();
     const end = line.points.at(-1);
     ctx.beginPath(); ctx.arc(end.x * width, end.y * height + drift, 3.1, 0, Math.PI * 2);
@@ -1816,8 +1822,12 @@
 
   function drawMotes(now) {
     motes = caustic.updateMotes(motes, Math.max(0, (now - last) / 1000));
+    const moteBudget = budget.style(waterBudget, 'motes');
+    const drawCount = Math.max(2, Math.round(motes.length * moteBudget));
     ctx.save();
-    for (const mote of motes) {
+    for (let index = 0; index < drawCount; index += 1) {
+      const mote = motes.at(index);
+      if (!mote) continue;
       const visual = caustic.moteVisual(mote, now, reduced.matches);
       if (visual.alpha <= .012) continue;
       const x = visual.x * width, y = visual.y * height;
@@ -1833,9 +1843,7 @@
       }
     }
     ctx.restore();
-  }
-
-  function water(now) {
+  }  function water(now) {
     const t = now * .0001;
     const gradient = ctx.createRadialGradient(width * .55, height * .38, 10, width * .52, height * .48, Math.max(width, height) * .78);
     gradient.addColorStop(0, '#163b38'); gradient.addColorStop(.38, '#0b2928'); gradient.addColorStop(1, '#041313');
@@ -1858,9 +1866,16 @@
     tidalSwells = tideState.swells;
     tidalStirs = tideState.stirs;
     const field = tide.tideVisual(tidalSwells, tidalStirs, now, reduced.matches);
+    // Under load the tide is the broadest cheapest-to-temper layer: ease the
+    // field down so the pond keeps its mineral depth without painting every
+    // swell at full brilliance.
+    const tideBudget = budget.style(waterBudget, 'tide');
+    const drawCount = Math.max(1, Math.round(field.length * tideBudget));
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    for (const glow of field) {
+    for (let index = 0; index < drawCount; index += 1) {
+      const glow = field.at(index);
+      if (!glow) continue;
       const radius = Math.max(24, glow.size * Math.max(width, height));
       const ry = radius * glow.spread;
       const cx = glow.x * width, cy = glow.y * height;
@@ -1939,7 +1954,11 @@
     if (age > life) return false;
     const fade = Math.pow(1 - age / life, 1.7) * r.strength;
     const spread = reduced.matches ? 34 : 24 + age * (96 + r.pressure * 52);
-    const rings = reduced.matches ? 1 : 3;
+    // The frame budget eases the ring count down under load: the outermost
+    // rings are the cheapest to spare while the core glow and first ring
+    // keep the gesture readable.
+    const ringBudget = budget.style(waterBudget, 'rippleRings');
+    const rings = Math.max(0, Math.min(3, Math.round((reduced.matches ? 1 : 3) * ringBudget)));
     const glow = ctx.createRadialGradient(r.x, r.y, 0, r.x, r.y, Math.max(8, spread * .45));
     glow.addColorStop(0, `hsla(${r.hue} 72% 82% / ${fade * .48})`);
     glow.addColorStop(.25, `hsla(${r.hue + 18} 68% 66% / ${fade * .17})`); glow.addColorStop(1, 'transparent');
@@ -2338,6 +2357,7 @@
   }
 
   function frame(now) {
+    const started = performance.now();
     const dt = Math.min((now - last) / 1000, .05); last = now;
     water(now + dt);
     drawTide(now);
@@ -2381,6 +2401,13 @@
     for (const pointer of pointers.values()) drawEddy(pointer, now);
     for (const pointer of pointers.values()) drawContact(pointer, now);
     if (keyboardVisual) drawContact(keyboardVisual, now);
+    // The water frame budget: record the observed render cost, then let the
+    // eased style feed the next frame. Quiet, cheap stretches unwind the
+    // steps so the full look returns.
+    const frameCost = performance.now() - started;
+    const budgetStep = budget.observe(waterBudget, frameCost);
+    canvas.dataset.budgetStep = String(budgetStep);
+    canvas.dataset.budgetFrameMs = frameCost.toFixed(2);
     requestAnimationFrame(frame);
   }
   resize(); requestAnimationFrame(frame);
