@@ -1,11 +1,11 @@
 {
   "project": "pond-piano",
   "phase": "done",
-  "iteration": 30,
-  "status": "complete",
-  "current_goal": "Drop visible as it sounds: every fresh accent births a small visible splash corona that honestly follows note depth (shallow thin bright spark, deep warm wide crown), gesture force, and entry angle; bounded ray set plus reduced-motion; sound layer untouched",
-  "last_verified": "2026-08-22: KAIZEN 0030. All 9 Node suites pass (22 tests incl new dropSpray bounds/shaping); syntax clean (22 JS); JSON + git diff --check clean. Headless Chromium 390x844 real Web Audio: fresh tap births a visible corona (coronaEvents=1) and the audio splash (buffersCreated=1), voice running + has-played set; deep tap also births a corona; no console/page errors. Shell v26; eyebrow 30. Screenshots output/pond-piano/note-corona-shallow-30.png and note-shift-deep-30.png pixel-checked: both tap sites show bright corona above dark water (62 vs overall ~36); vision inspection unavailable (image model limits) like 24/28/29.",
-  "next_step": "Real-device pass (Android Chrome/PWA, iPhone Safari): judge whether the corona lies gently under the note ripples and how distinct shallow vs deep taps are at true pixel density; change radius/brightness/spread limits only from measured device.",
+  "iteration": 32,
+  "status": "active",
+  "current_goal": "Iteration 0031 done: the pond keeps a quiet diary - every finished phrase is one fading ink line on the water; the diary stone counts readable lines and pours any of them back as a gentle melodic echo; purely offline, bounded storage (8 lines, ~54s ink life), no backend",
+  "last_verified": "2026-08-23: KAIZEN 0031. All 9 Node suites pass (22 tests incl new ink-diary bounds/lifecycle/pourable order); syntax clean (22 JS); JSON + git diff --check clean. Headless Chromium 390x844 @2x full path: fresh pond empty (inkLines=0, stored none); one finished phrase -> exactly one ink line, badge/aria '1', pixel band over ink brighter than water (173 vs 77); panel lists one entry, pour closes panel, pouredEchoes=1, status announced echo, after 2.6s echoVoices=0 + pendingPours=0; reload restores the young line (inkLines=1); aged diary file lets go cleanly (badge back to 0). No console/page errors. Shell v27; eyebrow 31. Screenshots output/pond-piano/pond-diary-ink-31.png and pond-diary-panel-31.png; vision inspection unavailable (image model limits) like 24/28-30.",
+  "next_step": "Real-device pass (Android Chrome/PWA, iPhone Safari): judge ink readability under ripples at true pixel density, diary stone and list-entry touch targets, pour-back behavior on live sound; change radius/brightness/touch sizes only from measured device.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -26,6 +26,26 @@
     "ios"
   ],
   "shell_hypothesis": "offline-first-pwa",
+  "iteration_31": {
+    "started": "2026-08-23T03:30:00+03:00",
+    "finished": "2026-08-23T07:35:00+03:00",
+    "phase": "done",
+    "plan": [
+      "pond-score.js: finish pure diary layer (phraseInk, appendPhraseInk, inkVisibility, pourableInk)",
+      "tests: pure-layer bounds/lifecycle coverage for the diary",
+      "pond.js: record ink at storeScorePhrase, draw under ripples in frame(), history stone + panel, pour-back path",
+      "index.html + pond.css: accessible history stone and listbox panel; sw v27; README/eyebrow 31",
+      "verify: node tests, syntax, JSON, git diff --check, headless Chromium smoke + screenshot"
+    ],
+    "verified": [
+      "node tests: 22 pass across 9 suites",
+      "syntax check: 22 JS files clean",
+      "JSON validity + git diff --check clean",
+      "headless Chromium end-to-end diary flow green, no console errors",
+      "pixel check: band over ink 173 vs water 77 mean channel sum"
+    ],
+    "next_step": "done; real-device pass remains for the shared device-pass backlog"
+  },
   "git_sync": "synced_public_github",
   "git_remote": "https://github.com/Suoriks/pond-piano.git",
   "git_branch": "main",
@@ -36,5 +56,5 @@
     "windows_asset": "Pond-Piano-0.1.0-Windows-x64.exe",
     "published_at": "2026-07-26T04:39:34+03:00"
   },
-  "updated_at": "2026-08-22T22:50:00+03:00"
+  "updated_at": "2026-08-23T07:35:00+03:00"
 }

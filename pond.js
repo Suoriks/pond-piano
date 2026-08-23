@@ -24,11 +24,18 @@
   const volumeRange = document.querySelector('#master-volume');
   const volumeValue = document.querySelector('#volume-value');
   const muteButton = document.querySelector('#mute-water');
+  const diaryControl = document.querySelector('#diary-control');
+  const diaryStone = document.querySelector('#diary-stone');
+  const diaryPanel = document.querySelector('#diary-panel');
+  const diaryList = document.querySelector('#diary-list');
+  const diaryEmpty = document.querySelector('#diary-empty');
+  const diaryCount = document.querySelector('#diary-count');
   const tuningInputs = [...document.querySelectorAll('input[name="tuning-family"]')];
   const tuningValue = document.querySelector('#tuning-value');
   const MASTER_STORAGE_KEY = 'pond-piano.master.v1';
   const TUNING_STORAGE_KEY = 'pond-piano.tuning.v1';
   const SCORE_STORAGE_KEY = 'pond-piano.score.v1';
+  const DIARY_STORAGE_KEY = 'pond-piano.diary.v1';
   const SCORE_HYDRATE_MAX_AGE_MS = 3600000;
   const epochNow = () => Date.now();
   const MAX_VOICES = 6;
@@ -40,8 +47,9 @@
   const MAX_PENDING_SKIPS = 3;
   const MAX_SKIP_VOICES = 2;
   const MAX_ECHO_VOICES = 3;
+  const MAX_PENDING_POURS = 6;
   const ripples = [], trails = [], splashes = [], scoreEchoes = [], collisionPearls = [], stoneFlights = [], pointers = new Map();
-  const coronas = [];
+  const coronas = [], pourEchoes = [], pouredInk = [];
   let motes = caustic.createMotes(caustic.DEFAULT_COUNT, 7);
   let tidalSwells = tide.createSwells(tide.DEFAULT_SWELLS, 13);
   let tidalStirs = [];
@@ -50,7 +58,12 @@
   const collisionTimers = new Map();
   const skipTimers = new Set();
   const echoTimers = new Set();
+  const pourTimers = new Set();
   let memories = score.restorePhrase(loadScorePhrase(), performance.now(), epochNow());
+  let phraseInk = loadPhraseDiary();
+  let diaryOpen = false;
+  let lastInkCount = -1;
+  let lastPourAt = -Infinity;
   const keyboard = { x: .5, y: .52, pitchX: .5, pressure: .48, sounding: false, born: 0, lastMotion: 0, motionSpeed: 0, mapping: null, materialBias: null, precisionActive: false, precisionAmount: 0, precisionOriginX: null, scoreSamples: [], distanceTraveled: 0, resonanceX: 0, resonanceY: 0, resonatedMemories: new Set() };
   let audio = null;
   let audioLifecycle = null;
@@ -63,7 +76,7 @@
   let lastCollisionAt = -Infinity;
   let lastSkipPlanAt = -Infinity;
   let width = 0, height = 0, dpr = 1, last = performance.now(), announced = false, scoreAnnounced = false, dynamicsAnnounced = false, textureAnnounced = false, precisionAnnounced = false, freedomAnnounced = false, eddyAnnounced = false;
-  let collisionAnnounced = false, skipAnnounced = false, scoreEchoAnnounced = false;
+  let collisionAnnounced = false, skipAnnounced = false, scoreEchoAnnounced = false, pourAnnounced = false;
   let phraseNoteIndex = 0;
 
   function pitchAt(x) {
@@ -276,12 +289,16 @@
     skipTimers.clear();
     for (const timer of echoTimers) clearTimeout(timer);
     echoTimers.clear();
+    for (const timer of pourTimers) clearTimeout(timer);
+    pourTimers.clear();
+    pourEchoes.length = 0;
     stoneFlights.length = 0;
     canvas.dataset.pearlVoices = '0';
     canvas.dataset.skipVoices = '0';
     canvas.dataset.pendingSkips = '0';
     canvas.dataset.echoVoices = '0';
     canvas.dataset.pendingEchoes = '0';
+    canvas.dataset.pendingPours = '0';
     balanceVoices(engine);
     for (const pointerId of pointers.keys()) {
       try { canvas.releasePointerCapture?.(pointerId); } catch {}
@@ -569,6 +586,258 @@
     catch {}
   }
 
+  // ---- The pond's quiet diary (browser side) -----------------------------
+  // Every finished phrase is written here as one fading ink line. The diary
+  // is local and bounded: the pond keeps writing while it plays, and the
+  // reader only decides when to pour an older line back onto the water.
+
+  function loadPhraseDiary() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(DIARY_STORAGE_KEY) ?? 'null');
+      if (!parsed || parsed.v !== 1 || !Array.isArray(parsed.lines) ||
+          !Number.isFinite(parsed.savedAt)) return [];
+      const epoch = epochNow();
+      const savedAge = epoch - parsed.savedAt;
+      if (savedAge < 0 || savedAge >= score.INK_LIFE_MS) return [];
+      return parsed.lines
+        .filter(line => {
+          if (!line || !Array.isArray(line.points) || line.points.length < 2 ||
+              !Number.isFinite(line.born)) return false;
+          const age = epoch - line.born;
+          return age >= 0 && age < score.INK_LIFE_MS;
+        })
+        .map(line => ({
+          born: performance.now() - (epoch - line.born),
+          durationMs: Math.max(80, Math.min(8000, Number.isFinite(line.durationMs) ? line.durationMs : 1200)),
+          depth: Math.max(0, Math.min(1, Number.isFinite(line.depth) ? line.depth : .5)),
+          pressure: Math.max(0, Math.min(1, Number.isFinite(line.pressure) ? line.pressure : .42)),
+          pitch: Math.max(0, Math.min(1, Number.isFinite(line.pitch) ? line.pitch : .5)),
+          points: line.points
+            .filter(point => point && Number.isFinite(point.x) && Number.isFinite(point.y))
+            .slice(0, score.MAX_POINTS)
+            .map(point => ({
+              x: Math.max(0, Math.min(1, point.x)),
+              y: Math.max(0, Math.min(1, point.y)),
+              pressure: Math.max(0, Math.min(1, Number.isFinite(point.pressure) ? point.pressure : .42))
+            }))
+        }))
+        .filter(line => line.points.length >= 2)
+        .slice(-score.MAX_INK);
+    } catch { return []; }
+  }
+
+  function storePhraseDiary() {
+    try {
+      const epoch = epochNow();
+      const perf = performance.now();
+      localStorage.setItem(DIARY_STORAGE_KEY, JSON.stringify({
+        v: 1,
+        savedAt: epoch,
+        lines: phraseInk.slice(-score.MAX_INK).map(line => ({
+          born: epoch - Math.max(0, perf - line.born),
+          durationMs: line.durationMs,
+          depth: line.depth,
+          pressure: line.pressure,
+          pitch: line.pitch,
+          points: line.points.map(point => ({ x: point.x, y: point.y, pressure: point.pressure }))
+        }))
+      }));
+    } catch {}
+  }
+
+  function recordPhraseInk() {
+    const latest = memories.at(-1);
+    const entry = score.phraseInk(latest);
+    if (!entry) return;
+    const before = phraseInk.length;
+    phraseInk = score.appendPhraseInk(phraseInk, entry, performance.now(), score.inkLifeMs(reduced.matches));
+    if (phraseInk.length === before && phraseInk.at(-1) === entry) return;
+    storePhraseDiary();
+    reflectDiaryCount();
+    if (diaryOpen) syncDiaryPanel();
+  }
+
+  // Draw one fading ink line on the water: the pond keeps a quiet diary.
+  function drawInkLine(line, now) {
+    const visible = score.inkVisibility(line, now, reduced.matches);
+    if (visible <= 0 || !Array.isArray(line.points) || line.points.length < 2) return;
+    const drift = reduced.matches ? 0 : Math.sin(now * .0003 + line.born * .0009) * 1.6;
+    const hue = 158 + 26 * (1 - line.depth);
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    traceMemoryPath(line.points, drift);
+    ctx.strokeStyle = `hsla(${hue} 46% 60% / ${visible * .13})`;
+    ctx.lineWidth = 6; ctx.stroke();
+    traceMemoryPath(line.points, drift);
+    ctx.strokeStyle = `hsla(${hue} 60% 76% / ${visible * .34})`;
+    ctx.lineWidth = 1.1; ctx.stroke();
+    const end = line.points.at(-1);
+    ctx.beginPath(); ctx.arc(end.x * width, end.y * height + drift, 3.1, 0, Math.PI * 2);
+    ctx.fillStyle = `hsla(${hue} 62% 80% / ${visible * .4})`;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // A poured phrase sweeps back across the surface as a gentle echo.
+  function drawPourEcho(echo, now) {
+    const life = reduced.matches ? 560 : 1240;
+    const age = now - echo.born;
+    if (age < 0 || age >= life) return false;
+    const progress = Math.max(0, Math.min(1, age / life));
+    const fade = Math.pow(1 - progress, 1.4);
+    const points = echo.line.points;
+    if (!points || points.length < 2) return false;
+    const keep = Math.max(2, Math.ceil(points.length * Math.min(1, progress * 1.6)));
+    const slice = points.slice(0, keep);
+    const hue = 158 + 26 * (1 - echo.line.depth);
+    const drift = reduced.matches ? 0 : Math.sin(now * .00034 + echo.born * .001) * 1.8;
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    traceMemoryPath(slice, drift);
+    ctx.strokeStyle = `hsla(${hue + 14} 72% 86% / ${fade * .4})`;
+    ctx.lineWidth = 2 + echo.line.pressure * 2;
+    ctx.stroke();
+    const tip = slice.at(-1);
+    const radius = 4.5;
+    const glow = ctx.createRadialGradient(tip.x * width, tip.y * height + drift, 0, tip.x * width, tip.y * height + drift, radius * 4.4);
+    glow.addColorStop(0, `hsla(${hue + 20} 82% 90% / ${fade * .7})`);
+    glow.addColorStop(.25, `hsla(${hue} 66% 74% / ${fade * .22})`);
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(tip.x * width, tip.y * height + drift, radius * 4.4, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    return true;
+  }
+
+  function setDiaryPanelOpen(open) {
+    diaryOpen = open;
+    diaryControl.classList.toggle('is-open', open);
+    diaryStone.setAttribute('aria-expanded', String(open));
+    if (open) syncDiaryPanel();
+  }
+
+  // The stone keeps a quiet count of still-readable lines while closed.
+  function reflectDiaryCount() {
+    const lines = score.pourableInk(phraseInk, performance.now(), reduced.matches);
+    const count = lines.length;
+    diaryCount.textContent = String(count);
+    diaryStone.setAttribute('aria-label',
+      `Дневник пруда: ${count} ${count === 1 ? 'строка' : count >= 2 && count <= 4 ? 'строки' : 'строк'} на воде${count ? '; откройте, чтобы вылить фразу обратно' : ''}`);
+    diaryControl.classList.toggle('has-lines', count > 0);
+    canvas.dataset.inkLines = String(count);
+    lastInkCount = count;
+    return count;
+  }
+
+  function syncDiaryPanel() {
+    const epoch = performance.now();
+    const lines = score.pourableInk(phraseInk, epoch, reduced.matches);
+    diaryCount.textContent = String(lines.length);
+    diaryList.textContent = '';
+    for (const line of lines) {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'diary-entry';
+      const hue = Math.round(158 + 26 * (1 - line.depth));
+      const x = Math.round(line.points.at(-1).x * 100);
+      const y = Math.round(line.points.at(-1).y * 100);
+      const visible = Math.round(score.inkVisibility(line, epoch, reduced.matches) * 100);
+      item.textContent = `Фраза на глубине ${Math.round(line.depth * 100)} · остаток ${visible}%`;
+      item.setAttribute('aria-label', `Вылить эту фразу обратно на воду: мягкое мелодическое эхо от её контура (около x ${x}, y ${y})`);
+      item.style.setProperty('--ink-hue', String(hue));
+      item.addEventListener('click', () => pourInkEntry(line));
+      diaryList.appendChild(item);
+    }
+    diaryEmpty.hidden = lines.length !== 0;
+    diaryList.hidden = lines.length === 0;
+    diaryStone.setAttribute('aria-label', `Дневник пруда: ${lines.length} ${lines.length === 1 ? 'строка' : lines.length >= 2 && lines.length <= 4 ? 'строки' : 'строк'} на воде`);
+    diaryControl.classList.toggle('has-lines', lines.length > 0);
+  }
+
+  function startPourEcho(line) {
+    pourEchoes.push({ line, born: performance.now() });
+    if (pourEchoes.length > 6) pourEchoes.shift();
+    canvas.dataset.pouredEchoes = String((Number(canvas.dataset.pouredEchoes) || 0) + 1);
+  }
+
+  function playPourNote(line, anchor, index, response) {
+    const engine = audio;
+    if (!engine || engine.context.state !== 'running' ||
+        engine.echoVoices.size >= MAX_ECHO_VOICES) return;
+    const x = anchor.x * width, y = anchor.y * height;
+    const depth = Math.max(0, Math.min(1, anchor.y));
+    const now = engine.context.currentTime;
+    const oscillator = engine.context.createOscillator();
+    const filter = engine.context.createBiquadFilter();
+    const gain = engine.context.createGain();
+    const panner = typeof engine.context.createStereoPanner === 'function' ? engine.context.createStereoPanner() : null;
+    const reflectionSend = engine.reflection ? engine.context.createGain() : null;
+    oscillator.type = 'triangle';
+    oscillator.frequency.setValueAtTime(response.startFrequency, now);
+    oscillator.frequency.exponentialRampToValueAtTime(response.frequency, now + response.durationSeconds * .42);
+    oscillator.frequency.exponentialRampToValueAtTime(response.frequency * .992, now + response.durationSeconds);
+    filter.type = 'lowpass'; filter.frequency.value = response.cutoffHz; filter.Q.value = 1.2;
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.exponentialRampToValueAtTime(response.peakGain, now + .01);
+    gain.gain.exponentialRampToValueAtTime(.0001, now + response.durationSeconds);
+    oscillator.connect(filter).connect(gain);
+    let output = gain;
+    if (panner) { panner.pan.value = music.spatialPan(anchor.x); gain.connect(panner); output = panner; }
+    output.connect(engine.master);
+    if (reflectionSend) {
+      reflectionSend.gain.value = music.depthReflection(depth).sendGain * .42;
+      output.connect(reflectionSend).connect(engine.reflection.input);
+    }
+    const echo = { oscillator, nodes: [oscillator, filter, gain, panner, reflectionSend] };
+    engine.echoVoices.add(echo);
+    canvas.dataset.echoVoices = String(engine.echoVoices.size);
+    canvas.dataset.peakEchoVoices = String(Math.max(Number(canvas.dataset.peakEchoVoices) || 0, engine.echoVoices.size));
+    addRipple(x, y, .12 + line.pressure * .16, .3 + response.peakGain * 7, response.frequency, false);
+    if (!pourAnnounced) {
+      status.textContent = 'Сохранившаяся фраза вылилась обратно на воду мягким мелодическим эхом';
+      pourAnnounced = true;
+    }
+    oscillator.addEventListener('ended', () => {
+      if (engine.echoVoices?.delete(echo)) {
+        for (const node of echo.nodes) { try { node?.disconnect(); } catch {} }
+        canvas.dataset.echoVoices = String(engine.echoVoices.size);
+      }
+    }, { once: true });
+    oscillator.start();
+    oscillator.stop(now + response.durationSeconds + .025);
+  }
+
+  // Pour one remembered line back onto the surface as a gentle echo.
+  function pourInkEntry(line) {
+    const now = performance.now();
+    if (score.inkVisibility(line, now, reduced.matches) <= .02) { syncDiaryPanel(); return; }
+    const engine = audio;
+    if (!engine || engine.context.state !== 'running' || pourTimers.size >= MAX_PENDING_POURS) return;
+    const pseudo = {
+      ...line, startedAt: line.born,
+      points: line.points.map((point, index) => ({
+        x: point.x, y: point.y, pitch: point.x,
+        pressure: Number.isFinite(point.pressure) ? point.pressure : line.pressure,
+        at: line.born + index
+      }))
+    };
+    const anchors = score.melodyAnchors(pseudo, MAX_ECHO_VOICES);
+    if (!anchors.length) return;
+    let serial = 0;
+    anchors.forEach((anchor, index) => {
+      const response = music.echoNote(anchor.pitch, anchor.y, .12 + line.pressure * .2, index, anchors.length);
+      const at = now + response.delayMs;
+      const timer = setTimeout(() => {
+        pourTimers.delete(timer);
+        canvas.dataset.pendingPours = String(pourTimers.size);
+        playPourNote(line, anchor, index, response);
+      }, Math.max(0, at - performance.now()));
+      pourTimers.add(timer);
+      serial += 1;
+    });
+    if (!serial) return;
+    startPourEcho(line);
+    canvas.dataset.pendingPours = String(pourTimers.size);
+    setDiaryPanelOpen(false);
+  }
+
   function reflectTuningFamily(announce = false) {
     const family = music.SCALE_FAMILIES[tuningFamily];
     for (const input of tuningInputs) input.checked = input.value === tuningFamily;
@@ -607,6 +876,21 @@
 
   volumeStone.addEventListener('click', () => setVolumePanelOpen(true));
   volumeControl.addEventListener('focusin', () => volumeStone.setAttribute('aria-expanded', 'true'));
+  diaryStone.addEventListener('click', () => setDiaryPanelOpen(!diaryOpen));
+  diaryControl.addEventListener('focusout', () => {
+    requestAnimationFrame(() => {
+      if (!diaryControl.contains(document.activeElement)) setDiaryPanelOpen(false);
+    });
+  });
+  document.addEventListener('pointerdown', event => {
+    if (!diaryControl.contains(event.target)) setDiaryPanelOpen(false);
+  });
+  diaryControl.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    setDiaryPanelOpen(false);
+    canvas.focus();
+  });
   volumeControl.addEventListener('focusout', () => {
     requestAnimationFrame(() => {
       if (!volumeControl.contains(document.activeElement) && !volumeControl.classList.contains('is-open')) {
@@ -646,6 +930,7 @@
   }
   reflectMasterState(false);
   reflectTuningFamily(false);
+  reflectDiaryCount();
 
   function resize() {
     dpr = Math.min(devicePixelRatio || 1, 2);
@@ -1000,6 +1285,7 @@
     memories = score.append(memories, score.createMemory(contact.scoreSamples, now));
     canvas.dataset.scoreMemories = String(memories.length);
     storeScorePhrase();
+    recordPhraseInk();
     const motifCount = score.groupMotifs(memories).length;
     if (previousMotifs > 0 && motifCount > previousMotifs) {
       status.textContent = 'Пауза отделила новый мотив; вода не связывает его с предыдущим';
@@ -1790,8 +2076,14 @@
     drawTide(now);
     drawMotes(now);
     memories = memories.filter(memory => now >= memory.born && now < memory.born + score.lifeMs(reduced.matches));
+    phraseInk = phraseInk.filter(line => now >= line.born && now < line.born + score.inkLifeMs(reduced.matches));
+    // The stone counts readable lines: their number also changes when ink
+    // arrives or dissolves, not only when the diary array itself changes.
+    if (score.pourableInk(phraseInk, now, reduced.matches).length !== lastInkCount) reflectDiaryCount();
+    for (const line of phraseInk) drawInkLine(line, now);
     for (const motif of score.groupMotifs(memories)) drawMotifUndercurrent(motif, now);
     for (const memory of memories) drawScoreMemory(memory, now);
+    for (const line of pourEchoes) if (!drawPourEcho(line, now)) pourEchoes.splice(pourEchoes.indexOf(line), 1);
     for (let i = scoreEchoes.length - 1; i >= 0; i--) if (!drawScoreEcho(scoreEchoes[i], now)) scoreEchoes.splice(i, 1);
     for (let i = trails.length - 1; i >= 0; i--) if (!drawTrail(trails[i], now)) trails.splice(i, 1);
     for (let i = splashes.length - 1; i >= 0; i--) if (!drawSplash(splashes[i], now)) splashes.splice(i, 1);

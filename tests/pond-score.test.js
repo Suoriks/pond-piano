@@ -132,4 +132,49 @@ assert.ok(score.melodyAnchors(crossingMemory, 9).length <= 4, 'the echo must sta
 assert.deepEqual(score.melodyAnchors(null, 3), [], 'an absent memory must wake no echo');
 assert.equal(score.melodyAnchors(crossingMemory, -5)[0].x, .85, 'a broken requested maximum must fall back to the final point');
 
-console.log('pond-score: bounded paths, fading, motifs, playable path crossings, and melodic echoes verified');
+// The pond's quiet diary: bounded fading ink lines, pourable while visible.
+{
+  const inkMemory = score.createMemory([
+    { x: .1, y: .3, at: 0, pressure: .4 },
+    { x: .5, y: .45, at: 300, pressure: .5 },
+    { x: .9, y: .6, at: 700, pressure: .6 }
+  ], 900);
+  const entry = score.phraseInk(inkMemory);
+  assert.ok(entry, 'a finished phrase must become an ink line');
+  assert.equal(entry.points.length, 3);
+  assert.equal(entry.depth, .6);
+  assert.equal(score.phraseInk(null), null, 'an absent phrase writes nothing');
+  assert.equal(score.phraseInk(score.createMemory([
+    { x: .2, y: .5, at: 0, pressure: .4 }
+  ], 100)), null, 'a single-point gesture has no line to write');
+
+  let diary = [];
+  for (let index = 0; index < score.MAX_INK + 2; index += 1) {
+    diary = score.appendPhraseInk(diary, { ...entry, born: index * 10 }, index * 10);
+  }
+  assert.equal(diary.length, score.MAX_INK, 'the diary must stay bounded');
+  assert.equal(diary[0].born, (score.MAX_INK + 2 - score.MAX_INK) * 10, 'oldest lines leave first');
+  const expired = score.appendPhraseInk(
+    [{ ...entry, born: -score.INK_LIFE_MS - 1 }, null, { ...entry, born: 5 }], entry, 1000
+  );
+  assert.equal(expired.length, 2, 'expired and broken lines are dropped at append time');
+  assert.equal(score.appendPhraseInk(diary, null, 1000).length, score.MAX_INK, 'broken input never grows the diary');
+
+  assert.equal(score.inkVisibility(entry, entry.born - 1), 0);
+  assert.ok(score.inkVisibility(entry, entry.born + 2000) > .99, 'a fresh line is fully on the water');
+  assert.ok(score.inkVisibility(entry, entry.born + score.inkLifeMs() * .85) < .5, 'an old line is dissolving');
+  assert.equal(score.inkVisibility(entry, entry.born + score.inkLifeMs()), 0);
+  assert.ok(score.inkLifeMs(true) < score.inkLifeMs(false), 'reduced motion shortens the ink patience');
+  assert.ok(score.inkVisibility(entry, entry.born + score.inkLifeMs(true) + 1, true) === 0,
+    'reduced-motion expiry must hold');
+
+  const fresh = { ...entry, born: 5000 };
+  const dissolving = { ...entry, born: 10000 - score.inkLifeMs() + 6000 };
+  const gone = { ...entry, born: 10000 - score.inkLifeMs() - 100 };
+  const pourable = score.pourableInk([gone, dissolving, fresh], 10000);
+  assert.deepEqual(pourable.map(line => line.born), [dissolving.born, fresh.born],
+    'only still-visible lines can be poured back, oldest first');
+  assert.equal(score.pourableInk(null, 0).length, 0);
+}
+
+console.log('pond-score: bounded paths, fading, motifs, playable path crossings, melodic echoes, and the quiet ink diary verified');

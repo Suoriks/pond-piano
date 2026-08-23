@@ -196,6 +196,69 @@
     });
   }
 
+  // ---- The pond's quiet diary ---------------------------------------------
+  // Finished phrases stay in a small local diary: each entry is one fading
+  // ink line drawn straight on the water. The pond keeps writing while it
+  // plays; the reader only decides when to pour an older line back.
+
+  const MAX_INK = 8;
+  const INK_LIFE_MS = 54000;
+
+  // Pure summary of one finished phrase: a bounded polyline, its depth,
+  // force and hue anchor - enough to redraw the line without the audio
+  // engine, the score memories or the DOM.
+  function phraseInk(memory) {
+    if (!memory || !Array.isArray(memory.points)) return null;
+    const points = memory.points.filter(point =>
+      point && Number.isFinite(point.x) && Number.isFinite(point.y)).slice(0, MAX_POINTS)
+      .map(point => ({ x: clamp(point.x), y: clamp(point.y), pressure: clamp(Number.isFinite(point.pressure) ? point.pressure : .42) }));
+    if (points.length < 2 || !Number.isFinite(memory.born)) return null;
+    return {
+      born: memory.born,
+      durationMs: Math.max(80, Math.min(8000, Number.isFinite(memory.durationMs) ? memory.durationMs : 1200)),
+      depth: clamp(memory.depth),
+      pressure: clamp(memory.pressure),
+      pitch: clamp(memory.pitch),
+      points: points.map(point => Object.freeze(point))
+    };
+  }
+
+  // Append one ink entry, dropping expired lines first and keeping the
+  // diary bounded; broken input never grows or corrupts the diary.
+  function appendPhraseInk(ink, entry, now = 0, lifeMsValue = INK_LIFE_MS) {
+    const current = Array.isArray(ink) ? ink : [];
+    if (!entry?.points?.length) return current;
+    const life = Math.max(1, Number.isFinite(lifeMsValue) ? lifeMsValue : INK_LIFE_MS);
+    const stamp = Number.isFinite(now) ? now : 0;
+    const alive = current.filter(line =>
+      line && Array.isArray(line.points) && line.points.length >= 2 && stamp - line.born < life);
+    return [...alive, entry].slice(-MAX_INK);
+  }
+
+  function inkLifeMs(reducedMotion = false) {
+    return reducedMotion ? Math.round(INK_LIFE_MS / 2) : INK_LIFE_MS;
+  }
+
+  // How much of an ink line is still on the water: a slow arrival, a long
+  // calm plateau and then a patient dissolve into the surface.
+  function inkVisibility(entry, now, reducedMotion = false) {
+    if (!entry || !Number.isFinite(now)) return 0;
+    const age = now - entry.born;
+    const life = inkLifeMs(reducedMotion);
+    if (!Number.isFinite(age) || age < 0 || age >= life) return 0;
+    const arrive = smoothstep(0, 420, age);
+    const leave = 1 - smoothstep(life * .5, life, age);
+    return arrive * leave;
+  }
+
+  // The diary entries that can still be poured back: visible lines only,
+  // oldest first so the panel reads like a small chronicle.
+  function pourableInk(ink, now, reducedMotion = false) {
+    return (Array.isArray(ink) ? ink : [])
+      .filter(entry => inkVisibility(entry, now, reducedMotion) > .02)
+      .sort((a, b) => a.born - b.born);
+  }
+
   function restorePhrase(serialized, nowPerf, nowEpoch) {
     const stamped = Number.isFinite(nowPerf) ? nowPerf : 0;
     const epoch = Number.isFinite(nowEpoch) ? nowEpoch : 0;
@@ -230,6 +293,7 @@
   return Object.freeze({
     MAX_MEMORIES, MAX_POINTS, MOTIF_GAP_MS,
     createMemory, lifeMs, visibility, append, groupMotifs, findCrossedMemory,
-    melodyAnchors, serializePhrase, restorePhrase
+    melodyAnchors, serializePhrase, restorePhrase,
+    MAX_INK, INK_LIFE_MS, phraseInk, appendPhraseInk, inkLifeMs, inkVisibility, pourableInk
   });
 });
