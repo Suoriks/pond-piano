@@ -42,7 +42,7 @@
     ],
     "next_step": "done; real-device pass remains for the shared device-pass backlog"
   },
-  "git_sync": "pending_push",
+  "git_sync": "synced_public_github",
   "git_remote": "https://github.com/Suoriks/pond-piano.git",
   "git_branch": "main",
   "updated_at": "2026-08-23T13:05:00+03:00"
