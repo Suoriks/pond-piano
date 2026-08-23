@@ -299,6 +299,46 @@
     return Object.freeze({ progress: travelPhase, breath, visible });
   }
 
+  // A finished phrase can leave the pond as a compact self-contained scroll:
+  // its real path, sounding pitch and depth, duration, pressure and chosen
+  // current remain transportable without the audio engine or the DOM. Pure
+  // geometry only, so the same fragment reads on any shell that understands it.
+  const SCROLL_KEYS = 3;
+  const round3 = value => Math.round((Number.isFinite(value) ? value : 0) * 1000) / 1000;
+
+  function phraseScroll(line, family = null) {
+    if (!line || !Array.isArray(line.points) || line.points.length < 2) return null;
+    const points = line.points
+      .filter(point => point && Number.isFinite(point.x) && Number.isFinite(point.y))
+      .slice(0, MAX_POINTS)
+      .map(point => ({
+        x: clamp(point.x), y: clamp(point.y),
+        pressure: clamp(Number.isFinite(point.pressure) ? point.pressure : .42)
+      }));
+    if (points.length < 2) return null;
+    const last = points.at(-1);
+    return Object.freeze({
+      kind: 'pond-phrase-scroll',
+      v: 1,
+      path: Object.freeze(points.map(point => Object.freeze(point))),
+      pitch: round3(Number.isFinite(line.pitch) ? clamp(line.pitch) : last.x),
+      depth: round3(Number.isFinite(line.depth) ? clamp(line.depth) : last.y),
+      durationMs: Math.max(80, Math.min(8000, Number.isFinite(line.durationMs) ? Math.round(line.durationMs) : 1200)),
+      pressure: round3(Number.isFinite(line.pressure) ? clamp(line.pressure) : .42),
+      family: typeof family === 'string' && family ? family : 'dawn',
+      length: points.length
+    });
+  }
+
+  // One quiet human line for carrying a phrase off the pond: a short numeric
+  // contour (readable in plain text), then the essence already stored. This is
+  // what the diary's third action lifts into the clipboard.
+  function phraseScrollText(scroll) {
+    if (!scroll || scroll.kind !== 'pond-phrase-scroll' || !Array.isArray(scroll.path) || scroll.path.length < 2) return null;
+    const contour = scroll.path.map(point => `${round3(point.x)} ${round3(point.y)}`).join(' · ');
+    return `Пруд-пианино · фраза\nконтур: ${contour}\nвысота ${Math.round(scroll.pitch * 100)} · глубина ${Math.round(scroll.depth * 100)} · ход ${(scroll.durationMs / 1000).toFixed(1)} с · течение ${scroll.family}`;
+  }
+
   // The pond must invite the first gesture itself: one quiet breathing ring
   // of light on the water plus a soft text line, both fading forever once
   // the water has actually sounded. Pure timing only — persistence and the
@@ -362,6 +402,7 @@
     melodyAnchors, serializePhrase, restorePhrase,
     MAX_INK, INK_LIFE_MS, phraseInk, appendPhraseInk, inkLifeMs, inkVisibility, pourableInk,
     LOOP_FIRST_DELAY_MS, LOOP_PASS_GAP_MS, MAX_LOOP_PASSES, loopSchedule, loopProbe,
-    INVITE_BREATH_MS, INVITE_RING_MS, invitation
+    INVITE_BREATH_MS, INVITE_RING_MS, invitation,
+    phraseScroll, phraseScrollText
   });
 });

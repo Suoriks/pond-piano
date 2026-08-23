@@ -893,6 +893,18 @@
         }
       });
       row.appendChild(circulate);
+
+      // A third little action lets the phrase leave the pond entirely: the
+      // same ink line becomes a compact self-contained string in the clipboard,
+      // so the music can travel off the surface.
+      const take = document.createElement('button');
+      take.type = 'button';
+      take.className = 'diary-take';
+      take.textContent = 'Забрать';
+      take.style.setProperty('--ink-hue', String(hue));
+      take.setAttribute('aria-label', `Забрать эту фразу с пруда: скопировать её контур, высоту и глубину в буфер обмена (около x ${x}, y ${y})`);
+      take.addEventListener('click', () => copyPhraseScroll(line));
+      row.appendChild(take);
       diaryList.appendChild(row);
     }
     diaryEmpty.hidden = lines.length !== 0;
@@ -1103,6 +1115,49 @@
       canvas.dataset.loopPasses = '0';
       if (diaryOpen) syncDiaryPanel();
     }
+  }
+
+  // Carry a finished phrase off the pond: one compact self-contained scroll
+  // (path, sounding pitch, depth, duration, chosen current) lifted into the
+  // clipboard. No network, no audio engine, no score memory — just the phrase
+  // itself, so it survives outside the surface and can be pasted anywhere.
+  function copyPhraseScroll(line) {
+    const scroll = score.phraseScroll(line, tuningFamily);
+    if (!scroll) { syncDiaryPanel(); return; }
+    const text = score.phraseScrollText(scroll);
+    if (!text) { syncDiaryPanel(); return; }
+    // Testability hook, like the other dataset probes: the exact carried
+    // phrase is visible to an instrumented smoke without depending on the
+    // host clipboard.
+    canvas.dataset.scrollText = text;
+    const copied = () => {
+      try {
+        navigator.clipboard?.writeText(text).then(() => {
+          canvas.dataset.lastScroll = String(Date.now());
+          status.textContent = `Фраза покинула пруд: контур из ${scroll.length} точек с высотой ${Math.round(scroll.pitch * 100)} и глубиной ${Math.round(scroll.depth * 100)} скопирован — можно вставить куда угодно`;
+          pourAnnounced = true;
+        }).catch(() => announceScrollFallback(text));
+      } catch { announceScrollFallback(text); }
+    };
+    copied();
+  }
+
+  function announceScrollFallback(text) {
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand?.('copy');
+      document.body.removeChild(textarea);
+      status.textContent = 'Фраза покинула пруд и скопирована в буфер обмена';
+    } catch {
+      status.textContent = 'Скопируйте фразу вручную: она готова в этом окне';
+    }
+    pourAnnounced = true;
   }
 
   function reflectTuningFamily(announce = false) {

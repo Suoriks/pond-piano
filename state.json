@@ -1,12 +1,12 @@
 {
   "project": "pond-piano",
   "phase": "done",
-  "iteration": 40,
+  "iteration": 41,
   "status": "active",
-  "current_goal": "Iteration 0040 done: repeated short taps are plainly separable on the ear. Each note shade (clear/neutral/deep) leads its droplet-and-splash transient length via dropScale (.9/1/1.1) on top of the strengthened harmonic tint; the X pitch axis and the voice budget stay untouched. Proven by updated unit tests plus an instrumented same-X three-tap smoke: scheduled droplet lengths 0.1284s / 0.1625s / 0.1763s match theory exactly (~48ms spread between extremes), release clean, no console errors.",
-  "previous_goal": "Iteration 0037 done: the two shore popovers (diary + volume) behave like real dialogs - honest aria-expanded through a pure pond-a11y.js layer, focus moves into the panel on open and back to the stone on close, Tab is trapped inside an open panel, and opening the diary with rows lands the keyboard player on the first surviving row.",
-  "last_verified": "2026-08-23 (0040): 47 node tests pass across 13 suites (shade asserts updated: deterministic 3-length droplet series, honest neutral base, budget bounds for stronger tint); syntax 34 JS clean; JSON + git diff --check clean. Instrumented Chromium same-X tap series: droplet spans 0.1284 (clear) < 0.1625 (neutral) < 0.1763 (deep), matching dropScale .9/1/1.1 on the .1425s base; no console errors; screenshot output/pond-piano/shade-taps-40.png.",
-  "next_step": "shared backlog - real device pass on Android Chrome/PWA and iPhone Safari; now includes listening to a quick 2-3-tap series on a real speaker to confirm the shade droplets read as distinct.",
+  "current_goal": "Iteration 0041 done: a finished phrase can leave the pond. The diary gains a third action per row: Zabrat lifts one ink line into the clipboard as a compact self-contained scroll (path contour, sounding pitch, depth, duration, chosen current) with a live status. Pure phraseScroll/phraseScrollText layer in pond-score.js with tests; no network, no audio engine, no DOM.",
+  "previous_goal": "Iteration 0040 done: repeated short taps are plainly separable on the ear (dropScale-driven droplet transients per note shade).",
+  "last_verified": "2026-08-23 (0041): 48 node tests pass across 13 suites (6 new phrase-scroll asserts); syntax 36 JS clean; JSON + git diff --check clean. Instrumented headless Chromium: diary row shows third Zabrat button, click lifts the real scroll text (Pond-Piano phrase, contour, pitch 64, depth 49, flow 1.1s, dawn), lastScroll set, status announces the phrase left the pond; no console errors. Screenshot output/pond-piano/scroll-take-41.png; vision verified organic water + open diary with 3 action buttons.",
+  "next_step": "shared backlog: real device pass on Android Chrome/PWA and iPhone Safari; now confirms the diary pane (rows + three actions) fits a live speaker, and that the copied scroll reads when pasted into a note or chat.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -161,5 +161,24 @@
       "vision model unavailable (limit); direct pixel probes as in 24-38; screenshot output/pond-piano/repose-resize-39.png"
     ],
     "next_step": "done; shared backlog now includes device-side resize-heavy moments: orientation change and keyboard appearance"
+  },
+  "iteration_41": {
+    "started": "2026-08-23T22:20:00+03:00",
+    "phase": "done",
+    "plan": [
+      "add pure phraseScroll + routePhrase to pond-score.js with tests",
+      "browser: third diary action per row copies a self-contained scroll to clipboard + live status",
+      "sw.js v38, eyebrow 41, README sentence",
+      "verify node suite, syntax, JSON, git diff, headless smoke + screenshot",
+      "KAIZEN 0041, commit one iteration, push main"
+    ],
+    "finished": "2026-08-23T23:05:00+03:00",
+    "verified": [
+      "node tests: 48 pass across 13 suites (6 new phrase-scroll asserts)",
+      "syntax: 35 JS files clean (36 with scroll-smoke.js present); JSON validity + git diff --check clean",
+      "instrumented headless Chromium 390x844: diary row after one phrase shows three actions, click lifts a real compact scroll (Pond phrase, contour from 22 points, pitch 64 depth 49 flow 1.1s, dawn), lastScroll dataset set, status announces the phrase left the pond with no console errors",
+      "screenshot output/pond-piano/scroll-take-41.png direct inspection: diary panel open, row carries three buttons, water organic and full-bleed; cramped phrase wrapping in the narrow panel is a pre-existing trait, not this iteration"
+    ],
+    "next_step": "done; the shared device-pass backlog now includes the diary pane (rows + Zabrat) and pasting the scroll on a real device"
   }
 }

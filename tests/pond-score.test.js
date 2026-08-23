@@ -214,6 +214,37 @@ assert.equal(score.melodyAnchors(crossingMemory, -5)[0].x, .85, 'a broken reques
     'a degenerate one-point line has no loop probe');
 }
 
+// A finished phrase can leave the pond as a compact self-contained scroll:
+// the diary's third action copies a short contour plus the phrase's essence
+// so the music survives off the surface without the audio engine or the DOM.
+{
+  const inkMemory = score.createMemory([
+    { x: .2, y: .3, at: 1000, pressure: .38 },
+    { x: .35, y: .42, at: 1200, pressure: .42 },
+    { x: .5, y: .5, at: 1400, pressure: .48 },
+    { x: .72, y: .63, at: 1700, pressure: .5 },
+    { x: .88, y: .55, at: 2000, pressure: .4 }
+  ], 2100);
+  const scrollEntry = score.phraseInk(inkMemory);
+  const phaseScroll = score.phraseScroll(scrollEntry, 'dusk');
+  assert.ok(phaseScroll, 'a real ink line must produce a scroll');
+  assert.equal(phaseScroll.kind, 'pond-phrase-scroll', 'the fragment is marked as a pond phrase');
+  assert.equal(phaseScroll.length, phaseScroll.path.length, 'the scroll counts its own path');
+  assert.ok(Array.isArray(phaseScroll.path) && phaseScroll.path.length >= 2, 'the path stays bounded');
+  assert.ok(phaseScroll.path.length <= score.MAX_POINTS, 'a long phrase never overflows the scroll');
+  assert.equal(phaseScroll.family, 'dusk', 'the chosen current travels with the phrase');
+  assert.ok(Number.isFinite(phaseScroll.pitch) && phaseScroll.pitch >= 0 && phaseScroll.pitch <= 1, 'the sounding pitch is bounded');
+  assert.ok(Number.isFinite(phaseScroll.depth) && phaseScroll.depth >= 0 && phaseScroll.depth <= 1, 'the depth is bounded');
+  assert.equal(score.phraseScroll(null), null, 'an absent line makes no scroll');
+  assert.equal(score.phraseScroll({ ...scrollEntry, points: [scrollEntry.points[0]] }), null, 'a degenerate one-point line makes no scroll');
+  assert.equal(score.phraseScroll({ ...scrollEntry, points: [] }), null, 'an empty path makes no scroll');
+  const text = score.phraseScrollText(phaseScroll);
+  assert.ok(text && text.includes('контур'), 'the text carries the path contour');
+  assert.ok(text.includes('Пруд-пианино') && text.includes('высота'), 'the text names the phrase and its pitch line');
+  assert.equal(score.phraseScrollText(null), null, 'an absent scroll has no text');
+  assert.equal(score.phraseScrollText({ kind: 'other' }), null, 'an unknown fragment has no text');
+}
+
 // The first screen must invite the gesture: a breathing invitation that is
 // alive, bounded and calm, never shown again once the pond has played.
 {
@@ -246,4 +277,4 @@ assert.equal(score.melodyAnchors(crossingMemory, -5)[0].x, .85, 'a broken reques
   assert.ok(Number.isFinite(score.invitation(NaN).alpha), 'broken clocks stay bounded');
 }
 
-console.log('pond-score: bounded paths, fading, motifs, playable path crossings, melodic echoes, the quiet ink diary, the visible loop probe, and the first-gesture invitation verified');
+console.log('pond-score: bounded paths, fading, motifs, playable path crossings, melodic echoes, the quiet ink diary, the visible loop probe, the first-gesture invitation, and the transportable phrase scroll verified');
