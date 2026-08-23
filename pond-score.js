@@ -299,6 +299,32 @@
     return Object.freeze({ progress: travelPhase, breath, visible });
   }
 
+  // The pond must invite the first gesture itself: one quiet breathing ring
+  // of light on the water plus a soft text line, both fading forever once
+  // the water has actually sounded. Pure timing only — persistence and the
+  // audio gate stay with the shell.
+  const INVITE_BREATH_MS = 3400;
+  const INVITE_RING_MS = 4600;
+  function invitation(now = 0, reducedMotion = false) {
+    if (!Number.isFinite(now) || now < 0) {
+      return Object.freeze({ alpha: .5, radius: 1, text: 1 });
+    }
+    // The whole invitation fades out over its last seconds so it never
+    // snaps away mid-gaze; reduced motion shares the same quiet exit.
+    const fadeStart = INVITE_RING_MS * .55;
+    const fade = now < fadeStart ? 1 : 1 - smoothstep(fadeStart, INVITE_RING_MS, now);
+    if (reducedMotion) {
+      return Object.freeze({ alpha: .5 * fade, radius: 1, text: fade });
+    }
+    const breathPhase = (((now % INVITE_BREATH_MS) + INVITE_BREATH_MS) % INVITE_BREATH_MS) / INVITE_BREATH_MS;
+    const breath = Math.sin(breathPhase * Math.PI * 2) * .5 + .5;
+    return Object.freeze({
+      alpha: (0.34 + breath * .3) * fade,
+      radius: 1 + breath * .16,
+      text: fade
+    });
+  }
+
   function restorePhrase(serialized, nowPerf, nowEpoch) {
     const stamped = Number.isFinite(nowPerf) ? nowPerf : 0;
     const epoch = Number.isFinite(nowEpoch) ? nowEpoch : 0;
@@ -335,6 +361,7 @@
     createMemory, lifeMs, visibility, append, groupMotifs, findCrossedMemory,
     melodyAnchors, serializePhrase, restorePhrase,
     MAX_INK, INK_LIFE_MS, phraseInk, appendPhraseInk, inkLifeMs, inkVisibility, pourableInk,
-    LOOP_FIRST_DELAY_MS, LOOP_PASS_GAP_MS, MAX_LOOP_PASSES, loopSchedule, loopProbe
+    LOOP_FIRST_DELAY_MS, LOOP_PASS_GAP_MS, MAX_LOOP_PASSES, loopSchedule, loopProbe,
+    INVITE_BREATH_MS, INVITE_RING_MS, invitation
   });
 });

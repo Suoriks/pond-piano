@@ -36,8 +36,10 @@
   const TUNING_STORAGE_KEY = 'pond-piano.tuning.v1';
   const SCORE_STORAGE_KEY = 'pond-piano.score.v1';
   const DIARY_STORAGE_KEY = 'pond-piano.diary.v1';
+  const INVITATION_STORAGE_KEY = 'pond-piano.invitation.v1';
   const SCORE_HYDRATE_MAX_AGE_MS = 3600000;
   const epochNow = () => Date.now();
+  const bootAt = performance.now();
   const MAX_VOICES = 6;
   const ECHO_COOLDOWN_MS = 3200;
   const COLLISION_RATE_LIMIT_MS = 230;
@@ -80,6 +82,10 @@
   let lastCollisionAt = -Infinity;
   let lastSkipPlanAt = -Infinity;
   let width = 0, height = 0, dpr = 1, last = performance.now(), announced = false, scoreAnnounced = false, dynamicsAnnounced = false, textureAnnounced = false, precisionAnnounced = false, freedomAnnounced = false, eddyAnnounced = false;
+  let pondHasPlayed = false;
+  try { pondHasPlayed = localStorage.getItem(INVITATION_STORAGE_KEY) === 'played'; } catch {}
+  const invitationLine = document.querySelector('#water-invitation');
+  if (invitationLine && pondHasPlayed) invitationLine.classList.add('is-gone');
   let collisionAnnounced = false, skipAnnounced = false, scoreEchoAnnounced = false, pourAnnounced = false;
   let phraseNoteIndex = 0;
 
@@ -1136,6 +1142,43 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
+  // The pond invites its first gesture itself: one breathing ring of light
+  // on the water, gone forever once the water has actually sounded.
+  function markPondPlayed() {
+    if (pondHasPlayed) return;
+    pondHasPlayed = true;
+    invitationLine?.classList.add('is-gone');
+    try { localStorage.setItem(INVITATION_STORAGE_KEY, 'played'); } catch {}
+  }
+
+  function drawInvitation(now) {
+    if (!width || !height) return;
+    if (pondHasPlayed) { canvas.dataset.inviteAlpha = '0'; return; }
+    const invite = score.invitation(now - bootAt, reduced.matches);
+    canvas.dataset.inviteAlpha = invite.alpha.toFixed(3);
+    if (invitationLine && invite.text <= 0 && !invitationLine.classList.contains('is-gone')) {
+      invitationLine.classList.add('is-gone');
+    }
+    if (invite.alpha <= 0) return;
+    const cx = width * .5, cy = height * .44, base = Math.min(width, height);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const radius = base * .085 * invite.radius;
+    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius * 1.9);
+    glow.addColorStop(0, `hsla(152 46% 82% / ${invite.alpha * .5})`);
+    glow.addColorStop(.55, `hsla(150 42% 66% / ${invite.alpha * .22})`);
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(cx, cy, radius * 1.9, 0, Math.PI * 2); ctx.fill();
+    const ring = radius * (1 + (1 - invite.alpha / .64) * .3);
+    ctx.strokeStyle = `hsla(150 48% 78% / ${Math.max(.06, invite.alpha * .5)})`;
+    ctx.lineWidth = 1.4;
+    ctx.setLineDash([2, 7]);
+    ctx.lineDashOffset = -(now * .012) % 9;
+    ctx.beginPath(); ctx.arc(cx, cy, ring, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+
   function point(event) {
     const rect = canvas.getBoundingClientRect();
     return { x: event.clientX - rect.left, y: event.clientY - rect.top };
@@ -1513,6 +1556,7 @@
     addRipple(p.x, p.y, attack);
     spawnDropCorona(p.x, p.y, attack);
     document.body.classList.add('has-played');
+    markPondPlayed();
     const chordSize = [...pointers.values()].filter(pointer => pointer.sounding).length;
     if (!sounding) status.textContent = `Пруд удерживает до ${MAX_VOICES} голосов; отпустите касание для следующей ноты`;
     else if (chordSize > 1) status.textContent = `Аккорд: ${chordSize} независимых ${voiceWord(chordSize)}`;
@@ -1728,7 +1772,7 @@
       if (!keyboard.sounding) keyboard.scoreSamples = [];
       addRipple(p.x, p.y, .48);
       spawnDropCorona(p.x, p.y, .48);
-      document.body.classList.add('has-played'); status.textContent = 'Звук воды звучит; стрелками меняйте высоту и глубину';
+      document.body.classList.add('has-played'); markPondPlayed(); status.textContent = 'Звук воды звучит; стрелками меняйте высоту и глубину';
     }
   });
   canvas.addEventListener('keyup', event => {
@@ -2298,6 +2342,7 @@
     water(now + dt);
     drawTide(now);
     drawMotes(now);
+    drawInvitation(now);
     memories = memories.filter(memory => now >= memory.born && now < memory.born + score.lifeMs(reduced.matches));
     phraseInk = phraseInk.filter(line => now >= line.born && now < line.born + score.inkLifeMs(reduced.matches));
     // The stone counts readable lines: their number also changes when ink

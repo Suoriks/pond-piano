@@ -19,6 +19,12 @@ body::selection { background: transparent; }
 h1 { margin: 0; font: 400 clamp(24px, 4vw, 44px)/1.05 Georgia, serif; letter-spacing: -.035em; }
 .hint { margin: 12px 0 0; color: #c3cdb8; font-size: 13px; opacity: .74; transition: opacity .6s ease; }
 .has-played .hint { opacity: 0; }
+/* The pond invites the first gesture itself: a quiet line that breathes
+   slowly, then hides forever once the water has sounded. */
+.water-invitation { margin: 14px 0 0; color: #dcead8; font-size: 15px; letter-spacing: .04em; text-shadow: 0 2px 22px #00100d; animation: invitation-breathe 3.4s ease-in-out infinite; transition: opacity .5s ease, visibility 0s linear .5s; }
+.water-invitation.is-gone { display: none; }
+@keyframes invitation-breathe { 0%, 100% { opacity: .55; } 50% { opacity: .95; } }
+@media (prefers-reduced-motion: reduce) { .water-invitation { animation: none; opacity: .85; } }
 .tuning-control {
   position: absolute; z-index: 4;
   left: max(18px, env(safe-area-inset-left)); bottom: max(14px, env(safe-area-inset-bottom));

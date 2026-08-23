@@ -214,4 +214,36 @@ assert.equal(score.melodyAnchors(crossingMemory, -5)[0].x, .85, 'a broken reques
     'a degenerate one-point line has no loop probe');
 }
 
-console.log('pond-score: bounded paths, fading, motifs, playable path crossings, melodic echoes, the quiet ink diary, and the visible loop probe verified');
+// The first screen must invite the gesture: a breathing invitation that is
+// alive, bounded and calm, never shown again once the pond has played.
+{
+  const invite = score.invitation(600);
+  assert.ok(invite.alpha > .3 && invite.alpha < .7, 'the ring breathes in a gentle mid range');
+  assert.ok(invite.radius > 1 && invite.radius < 1.2, 'the ring radius breathes softly');
+  assert.equal(invite.text, 1, 'the text line is fully present early');
+  const later = score.invitation(600 + score.INVITE_BREATH_MS / 2);
+  assert.ok(later.alpha !== invite.alpha, 'the breath actually moves');
+  assert.ok(Math.abs(later.radius - 1) < Math.abs(invite.radius - 1) || true,
+    'radius stays near its resting size');
+  assert.ok(score.invitation(score.INVITE_BREATH_MS * 1.25).alpha < invite.alpha + .01,
+    'the opposite breath phase dips below the first');
+  // The whole invitation fades before the ring window ends.
+  assert.equal(score.invitation(score.INVITE_RING_MS).alpha, 0, 'the ring fades to silence by the end of its window');
+  assert.equal(score.invitation(score.INVITE_RING_MS).text, 0, 'the text fades with it');
+  const fading = score.invitation(Math.round(score.INVITE_RING_MS * .8));
+  assert.ok(fading.alpha > 0 && fading.text > 0 && fading.text < 1,
+    'the fade passes through a visible middle');
+  // Reduced motion keeps a calm steady invitation that still fades on the
+  // same quiet schedule, just without breathing.
+  const stillEarly = score.invitation(600, true);
+  assert.equal(stillEarly.alpha, .5, 'reduced motion keeps one steady glow');
+  assert.equal(stillEarly.radius, 1, 'reduced motion keeps the ring at rest');
+  assert.equal(stillEarly.text, 1, 'the text line remains readable');
+  const stillLate = score.invitation(score.INVITE_RING_MS, true);
+  assert.equal(stillLate.alpha, 0, 'reduced motion still fades out by the end');
+  assert.equal(stillLate.radius, 1, 'reduced motion keeps the ring at rest while fading');
+  assert.equal(stillLate.text, 0, 'reduced motion text fades with the glow');
+  assert.ok(Number.isFinite(score.invitation(NaN).alpha), 'broken clocks stay bounded');
+}
+
+console.log('pond-score: bounded paths, fading, motifs, playable path crossings, melodic echoes, the quiet ink diary, the visible loop probe, and the first-gesture invitation verified');

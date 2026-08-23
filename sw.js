@@ -1,5 +1,6 @@
-const CACHE = 'pond-piano-shell-v31';
-// Iteration 0034: the mobile shell holds the water — gesture surface + wake lock.
+const CACHE = 'pond-piano-shell-v32';
+// Iteration 0035: the pond invites its first gesture — breathing ring + line,
+// gone forever after the first play.
 const SHELL = [
   './',
   './index.html',
