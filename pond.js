@@ -11,6 +11,7 @@
   const tide = window.PondTide;
   const budget = window.PondBudget;
   const a11y = window.PondA11y;
+  const repose = window.PondRepose;
   const masterModel = window.PondMaster;
   const audioLifecycleFactory = window.PondAudioLifecycle;
   if (!music) throw new Error('Pond music mapping did not load');
@@ -55,7 +56,10 @@
   const MAX_SKIP_VOICES = 2;
   const MAX_ECHO_VOICES = 3;
   const MAX_PENDING_POURS = 6;
-  const ripples = [], trails = [], splashes = [], scoreEchoes = [], collisionPearls = [], collisionGlints = [], stoneFlights = [], pointers = new Map();
+  // `pointers` is `let`: a resize re-seats live contacts into a fresh Map
+  // via the repose layer, so every closure keeps reading the current one.
+  const ripples = [], trails = [], splashes = [], scoreEchoes = [], collisionPearls = [], collisionGlints = [], stoneFlights = [];
+  let pointers = new Map();
   const coronas = [], pourEchoes = [], pouredInk = [];
   let motes = caustic.createMotes(caustic.DEFAULT_COUNT, 7);
   let tidalSwells = tide.createSwells(tide.DEFAULT_SWELLS, 13);
@@ -1226,10 +1230,44 @@
   reflectDiaryCount();
 
   function resize() {
+    // The pond survives a change of screen: every live pixel-space artifact
+    // keeps its normalized place on the water and lands in the new space,
+    // so pitch, depth and stereo meaning of what already sounds stay put.
+    const previousWidth = width, previousHeight = height;
     dpr = Math.min(devicePixelRatio || 1, 2);
     width = innerWidth; height = innerHeight;
     canvas.width = Math.round(width * dpr); canvas.height = Math.round(height * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (!previousWidth || !previousHeight || (previousWidth === width && previousHeight === height)) return;
+    const from = { w: previousWidth, h: previousHeight }, to = { w: width, h: height };
+    if (repose) {
+      const movedWaves = repose.reposeWaves(ripples, from, to);
+      ripples.length = 0; ripples.push(...movedWaves);
+      const movedTrails = repose.reposeTrails(trails, from, to);
+      trails.length = 0; trails.push(...movedTrails);
+      const movedSplashes = repose.reposeSplashes(splashes, from, to);
+      splashes.length = 0; splashes.push(...movedSplashes);
+      const movedCoronas = repose.reposeCoronas(coronas, from, to);
+      coronas.length = 0; coronas.push(...movedCoronas);
+      const movedPearls = repose.reposePoints(collisionPearls, from, to);
+      collisionPearls.length = 0; collisionPearls.push(...movedPearls);
+      const movedGlints = repose.reposePoints(collisionGlints, from, to);
+      collisionGlints.length = 0; collisionGlints.push(...movedGlints);
+      const movedFlights = repose.reposeFlights(stoneFlights, from, to);
+      stoneFlights.length = 0; stoneFlights.push(...movedFlights);
+      pointers = repose.reposePointers(pointers, from, to);
+    } else {
+      // Without the layer the water still refuses to strand its live
+      // artifacts in dead coordinates: they leave with the old space.
+      ripples.length = 0; trails.length = 0; splashes.length = 0;
+      coronas.length = 0; collisionPearls.length = 0;
+      collisionGlints.length = 0; stoneFlights.length = 0; pointers.clear();
+    }
+    // Wave appointments were predicted against the old geometry: dissolve
+    // them cleanly instead of answering at a place the new water never saw.
+    for (const timer of collisionTimers.values()) clearTimeout(timer);
+    collisionTimers.clear();
+    collisionPairs.clear();
   }
 
   // The pond invites its first gesture itself: one breathing ring of light

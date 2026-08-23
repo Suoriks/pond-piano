@@ -1,5 +1,9 @@
-const CACHE = 'pond-piano-shell-v35';
-// Iteration 0038: the wave-collision pearl keeps its promised local water glint - a
+const CACHE = 'pond-piano-shell-v36';
+// Iteration 0039: the pond survives a change of screen. A resize re-seats
+// every live pixel-space artifact (ripples, trails, splashes, coronas,
+// pearls, glints, stone flights, held contacts and their eddies) into the
+// new space at its normalized place on the water, so pitch, depth and stereo
+// meaning of what already sounds stay put; stale wave appointments dissolve.
 // aria-expanded, focus moving into the panel on open and back to the stone
 // on close, a Tab trap inside an open panel, and diary focus that survives
 // a live re-render while ink is still on the water.
@@ -11,6 +15,7 @@ const SHELL = [
   './pond-gesture.js',
   './pond-score.js',
   './pond-waves.js',
+  './pond-repose.js',
   './pond-caustic.js',
   './pond-tide.js',
   './pond-budget.js',

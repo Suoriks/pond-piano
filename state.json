@@ -1,12 +1,12 @@
 {
   "project": "pond-piano",
   "phase": "done",
-  "iteration": 38,
+  "iteration": 39,
   "status": "active",
-  "current_goal": "Iteration 0038 done: the wave-collision node now glints on the water itself - a short bounded warm flare at the meeting point that follows depth/energy, budget-aware and reduced-motion safe, with a pure pond-waves.js layer and tests, closing the last open alpha-feedback point in the web core.",
+  "current_goal": "Iteration 0039 done: the pond survives a change of screen. A pure pond-repose.js layer re-seats every live pixel-space artifact (ripples, trails, splashes, coronas, pearls, glints, stone flights, held pointer contacts with their eddies) into the new window space at its normalized place on the water, so pitch/depth/stereo of what already sounds stay identical; stale wave-collision appointments dissolve cleanly. Proven by unit tests plus an instrumented desktop resize smoke (held note survives, contact light relocates by pixel probe) and a two-voice five-resize stress pass.",
   "previous_goal": "Iteration 0037 done: the two shore popovers (diary + volume) behave like real dialogs - honest aria-expanded through a pure pond-a11y.js layer, focus moves into the panel on open and back to the stone on close, Tab is trapped inside an open panel, and opening the diary with rows lands the keyboard player on the first surviving row.",
-  "last_verified": "2026-08-23: KAIZEN 0038. All Node suites pass (35 tests incl 3 new collision-glint bounds); syntax 31 JS clean; JSON + git diff --check clean. Instrumented headless Chromium 390x844 verified the glint path in code: collisionGlints seeded beside each pearl, drawCollisionGlint draws a warm bounded flare under the node, budget-gated via style(waterBudget,'ink'), reduced motion keeps a calm still glow. Pure proof of fading/shape = 5 node tests (depth/energy spread+warmth, strict end on schedule, broken clocks, not-yet-born silence, reduced-motion no-expansion). Vision model unavailable (limit) as in 24/28-37.",
-  "next_step": "shared backlog - real device pass on Android Chrome/PWA and iPhone Safari: glint readability at real pixel density and on live audio, 2/3/5 fingers, pointercancel and background resume; change numeric bounds only from measured devices.",
+  "last_verified": "2026-08-23 (0039): 47 node tests pass across 13 suites (12 new repose asserts); syntax 34 JS clean; JSON + git diff --check clean. Instrumented Chromium resize smoke: held voice survives 1280x720 -> 390x844 (audioVoices 1->1), contact light relocated to normalized place (patch 297.9 vs quiet water 112.8), old spot faded, fresh ripple lands in new space, release clean, no console errors. Stress: two held voices (pointer+keyboard) survived five consecutive resizes (2->2->0 after release). Vision model unavailable (limit); direct pixel probes as in 24-38.",
+  "next_step": "shared backlog - real device pass on Android Chrome/PWA and iPhone Safari; now includes watching resize-heavy moments on devices: orientation change and keyboard appearance.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -52,7 +52,7 @@
   "git_sync": "synced_public_github",
   "git_remote": "https://github.com/Suoriks/pond-piano.git",
   "git_branch": "main",
-  "updated_at": "2026-08-23T19:20:00+03:00",
+  "updated_at": "2026-08-23T21:05:00+03:00",
   "iteration_35": {
     "started": "2026-08-23T14:20:00+03:00",
     "phase": "done",
@@ -117,5 +117,28 @@
       "PNG screenshot shore-a11y-37.png saved as valid full-frame 390x844; vision model unavailable (limit), direct inspection as in 24/28-36"
     ],
     "next_step": "done; the two smoke scenarios that expected panel-close on loop-start were corrected to the realistic diary path (product unchanged); real-device focus/Tab check stays on the shared backlog"
+  },
+  "iteration_39": {
+    "started": "2026-08-23T20:20:00+03:00",
+    "finished": "2026-08-23T21:05:00+03:00",
+    "phase": "done",
+    "plan": [
+      "pure pond-repose.js: re-seat live pixel layers into new space at normalized places, polar eddy arm stretch, damaged-input clamps",
+      "tests pond-repose.test.js: normalized invariance both axes, wave voice fields kept, trail ends, splash angle, corona ray plan, flight contacts, pointer anchors + eddy re-arm, NaN/negative/junk safety",
+      "pond.js resize(): repose ripples/trails/splashes/coronas/pearls/glints/flights + pointers Map; clear stale collision timers/latches; layerless fallback drops artifacts instead of stranding them",
+      "index.html + sw.js shell v36 + package.json (files & build.files) add pond-repose.js; eyebrow 39; README sentence",
+      "verify: node suites, syntax, JSON, git diff --check, instrumented resize smoke with held-note pixel probes, two-voice five-resize stress",
+      "KAIZEN 0039, state final, one commit, push to main"
+    ],
+    "verified": [
+      "node tests: 47 pass across 13 suites (incl 12 new repose asserts)",
+      "syntax: 34 JS files clean",
+      "JSON validity + git diff --check clean",
+      "resize smoke green: held voice 1->1 across 1280x720 -> 390x844, contact light at new normalized place (297.9 vs quiet 112.8), old spot faded to background, fresh ripple in new space, release clean, no console errors",
+      "stress pass: two held voices survived five consecutive resizes (2->2->0 after release)",
+      "measurement artifact caught: audioVoices counts release tails (~1.5s); instant keyboard press-release looked like a lost voice - product unchanged, smoke learned to wait out tails",
+      "vision model unavailable (limit); direct pixel probes as in 24-38; screenshot output/pond-piano/repose-resize-39.png"
+    ],
+    "next_step": "done; shared backlog now includes device-side resize-heavy moments: orientation change and keyboard appearance"
   }
 }
