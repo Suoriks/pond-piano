@@ -81,7 +81,16 @@ class FakeContext extends EventTarget {
   assert.equal(lifecycle.activateFromGesture(), null, 'a browser-closed context needs reload, not a hidden replacement context');
   assert.equal(createCount, 1, 'closed audio is never silently replaced');
 
-  console.log('pond-audio-lifecycle: explicit unlock, one-context resume, background cleanup, and interruption recovery verified');
+  // keepScreenAwake: the lock is only sought while a gesture is audible and the shell is visible.
+  const keep = lifecycleFactory.keepScreenAwake;
+  assert.equal(keep({ visible: true, soundingVoices: 1 }), true, 'a living note holds the screen awake');
+  assert.equal(keep({ visible: true, soundingVoices: 6 }), true, 'a chord still holds the screen awake');
+  assert.equal(keep({ visible: true, soundingVoices: 0 }), false, 'silent water must release the lock');
+  assert.equal(keep({ visible: false, soundingVoices: 1 }), false, 'a backgrounded note must never seek the lock');
+  assert.equal(keep({ visible: false, soundingVoices: 0 }), false, 'hidden silent water stays unlocked');
+  assert.equal(keep({ visible: true, soundingVoices: -1 }), false, 'a negative count is invalid and must not hold be a lock');
+
+  console.log('pond-audio-lifecycle: explicit unlock, one-context resume, background cleanup, interruption recovery, and keepScreenAwake verified');
 })().catch(error => {
   console.error(error);
   process.exitCode = 1;

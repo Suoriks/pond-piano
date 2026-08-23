@@ -1,11 +1,11 @@
 {
   "project": "pond-piano",
   "phase": "done",
-  "iteration": 33,
+  "iteration": 34,
   "status": "active",
-  "current_goal": "Iteration 0033 done: a circling phrase is visible on the water itself - when a diary line is set to loop, its ink contour breathes and a warm amber point travels the contour (still mark, no breath under reduced motion), so the looping state is readable even with the diary panel closed.",
-  "last_verified": "2026-08-23: KAIZEN 0033. All 9 Node suites (22 tests incl loopProbe) pass; syntax clean (23 JS); JSON + git diff --check clean. Headless Chromium 390x844 full loop flow green: fresh pond empty, one phrase -> one ink line, start circulation closes panel, loopPasses>=2, looping=1, panel closed, no console errors. Pixel probe confirms warm amber point (23 px, center ~247,395, 5x6 span) riding the green ink contour (86 px); band over the line brighter than quiet water (139 vs 109). eye 33; shell v30.",
-  "next_step": "Real-device pass (Android Chrome/PWA, iPhone Safari) covering diary + circulation + the new on-water loop marker together: ink readability under true ripples, pebble button touch targets under a finger, loop behavior + marker visibility on backgrounding; adjust numbers only from measured device.",
+  "current_goal": "Iteration 0034 done: the mobile shell holds the water - the canvas sits in a gesture surface that keeps overscroll/pull-to-refresh/text selection/double-tap away from the water, and a pure keepScreenAwake({visible, soundingVoices}) policy holds a wake lock only while a phrase is actually sounding and the shell is visible, so the screen does not sleep mid-gesture and can sleep naturally on silence or background.",
+  "last_verified": "2026-08-23: KAIZEN 0034. All 9 Node suites (23 tests incl keepScreenAwake) pass; syntax clean (23 JS); JSON + git diff --check clean. Headless Chromium 390x844: shell loads with no console errors, .gesture-surface holds user-select:none and overscroll:none, a full pointer gesture sounds one voice (audioVoices=1 while held) and frees it after release (0 within ~1.5s). Direct screenshot inspection confirms full-bleed water, intact shore controls, no crop, organic composition. eye 34; shell v31.",
+  "next_step": "Real-device pass (Android Chrome/PWA, iPhone Safari) - now includes the shell readiness from 0034: visual-viewport ground truth under the address bar/soft keyboard (pond-jump question stays open until a live device), real overscroll/pull-to-refresh at screen edges, and how the wake lock behaves across minimizing; tweak numbers only from what a real screen shows.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -21,29 +21,30 @@
   },
   "platform_target": ["desktop", "linux", "android", "ios"],
   "shell_hypothesis": "offline-first-pwa",
-  "iteration_33": {
-    "started": "2026-08-23T12:20:00+03:00",
-    "finished": "2026-08-23T13:05:00+03:00",
+  "iteration_34": {
+    "started": "2026-08-23T13:10:00+03:00",
+    "finished": "2026-08-23T13:45:00+03:00",
     "phase": "done",
     "plan": [
-      "add clean loopProbe() to pond-score.js returning {progress, breath, visible}",
-      "add probe tests (progress bounds, reduced-motion stillness, expired/broken null)",
-      "track looping line + pointAlongContour in pond.js; draw warm amber sweep on the circling ink line",
-      "verify: node tests, 23 JS syntax, JSON + git diff, headless Chromium smoke + pixel check",
-      "commit one iteration, push to main"
+      "add clean keepScreenAwake({visible, soundingVoices}) policy to the audio-lifecycle layer",
+      "add keepScreenAwake tests (live note holds, silence/background/negative release)",
+      "wrap the pond canvas in .gesture-surface: user-select/touch-callout/tap-highlight+overscroll none; leave shore controls and panels interactive",
+      "hook scheduleWakeSync() into voice start/release and lifecycle events; debounce 260ms; swallow unsupported",
+      "verify: node tests (23), syntax (25 JS incl scripts), JSON + git diff --check, headless Chromium smoke + screenshot inspection",
+      "bump eyebrow to 34 and shell cache to v31; commit one iteration and push to main"
     ],
     "verified": [
-      "node tests: 22 pass across 9 suites (incl loopProbe)",
-      "syntax: 23 JS files clean",
+      "node tests: 23 pass across 9 suites (incl keepScreenAwake asserts)",
+      "syntax: 25 JS files clean",
       "JSON validity + git diff --check clean",
-      "headless Chromium end-to-end loop flow green, no console errors",
-      "pixel check: warm amber traveling point visible on the contour (benchmark values above)",
-      "vision model unavailable (image-model limit), replaced by direct pixel proof"
+      "headless Chromium smoke green: no console errors, gesture-surface holds user-select:none + overscroll:none, gesture voices 1 while held, 0 after release",
+      "screenshot direct inspection: full-bleed water, intact controls, no crop, organic composition",
+      "vision model unavailable (image-model limit), replaced by direct pixel/screenshot proof"
     ],
-    "next_step": "done; real-device pass remains for the shared device-pass backlog"
+    "next_step": "done; real-device pass remains as the shared backlog, now with 0034 shell readiness folded in"
   },
   "git_sync": "synced_public_github",
   "git_remote": "https://github.com/Suoriks/pond-piano.git",
   "git_branch": "main",
-  "updated_at": "2026-08-23T13:05:00+03:00"
+  "updated_at": "2026-08-23T13:45:00+03:00"
 }

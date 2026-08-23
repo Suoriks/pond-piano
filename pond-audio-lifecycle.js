@@ -117,5 +117,12 @@
     });
   }
 
-  return Object.freeze({ create });
+  // Pure policy for the wake lock: true when the shell should keep the screen awake.
+  // The lock may only be sought while a gesture is audible. backgrounding or silence
+  // must release it so a phone can sleep naturally.
+  function keepScreenAwake({ visible, soundingVoices }) {
+    return Boolean(visible) && soundingVoices > 0;
+  }
+
+  return Object.freeze({ create, keepScreenAwake });
 });

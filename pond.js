@@ -322,6 +322,7 @@
   function reflectAudioState(event) {
     canvas.dataset.audioState = event.state;
     canvas.dataset.audioVoices = String(event.engine?.voices?.size ?? 0);
+    scheduleWakeSync();
     if (event.reason === 'gesture-required') {
       status.textContent = 'Звук пруда уснул; коснитесь воды, чтобы мягко разбудить его';
     } else if (event.reason === 'resume-failed') {
@@ -329,6 +330,52 @@
     } else if (event.reason === 'closed') {
       status.textContent = 'Аудиосистема закрыта браузером; перезагрузите пруд, чтобы снова играть';
     }
+  }
+
+  // Wake lock: keep the screen awake only while the water is actually sounding
+  // and visible. A living phrase must not let the phone sleep mid-gesture; a
+  // silent or backgrounded pond must release the lock so it can sleep naturally.
+  let wakeLock = null;
+  let wakeLockPending = false;
+  const scheduleWakeLock = { timer: null };
+
+  function soundingVoiceCount(engine) {
+    if (!engine?.voices) return 0;
+    let count = 0;
+    for (const voice of engine.voices.values()) if (!voice.releasing) count += 1;
+    return count;
+  }
+
+  async function syncWakeLock() {
+    const engine = audioLifecycle?.getEngine() ?? null;
+    const shouldHold = audioLifecycleFactory.keepScreenAwake({
+      visible: document.visibilityState !== 'hidden',
+      soundingVoices: soundingVoiceCount(engine)
+    });
+    if (shouldHold) {
+      if (wakeLock || wakeLockPending) return;
+      wakeLockPending = true;
+      try {
+        if (navigator.wakeLock?.request) {
+          wakeLock = await navigator.wakeLock.request('screen');
+          wakeLock.addEventListener?.('release', () => { wakeLock = null; syncWakeLock(); });
+        }
+      } catch { /* unsupported or denied: the pond keeps playing; screen may sleep */ }
+      wakeLockPending = false;
+    } else if (wakeLock) {
+      try { await wakeLock.release(); } catch {}
+      wakeLock = null;
+      wakeLockPending = false;
+    }
+  }
+
+  function scheduleWakeSync() {
+    // Debounce: a fast glissando calls this many times per second.
+    if (scheduleWakeLock.timer) return;
+    scheduleWakeLock.timer = setTimeout(() => {
+      scheduleWakeLock.timer = null;
+      syncWakeLock();
+    }, 260);
   }
 
   function startVoice(id, x, y, pressure = .42, frequency = pitchAt(x), attack = pressure, engine = audio, shadeIndex = 0) {
@@ -446,6 +493,7 @@
     canvas.dataset.materialBias = '0.000';
     reflectDropVoices(engine);
     canvas.dataset.audioVoices = String(engine.voices.size);
+    scheduleWakeSync();
     dropOscillator.addEventListener('ended', () => {
       if (voice.dropOscillator !== dropOscillator) return;
       try { dropOscillator.disconnect(); dropGain.disconnect(); } catch {}
@@ -553,6 +601,7 @@
     try { voice.splashSource?.stop(now + .02); } catch {}
     try { voice.eddyOscillator?.stop(now + voice.releaseSeconds); } catch {}
     balanceVoices(audio);
+    scheduleWakeSync();
   }
 
   audioLifecycle = audioLifecycleFactory.create({

@@ -1,5 +1,5 @@
-const CACHE = 'pond-piano-shell-v30';
-// Iteration 0032: the diary phrase can be set to quietly circulate.
+const CACHE = 'pond-piano-shell-v31';
+// Iteration 0034: the mobile shell holds the water — gesture surface + wake lock.
 const SHELL = [
   './',
   './index.html',
