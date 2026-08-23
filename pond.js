@@ -614,12 +614,20 @@
     if (!voice || voice.releasing) return;
     const now = audio.context.currentTime;
     voice.releasing = true;
+    // The note leaves the water the way it lived: a quick tap departs with
+    // the material's brisk exit, a long-settled deep note sinks away on a
+    // longer warm tail. The fade time-constant follows the same stretch so
+    // the tail stays smooth instead of hissing under a longer stop.
+    const holdMs = Math.max(0, (now - voice.born) * 1000);
+    const releaseSeconds = music.waterRelease(holdMs, voice.materialDepth, voice.releaseSeconds);
+    const fadeTau = releaseSeconds / 3.2;
+    canvas.dataset.lastRelease = releaseSeconds.toFixed(3);
     voice.gain.gain.cancelScheduledValues(now);
-    voice.gain.gain.setTargetAtTime(.0001, now, .1);
-    voice.oscillator.stop(now + voice.releaseSeconds); voice.overtone.stop(now + voice.releaseSeconds); voice.undertow.stop(now + voice.releaseSeconds);
+    voice.gain.gain.setTargetAtTime(.0001, now, fadeTau);
+    voice.oscillator.stop(now + releaseSeconds); voice.overtone.stop(now + releaseSeconds); voice.undertow.stop(now + releaseSeconds);
     try { voice.dropOscillator?.stop(Math.min(now + .03, voice.dropEndsAt + .025)); } catch {}
     try { voice.splashSource?.stop(now + .02); } catch {}
-    try { voice.eddyOscillator?.stop(now + voice.releaseSeconds); } catch {}
+    try { voice.eddyOscillator?.stop(now + releaseSeconds); } catch {}
     balanceVoices(audio);
     scheduleWakeSync();
   }

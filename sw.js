@@ -1,7 +1,7 @@
-const CACHE = 'pond-piano-shell-v40';
-// Iteration 0043: a lifted phrase rests on a small paper leaf inside the
-// diary panel — its carried scroll text stays readable, and one touch
-// seats it back on the water, clipboard or not.
+const CACHE = 'pond-piano-shell-v41';
+// Iteration 0044: a note leaves the water the way it lived - a quick tap
+// departs with the brisk material exit, while a long-settled deep note
+// sinks away on a longer warm tail instead of one flat constant.
 const SHELL = [
   './',
   './index.html',

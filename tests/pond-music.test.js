@@ -301,6 +301,30 @@ assert.ok(deepShade.dropScale > 1 && deepShade.dropScale <= 1.2, 'a deep shade l
 assert.ok(tinted.levelCompensation >= .9 && tinted.levelCompensation <= 1.1,
   'a tinted shade must never leave the safe level range (stronger tint stays inside the budget)');
 
+// A finished note leaves the water the way it lived: the release tail
+// follows the note's own life instead of one flat constant.
+const tapRelease = music.waterRelease(120, .5, .5);
+assert.ok(Math.abs(tapRelease - .5) < .003, 'a quick tap keeps the material base exit (sub-3ms drift)');
+const heldShallow = music.waterRelease(2400, 0, .42);
+const heldDeep = music.waterRelease(2400, 1, .58);
+assert.ok(Math.abs(heldShallow - .42) < 1e-9, 'shallow water stays dry even after a long hold');
+assert.ok(heldDeep > .58 && heldDeep <= music.RELEASE_MAX_SECONDS, 'a long-settled deep note sinks away on a longer tail');
+assert.equal(music.waterRelease(2400, 1, 1.1), music.RELEASE_MAX_SECONDS, 'the stretch is bounded by the honest ceiling');
+const midHold = music.waterRelease(800, 1, .5);
+assert.ok(midHold > .5 && midHold < music.RELEASE_MAX_SECONDS,
+  'a medium hold stretches partway, not to the ceiling');
+assert.ok(music.waterRelease(4000, 1, .58) >= music.waterRelease(2000, 1, .58),
+  'a longer hold never departs faster');
+assert.ok(music.waterRelease(120, .9) >= music.waterRelease(120, .2),
+  'at equal life deeper water never leaves drier');
+for (const broken of [NaN, undefined, null]) {
+  const value = broken === undefined ? music.waterRelease() : music.waterRelease(broken, broken, broken);
+  assert.ok(Number.isFinite(value) && value >= .05 && value <= music.RELEASE_MAX_SECONDS,
+    'broken inputs must fall back to a bounded safe tail');
+}
+assert.equal(music.waterRelease(900, .5, 99), music.RELEASE_MAX_SECONDS, 'an oversized material base is capped');
+assert.equal(music.waterRelease(0, 0, NaN), .5, 'a broken base falls back to the calm default');
+
 console.log('pond-music: pitch currents, precision, water materials, drop/pearl/stone transients, space, held texture, reflection, and note shades verified');
 
 // A fresh accent carries one short noise splash: water receiving the drop.

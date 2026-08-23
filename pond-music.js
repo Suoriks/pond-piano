@@ -43,6 +43,7 @@
 
   const clamp = (value, minimum = 0, maximum = 1) => Math.max(minimum, Math.min(maximum, value));
   const smoothstep = (minimum, maximum, value) => {
+    if (!Number.isFinite(value)) return 0;
     const t = clamp((value - minimum) / Math.max(.000001, maximum - minimum));
     return t * t * (3 - 2 * t);
   };
@@ -171,6 +172,26 @@
       attackSeconds: .006 + depth * .004,
       decaySeconds: .075 + depth * .045
     };
+  }
+
+  // A note must leave the water the way it lived: a quick tap departs with
+  // the brisk material exit it always had, while a long-settled note sinks
+  // away on a longer, warmer tail. Pure timing only - the shell keeps every
+  // node, the fade shape and the six-voice budget; this decides only how
+  // long the departure is allowed to take.
+  const RELEASE_MIN_SECONDS = .42;
+  const RELEASE_MAX_SECONDS = 1.15;
+  const RELEASE_HOLD_FULL_MS = 1600;
+  const RELEASE_DEPTH_REACH = .18;
+
+  function waterRelease(holdMilliseconds = 0, normalizedDepth = .5, materialBaseSeconds = .5) {
+    const hold = Math.max(0, Number.isFinite(holdMilliseconds) ? holdMilliseconds : 0);
+    const depth = Number.isFinite(normalizedDepth) ? clamp(normalizedDepth) : .5;
+    const base = Math.max(.05, Math.min(RELEASE_MAX_SECONDS,
+      Number.isFinite(materialBaseSeconds) ? materialBaseSeconds : .5));
+    const settle = smoothstep(0, RELEASE_HOLD_FULL_MS, hold);
+    return Math.max(base, Math.min(RELEASE_MAX_SECONDS,
+      base + depth * RELEASE_DEPTH_REACH * settle));
   }
 
   // The drop must be seen as it is heard: a small splash corona
@@ -439,6 +460,9 @@
     waterMaterial,
     waterDrop,
     waterSplash,
+    waterRelease,
+    RELEASE_MIN_SECONDS,
+    RELEASE_MAX_SECONDS,
     dropSpray,
     frequencyAt
   });
