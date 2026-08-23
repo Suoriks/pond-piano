@@ -1,7 +1,8 @@
-const CACHE = 'pond-piano-shell-v33';
-// Iteration 0036: the water spends its frame budget honestly - a measured
-// p95 step-down of ripple rings, motes, tide and ink under load, then a quiet
-// recovery during idle. Audio voices stay untouched.
+const CACHE = 'pond-piano-shell-v34';
+// Iteration 0037: the two shore popovers behave like real dialogs - honest
+// aria-expanded, focus moving into the panel on open and back to the stone
+// on close, a Tab trap inside an open panel, and diary focus that survives
+// a live re-render while ink is still on the water.
 const SHELL = [
   './',
   './index.html',
@@ -14,6 +15,7 @@ const SHELL = [
   './pond-tide.js',
   './pond-budget.js',
   './pond-master.js',
+  './pond-a11y.js',
   './pond-audio-lifecycle.js',
   './pond.js',
   './manifest.webmanifest',

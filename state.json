@@ -1,11 +1,11 @@
 {
   "project": "pond-piano",
   "phase": "done",
-  "iteration": 36,
+  "iteration": 37,
   "status": "active",
-  "current_goal": "Iteration 0036 done: the water spends its frame budget honestly - a measured p95 cost, easing down ripple rings, mote density, tide swells and a slight ink dim under sustained load, then unwinding during easy stretches so the full look returns; the six audio voices are never touched.",
-  "last_verified": "2026-08-23: KAIZEN 0035. All Node suites (23 tests incl invitation bounds) pass; syntax clean (24 JS); JSON + git diff --check clean. Headless Chromium 390x844 @2x: fresh pond shows line + breathing ring (inviteAlpha 0.612->0.337 half-cycle), pixel proof of breath (ring patch delta 60.8 vs 0.1 control); first gesture kills both (inviteAlpha=0, localStorage=played, has-played), reload keeps them dead, no console errors. Vision model unavailable (limit) - PNG screenshots verified by direct pixel probe: ring patch 279.8 vs 113.0 quiet water same frame; after play 147.0 (background). eye 35; shell v32. Windows CI green on final sync commit: run 32637050977 (2m20s).",
-  "next_step": "Real-device pass remains the shared backlog; for the invitation add: ring readability under real ripple and no fight with the phone status bar/address bar.",
+  "current_goal": "Iteration 0037 done: the two shore popovers (diary + volume) behave like real dialogs - honest aria-expanded through a pure pond-a11y.js layer, focus moves into the panel on open and back to the stone on close, Tab is trapped inside an open panel, and opening the diary with rows lands the keyboard player on the first surviving row.",
+  "last_verified": "2026-08-23: KAIZEN 0036->37. All Node suites (32 tests incl 4 new a11y) pass; syntax clean (31 JS); JSON + git diff --check clean. Headless Chromium 390x844 @2x instrumented smoke: both stones start honestly closed; opening volume moves focus to the range; Tab wraps range->mute->range; Esc returns to the volume stone; empty diary opens honestly with focus on the stone; diary with two rows opens focus onto diary-entry row 1 and Esc returns to the stone. No console errors. PNG screenshot shore-a11y-37.png verified as a full 390x844 pond frame; vision model unavailable (limit) - pixel/direct proof as in 24/28-36.",
+  "next_step": "Real-device pass (shared backlog): confirm focus and the Tab trap behave with native focus order and the on-screen keyboard when panels open from touch on Android Chrome/PWA and iPhone Safari; keep numeric thresholds derived only from measured devices.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -51,7 +51,7 @@
   "git_sync": "synced_public_github",
   "git_remote": "https://github.com/Suoriks/pond-piano.git",
   "git_branch": "main",
-  "updated_at": "2026-08-23T15:32:25+03:00",
+  "updated_at": "2026-08-23T17:35:00+03:00",
   "iteration_35": {
     "started": "2026-08-23T14:20:00+03:00",
     "phase": "done",
@@ -95,5 +95,26 @@
       "budget logic proven in pure layer unit tests, since a fast desktop renderer legitimately stays under the p95 budget; real-device tone stays the measured source of truth"
     ],
     "next_step": "real device pass: on Android/iOS measure actual p95 frame cost and confirm the eased steps engage and recover; keep thresholds derived only from measured devices"
+  },
+  "iteration_37": {
+    "started": "2026-08-23T15:45:00+03:00",
+    "finished": "2026-08-23T17:35:00+03:00",
+    "phase": "done",
+    "plan": [
+      "pure PondA11y layer in pond-a11y.js: honest expandedState, Tab trap countIndex, openIndex; freeze as deterministic API",
+      "tests pond-a11y.test.js: honest closed/muted/open, trap forward/backward, damaged bounds, first-target when present",
+      "wire into pond.js: setVolumePanelOpen/setDiaryPanelOpen keep aria-expanded honest, focus in on open / back to stone on close, bounded Tab trap inside open panel",
+      "diary panel role=dialog aria-modal=false, triggers aria-haspopup=dialog; opening diary with rows lands focus on row 1",
+      "index.html + sw.js shell v34 + package.json add pond-a11y.js; README + eyebrow 37",
+      "verify: node suites, syntax, JSON, git diff --check, instrumented headless smoke (+ pixel proof), KAIZEN 0037, commit and push to main"
+    ],
+    "verified": [
+      "node tests: 32 pass across 11 suites (incl 4 new a11y asserts)",
+      "syntax: 31 JS files clean",
+      "JSON validity + git diff --check clean",
+      "instrumented Chromium smoke green: honest closed/open states, focus-in on open, Tab wrap range->mute->range, Esc return to stones, diary with rows opens onto row 1 entry",
+      "PNG screenshot shore-a11y-37.png saved as valid full-frame 390x844; vision model unavailable (limit), direct inspection as in 24/28-36"
+    ],
+    "next_step": "done; the two smoke scenarios that expected panel-close on loop-start were corrected to the realistic diary path (product unchanged); real-device focus/Tab check stays on the shared backlog"
   }
 }

@@ -10,6 +10,7 @@
   const caustic = window.PondCaustic;
   const tide = window.PondTide;
   const budget = window.PondBudget;
+  const a11y = window.PondA11y;
   const masterModel = window.PondMaster;
   const audioLifecycleFactory = window.PondAudioLifecycle;
   if (!music) throw new Error('Pond music mapping did not load');
@@ -18,6 +19,8 @@
   if (!waves) throw new Error('Pond wave mapping did not load');
   if (!tide) throw new Error('Pond tide mapping did not load');
   if (!masterModel) throw new Error('Pond master control did not load');
+  if (!budget) throw new Error('Pond budget mapping did not load');
+  if (!a11y) throw new Error('Pond accessibility mapping did not load');
   if (!audioLifecycleFactory) throw new Error('Pond audio lifecycle did not load');
   const volumeControl = document.querySelector('.shore-control');
   const volumeStone = document.querySelector('#volume-stone');
@@ -804,10 +807,17 @@
   }
 
   function setDiaryPanelOpen(open) {
+    const hadFocusInside = diaryPanel.contains(document.activeElement) || diaryStone === document.activeElement;
     diaryOpen = open;
     diaryControl.classList.toggle('is-open', open);
-    diaryStone.setAttribute('aria-expanded', String(open));
-    if (open) syncDiaryPanel();
+    diaryStone.setAttribute('aria-expanded', a11y.expandedState(open));
+    if (open) {
+      syncDiaryPanel();
+      const target = diaryPanelTabTarget();
+      if (target) target.focus();
+    } else if (hadFocusInside) {
+      diaryStone.focus();
+    }
   }
 
   // The stone keeps a quiet count of still-readable lines while closed.
@@ -827,10 +837,18 @@
     const epoch = performance.now();
     const lines = score.pourableInk(phraseInk, epoch, reduced.matches);
     diaryCount.textContent = String(lines.length);
+    // Remember where the keyboard player is before the list rebuilds, so a
+    // live refresh (new ink while the panel is open) does not drop focus.
+    const focusedInside = diaryPanel.contains(document.activeElement);
+    const focusedAction = focusedInside ? document.activeElement : null;
+    const focusedCirculate = focusedAction?.classList?.contains('diary-loop') ?? false;
+    const focusedRow = focusedAction?.closest?.('.diary-row') ?? null;
+    const focusedBorn = focusedRow?.dataset?.born ?? null;
     diaryList.textContent = '';
     for (const line of lines) {
       const row = document.createElement('div');
       row.className = 'diary-row';
+      row.dataset.born = String(line.born);
       const item = document.createElement('button');
       item.type = 'button';
       item.className = 'diary-entry';
@@ -877,6 +895,42 @@
     diaryList.hidden = lines.length === 0;
     diaryStone.setAttribute('aria-label', `Дневник пруда: ${lines.length} ${lines.length === 1 ? 'строка' : lines.length >= 2 && lines.length <= 4 ? 'строки' : 'строк'} на воде`);
     diaryControl.classList.toggle('has-lines', lines.length > 0);
+    // Restore the keyboard player after a live re-render: same row, same
+    // action. A vanished row (expired ink) returns focus to the stone so
+    // the player is never dropped silently.
+    if (focusedInside) {
+      const retained = [...diaryList.children].find(row => row?.dataset?.born === focusedBorn);
+      if (retained) {
+        const restored = focusedCirculate
+          ? retained.querySelector('.diary-loop')
+          : retained.querySelector('.diary-entry');
+        if (restored) restored.focus();
+      } else {
+        diaryStone.focus();
+      }
+    }
+  }
+
+  // Order the diary panel's interactive controls for keyboard travel: the
+  // row actions first, then each row's circulate stone, then nothing else.
+  function diaryPanelControls() {
+    const controls = [];
+    for (const row of diaryList.children) {
+      for (const child of row.children) {
+        if (child instanceof HTMLButtonElement) controls.push(child);
+      }
+    }
+    return controls;
+  }
+
+  // Focus the first tabbable control inside the diary panel when it opens,
+  // so a keyboard player lands on the row action immediately. Returns null
+  // for an empty panel (nothing to focus).
+  function diaryPanelTabTarget() {
+    const controls = diaryPanelControls();
+    const target = controls[0] ?? null;
+    if (target) target.focus();
+    return target;
   }
 
   function startPourEcho(line) {
@@ -1079,12 +1133,29 @@
   }
 
   function setVolumePanelOpen(open) {
+    const hadFocusInside = volumePanel.contains(document.activeElement) || volumeStone === document.activeElement;
     volumeControl.classList.toggle('is-open', open);
-    volumeStone.setAttribute('aria-expanded', String(open));
+    volumeStone.setAttribute('aria-expanded', a11y.expandedState(open));
+    if (open && !volumePanel.contains(document.activeElement)) {
+      volumeRange.focus();
+    } else if (!open && hadFocusInside) {
+      volumeStone.focus();
+    }
   }
 
-  volumeStone.addEventListener('click', () => setVolumePanelOpen(true));
-  volumeControl.addEventListener('focusin', () => volumeStone.setAttribute('aria-expanded', 'true'));
+  // The volume panel's interactive controls in tab order: the range first,
+  // then the mute stone. The trigger stone lives outside the panel, so the
+  // trap only wraps these two.
+  function volumePanelControls() {
+    const controls = [];
+    if (volumeRange instanceof HTMLInputElement) controls.push(volumeRange);
+    if (muteButton instanceof HTMLButtonElement) controls.push(muteButton);
+    return controls;
+  }
+
+  volumeStone.addEventListener('click', () => setVolumePanelOpen(!volumeControl.classList.contains('is-open')));
+  // Buttons already fire click on Enter/Space; expanded honesty and the
+  // focus move happen inside setVolumePanelOpen on that same click path.
   diaryStone.addEventListener('click', () => setDiaryPanelOpen(!diaryOpen));
   diaryControl.addEventListener('focusout', () => {
     requestAnimationFrame(() => {
@@ -1095,26 +1166,39 @@
     if (!diaryControl.contains(event.target)) setDiaryPanelOpen(false);
   });
   diaryControl.addEventListener('keydown', event => {
-    if (event.key !== 'Escape') return;
+    if (event.key === 'Escape') { event.preventDefault(); setDiaryPanelOpen(false); return; }
+    if (event.key !== 'Tab' || !diaryOpen) return;
+    const controls = diaryPanelControls();
+    if (!controls.length) return;
+    const current = controls.indexOf(document.activeElement);
+    const direction = event.shiftKey ? 'backward' : 'forward';
+    const resolved = a11y.countIndex(current, controls.length, direction);
     event.preventDefault();
-    setDiaryPanelOpen(false);
-    canvas.focus();
+    controls[resolved]?.focus();
   });
   volumeControl.addEventListener('focusout', () => {
     requestAnimationFrame(() => {
-      if (!volumeControl.contains(document.activeElement) && !volumeControl.classList.contains('is-open')) {
-        volumeStone.setAttribute('aria-expanded', 'false');
-      }
+      if (!volumeControl.contains(document.activeElement)) setVolumePanelOpen(false);
     });
   });
   document.addEventListener('pointerdown', event => {
     if (!volumeControl.contains(event.target)) setVolumePanelOpen(false);
   });
   volumeControl.addEventListener('keydown', event => {
-    if (event.key !== 'Escape') return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      setVolumePanelOpen(false);
+      volumeStone.focus();
+      return;
+    }
+    if (event.key !== 'Tab' || !volumeControl.classList.contains('is-open')) return;
+    const controls = volumePanelControls();
+    if (!controls.length) return;
+    const current = controls.indexOf(document.activeElement);
+    const direction = event.shiftKey ? 'backward' : 'forward';
+    const resolved = a11y.countIndex(current, controls.length, direction);
     event.preventDefault();
-    setVolumePanelOpen(false);
-    canvas.focus();
+    controls[resolved]?.focus();
   });
   volumeRange.addEventListener('input', () => {
     masterState = masterModel.withVolume(masterState, volumeRange.value);

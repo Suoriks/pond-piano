@@ -22,7 +22,7 @@
     </div>
     <div class="shore" aria-hidden="true"></div>
     <header class="title-block">
-      <p class="eyebrow">Этюд воды · 36</p>
+      <p class="eyebrow">Этюд воды · 37</p>
       <h1>Пруд-пианино</h1>
       <p class="hint">Мельче — стекло · быстрый отпуск — камешек</p>
       <p id="water-invitation" class="water-invitation" aria-hidden="true">Коснитесь воды</p>
@@ -49,23 +49,23 @@
       <p id="tuning-description" class="sr-only">Стрелки выбирают семейство высот, к которому вода мягко тянется только после выдержки. Свободное скольжение остаётся непрерывным.</p>
     </section>
     <section id="diary-control" class="diary-control" aria-label="Дневник пруда">
-      <button id="diary-stone" class="diary-stone" type="button" aria-expanded="false" aria-controls="diary-panel">
+      <button id="diary-stone" class="diary-stone" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="diary-panel">
         <span class="stone-line" aria-hidden="true"></span>
         <output id="diary-count" aria-hidden="true">0</output>
         <span class="sr-only">Дневник пруда: открыть список сохранённых фраз</span>
       </button>
-      <div id="diary-panel" class="diary-panel" role="group" aria-label="Строки дневника">
+      <div id="diary-panel" class="diary-panel" role="dialog" aria-modal="false" aria-label="Дневник воды">
         <p class="diary-heading">Дневник воды</p>
         <div id="diary-list" class="diary-list"></div>
         <p id="diary-empty" class="diary-empty">Пруд пока ничего не записал</p>
       </div>
     </section>
     <section class="shore-control" aria-label="Громкость пруда">
-      <button id="volume-stone" class="volume-stone" type="button" aria-expanded="false" aria-controls="volume-panel">
+      <button id="volume-stone" class="volume-stone" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="volume-panel">
         <span class="stone-rings" aria-hidden="true"></span>
         <span class="sr-only">Настроить громкость пруда</span>
       </button>
-      <div id="volume-panel" class="volume-panel" role="group" aria-labelledby="volume-label">
+      <div id="volume-panel" class="volume-panel" role="dialog" aria-modal="false" aria-label="Громкость воды">
         <div class="volume-heading">
           <label id="volume-label" for="master-volume">Громкость воды</label>
           <output id="volume-value" for="master-volume">72%</output>
@@ -84,6 +84,7 @@
   <script src="pond-tide.js"></script>
   <script src="pond-budget.js"></script>
   <script src="pond-master.js"></script>
+  <script src="pond-a11y.js"></script>
   <script src="pond-audio-lifecycle.js"></script>
   <script src="pond.js"></script>
 </body>
