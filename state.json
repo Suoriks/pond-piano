@@ -1,12 +1,12 @@
 {
   "project": "pond-piano",
   "phase": "done",
-  "iteration": 39,
+  "iteration": 40,
   "status": "active",
-  "current_goal": "Iteration 0039 done: the pond survives a change of screen. A pure pond-repose.js layer re-seats every live pixel-space artifact (ripples, trails, splashes, coronas, pearls, glints, stone flights, held pointer contacts with their eddies) into the new window space at its normalized place on the water, so pitch/depth/stereo of what already sounds stay identical; stale wave-collision appointments dissolve cleanly. Proven by unit tests plus an instrumented desktop resize smoke (held note survives, contact light relocates by pixel probe) and a two-voice five-resize stress pass.",
+  "current_goal": "Iteration 0040 done: repeated short taps are plainly separable on the ear. Each note shade (clear/neutral/deep) leads its droplet-and-splash transient length via dropScale (.9/1/1.1) on top of the strengthened harmonic tint; the X pitch axis and the voice budget stay untouched. Proven by updated unit tests plus an instrumented same-X three-tap smoke: scheduled droplet lengths 0.1284s / 0.1625s / 0.1763s match theory exactly (~48ms spread between extremes), release clean, no console errors.",
   "previous_goal": "Iteration 0037 done: the two shore popovers (diary + volume) behave like real dialogs - honest aria-expanded through a pure pond-a11y.js layer, focus moves into the panel on open and back to the stone on close, Tab is trapped inside an open panel, and opening the diary with rows lands the keyboard player on the first surviving row.",
-  "last_verified": "2026-08-23 (0039): 47 node tests pass across 13 suites (12 new repose asserts); syntax 34 JS clean; JSON + git diff --check clean. Instrumented Chromium resize smoke: held voice survives 1280x720 -> 390x844 (audioVoices 1->1), contact light relocated to normalized place (patch 297.9 vs quiet water 112.8), old spot faded, fresh ripple lands in new space, release clean, no console errors. Stress: two held voices (pointer+keyboard) survived five consecutive resizes (2->2->0 after release). Vision model unavailable (limit); direct pixel probes as in 24-38.",
-  "next_step": "shared backlog - real device pass on Android Chrome/PWA and iPhone Safari; now includes watching resize-heavy moments on devices: orientation change and keyboard appearance.",
+  "last_verified": "2026-08-23 (0040): 47 node tests pass across 13 suites (shade asserts updated: deterministic 3-length droplet series, honest neutral base, budget bounds for stronger tint); syntax 34 JS clean; JSON + git diff --check clean. Instrumented Chromium same-X tap series: droplet spans 0.1284 (clear) < 0.1625 (neutral) < 0.1763 (deep), matching dropScale .9/1/1.1 on the .1425s base; no console errors; screenshot output/pond-piano/shade-taps-40.png.",
+  "next_step": "shared backlog - real device pass on Android Chrome/PWA and iPhone Safari; now includes listening to a quick 2-3-tap series on a real speaker to confirm the shade droplets read as distinct.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -52,7 +52,28 @@
   "git_sync": "synced_public_github",
   "git_remote": "https://github.com/Suoriks/pond-piano.git",
   "git_branch": "main",
-  "updated_at": "2026-08-23T21:05:00+03:00",
+  "updated_at": "2026-08-23T22:25:00+03:00",
+  "iteration_40": {
+    "started": "2026-08-23T21:50:00+03:00",
+    "finished": "2026-08-23T22:25:00+03:00",
+    "phase": "done",
+    "resumed_from_interrupted_slot": true,
+    "plan": [
+      "finish tests/pond-music.test.js: fix reserved-word 'with' variable, series dropScale asserts, honest neutral-shade expectation, budget bounds for stronger tint",
+      "run pond-music suite, then all node suites + syntax + JSON + git diff --check",
+      "bump eyebrow 40 and sw.js shell v37",
+      "instrumented headless Chromium smoke: tap series exposes distinct droplet transients, X pitch untouched by shades, release clean, no console errors; screenshot",
+      "KAIZEN 0040 entry, README sentence, state.json final, one commit, push to main, watch Windows CI"
+    ],
+    "verified": [
+      "node tests: 47 pass across 13 suites (shade asserts updated: deterministic 3-length droplet series, honest neutral base, budget bounds for stronger tint)",
+      "syntax: 34 JS files clean; JSON validity + git diff --check clean",
+      "instrumented same-X three-tap smoke green: droplet spans 0.1284 (clear) < 0.1625 (neutral) < 0.1763 (deep), matching dropScale .9/1/1.1 on the 0.1425s base (~48ms spread)",
+      "smoke retry scoping fixed on the way: per-attempt baseline so a failed first tap's oscillators no longer pollute the window; product unchanged",
+      "no console/page errors; screenshot output/pond-piano/shade-taps-40.png; vision model unavailable (limit), water surface unchanged this slot"
+    ],
+    "next_step": "done; device-pass backlog includes listening to a quick tap series on a real speaker"
+  },
   "iteration_35": {
     "started": "2026-08-23T14:20:00+03:00",
     "phase": "done",

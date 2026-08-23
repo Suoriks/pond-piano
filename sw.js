@@ -1,12 +1,8 @@
-const CACHE = 'pond-piano-shell-v36';
-// Iteration 0039: the pond survives a change of screen. A resize re-seats
-// every live pixel-space artifact (ripples, trails, splashes, coronas,
-// pearls, glints, stone flights, held contacts and their eddies) into the
-// new space at its normalized place on the water, so pitch, depth and stereo
-// meaning of what already sounds stay put; stale wave appointments dissolve.
-// aria-expanded, focus moving into the panel on open and back to the stone
-// on close, a Tab trap inside an open panel, and diary focus that survives
-// a live re-render while ink is still on the water.
+const CACHE = 'pond-piano-shell-v37';
+// Iteration 0040: repeated short taps become plainly separable on the ear.
+// Each note shade (clear/neutral/deep) now leads its droplet-and-splash
+// transient length (dropScale) on top of the harmonic tint; the X pitch axis
+// and the voice budget stay untouched.
 const SHELL = [
   './',
   './index.html',

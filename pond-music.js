@@ -136,7 +136,8 @@
     const pitch = Math.max(20, Number.isFinite(frequency) ? frequency : BASE_FREQUENCY);
     const depth = clamp(normalizedDepth);
     const force = clamp(intensity);
-    const durationSeconds = DROP_MIN_DURATION_SECONDS + depth * (DROP_MAX_DURATION_SECONDS - DROP_MIN_DURATION_SECONDS);
+    const dropScale = material && Number.isFinite(material.dropScale) ? material.dropScale : 1;
+    const durationSeconds = (DROP_MIN_DURATION_SECONDS + depth * (DROP_MAX_DURATION_SECONDS - DROP_MIN_DURATION_SECONDS)) * dropScale;
     // A quick tap is mostly this transient, so let the water material tint it:
     // glassy shallows pluck bright and high, a hollow deep falls warmer and lower.
     const brightness = material && Number.isFinite(material.brightness)
@@ -161,8 +162,9 @@
       ? clamp(material.brightness, -1, 1)
       : 0;
     const active = .5 + brightness * .5; // 0 in hollow deep, 1 in glassy shallows
+    const dropScale = material && Number.isFinite(material.dropScale) ? material.dropScale : 1;
     return {
-      durationSeconds: SPLASH_MIN_DURATION_SECONDS + depth * (SPLASH_MAX_DURATION_SECONDS - SPLASH_MIN_DURATION_SECONDS),
+      durationSeconds: (SPLASH_MIN_DURATION_SECONDS + depth * (SPLASH_MAX_DURATION_SECONDS - SPLASH_MIN_DURATION_SECONDS)) * dropScale,
       peakGain: (.014 + force * .026) * (.82 + active * .3),
       lowHz: 320 - depth * 60 - active * 100,
       highHz: 2100 - depth * 900 + active * 500,
@@ -216,9 +218,10 @@
     return Object.freeze({
       tint,
       depth,
-      overtoneBias: clear ? .035 : deep ? -.03 : 0,
-      gainLift: clear ? 1.03 : deep ? .96 : 1,
-      cutoffTone: clear ? 1.06 : deep ? .92 : 1,
+      overtoneBias: clear ? .055 : deep ? -.05 : 0,
+      gainLift: clear ? 1.05 : deep ? .94 : 1,
+      cutoffTone: clear ? 1.09 : deep ? .88 : 1,
+      dropScale: clear ? .9 : deep ? 1.1 : 1,
       label: clear ? 'clear' : deep ? 'deep' : 'neutral'
     });
   }
@@ -294,6 +297,7 @@
     const overtoneBias = shade?.overtoneBias ?? 0;
     const gainLift = shade?.gainLift ?? 1;
     const cutoffTone = shade?.cutoffTone ?? 1;
+    const dropScale = shade?.dropScale ?? 1;
     const names = ['glass', 'living', 'hollow'];
     const dominant = names[weights.indexOf(Math.max(...weights))];
     return {
@@ -310,7 +314,8 @@
       filterQ: blend(weights, [.55, 1.35, .82]),
       attackSeconds: blend(weights, [.032, .044, .058]),
       releaseSeconds: blend(weights, [.42, .5, .58]),
-      levelCompensation: blend(weights, [.94, 1, 1.06]) * gainLift
+      levelCompensation: blend(weights, [.94, 1, 1.06]) * gainLift,
+      dropScale: clamp(Number.isFinite(dropScale) ? dropScale : 1, .8, 1.2)
     };
   }
 

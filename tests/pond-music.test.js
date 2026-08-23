@@ -212,6 +212,27 @@ assert.ok(calmShallowDrop.dipFrequency < calmShallowDrop.settleFrequency,
   'the transient should dip below and return to the played pitch like a water drop');
 assert.equal(music.waterDrop(440, -4, calmAttack).durationSeconds, calmShallowDrop.durationSeconds);
 assert.equal(music.waterDrop(440, 4, fastAttack).durationSeconds, strongDeepDrop.durationSeconds);
+assert.equal(calmShallowDrop.durationSeconds, music.DROP_MIN_DURATION_SECONDS * 1, 'a shade-less drop keeps its base duration');
+
+// A short series of taps must stay recognisably kin, but each tap must now
+// be separable on the ear without random presets or a pitch change for X:
+// the clear shade drops short and snappy, the deep one lingers fuller, and
+// the audible height axis itself stays untouched.
+const seriesShades = [0, 1, 2, 3, 4, 5].map(index => music.noteShade(index, .5));
+const seriesLabels = seriesShades.map(shade => shade.label);
+assert.deepEqual(seriesLabels, ['clear', 'neutral', 'deep', 'clear', 'neutral', 'deep'],
+  'a six-tap series repeats clear/neutral/deep deterministically');
+const seriesDropScales = [...new Set(seriesShades.map(shade => shade.dropScale))].sort();
+assert.equal(seriesDropScales.length, 3, 'the series offers three distinct droplet lengths, no more');
+assert.ok(seriesDropScales[0] < seriesDropScales[1] && seriesDropScales[1] < seriesDropScales[2]);
+assert.ok([0, 1, 2].every(index => {
+  const plain = music.waterDrop(440, .5, calmAttack);
+  const shaded = music.waterDrop(440, .5, calmAttack, music.waterMaterial(.5, 0, seriesShades[index]));
+  const expected = index === 1
+    ? Math.abs(shaded.durationSeconds - plain.durationSeconds) < 1e-9
+    : Math.abs(shaded.durationSeconds - plain.durationSeconds) >= .001;
+  return expected;
+}), 'clear and deep shades reach the droplet transient; the neutral shade stays the honest base');
 
 const glassMaterial = music.waterMaterial(0);
 const livingMaterial = music.waterMaterial(.5);
@@ -263,15 +284,22 @@ assert.ok(shade0.label !== shade1.label && shade1.label !== shade2.label && shad
 assert.ok(shade0.gainLift > shade1.gainLift && shade2.gainLift < shade1.gainLift,
   'a clear note may lift level, a deep note must sit a hair lower');
 assert.ok(shade0.cutoffTone > shade2.cutoffTone, 'a clear shade keeps more treble than a deep one');
+assert.ok(shade0.dropScale < shade2.dropScale, 'the clear shade falls short and snappy, the deep one lingers fuller');
 assert.deepEqual(music.noteShade(-3, .5), music.noteShade(0, .5), 'a broken index must fall back like the first note');
 assert.equal(music.noteShade(3, 9).depth, 1, 'depth must stay clamped inside the shade model');
-// The shading must stay a small deterministic tint within the voice budget.
+// The shading must stay a deterministic tint within the voice budget: it may
+// now be plainly audible on a quick tap (that is the point) but it must never
+// cross into a replaced voice or a random preset.
 const tinted = music.waterMaterial(.5, 0, shade0);
 const base = music.waterMaterial(.5);
-assert.ok(Math.abs(tinted.overtoneRatio - base.overtoneRatio) <= .05, 'shade must nudge the harmonic, not replace it');
-assert.ok(Math.abs(tinted.cutoffHz - base.cutoffHz) < 260, 'shade may tint the cutoff within the budget');
+assert.ok(Math.abs(tinted.overtoneRatio - base.overtoneRatio) <= .07, 'shade must nudge the harmonic strongly but not replace it');
+assert.ok(Math.abs(tinted.cutoffHz - base.cutoffHz) < 300, 'shade may tint the cutoff within the budget');
+assert.ok(tinted.dropScale < 1 && Math.abs(tinted.dropScale - base.dropScale) >= .05,
+  'the drop transient must shorten for a clear shade');
+const deepShade = music.waterMaterial(.5, 0, shade2);
+assert.ok(deepShade.dropScale > 1 && deepShade.dropScale <= 1.2, 'a deep shade lingers the drop within a safe bound');
 assert.ok(tinted.levelCompensation >= .9 && tinted.levelCompensation <= 1.1,
-  'a tinted shade must never leave the safe level range');
+  'a tinted shade must never leave the safe level range (stronger tint stays inside the budget)');
 
 console.log('pond-music: pitch currents, precision, water materials, drop/pearl/stone transients, space, held texture, reflection, and note shades verified');
 
