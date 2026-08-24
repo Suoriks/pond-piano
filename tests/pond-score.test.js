@@ -398,3 +398,68 @@ test('visibility fades in, holds and fades out; reduced motion lives longer', ()
   assert.ok(lateReduced > .5, 'reduced motion keeps the line readable longer');
   assert.equal(score.whisperVisibility({ ...hint, born: NaN }, 1200), 0, 'broken clock stays quiet');
 });
+
+// ---- The rehearsal double-tap (iteration 0048) ----------------------------
+
+function tastefulInk(born = 15000, deep = false) {
+  const started = born - 2000;
+  const mem = score.createMemory([
+    { x: deep ? .2 : .3, y: deep ? .7 : .5, at: started, pressure: .4 },
+    { x: .5, y: .5, at: started + 100, pressure: .4 },
+    { x: .7, y: .5, at: started + 200, pressure: .4 }
+  ], born);
+  return score.phraseInk(mem);
+}
+
+function calmDoubleTaps(now = 20000, secondGap = 320) {
+  return [
+    { at: now - secondGap, x: .34, y: .48, moved: 2 },
+    { at: now, x: .36, y: .5, moved: 1 }
+  ];
+}
+
+const freshInk = [tastefulInk(15000), tastefulInk(19000)]; // newest is the second
+
+test('two calm taps summon the newest readable phrase', () => {
+  const decision = score.rehearsalDecision(calmDoubleTaps(), freshInk, 20000);
+  assert.ok(decision, 'two quiet taps close in time and place make a rehearsal');
+  assert.equal(decision.line, freshInk[1], 'the newest readable line is the one rehearsed');
+});
+
+test('a single tap, a wide second tap or a past window summons nothing', () => {
+  assert.equal(score.rehearsalDecision([{ at: 20000, x: .36, y: .5, moved: 1 }], freshInk, 20000), null,
+    'one tap is not a double-tap');
+  assert.equal(score.rehearsalDecision(calmDoubleTaps(20000, 10), freshInk, 20000), null,
+    'a machine-gun pair is not a calm double-tap');
+  const farAway = calmDoubleTaps();
+  farAway[1].x = .6; farAway[1].y = .8;
+  assert.equal(score.rehearsalDecision(farAway, freshInk, 20000), null,
+    'taps too far apart are not one summon');
+  assert.equal(score.rehearsalDecision(calmDoubleTaps(20000, 2000), freshInk, 20000), null,
+    'a pair older than the window is a pair of separate notes');
+});
+
+test('motion-rich taps and absent or expired ink keep the surface silent', () => {
+  const slid = calmDoubleTaps();
+  slid[0].moved = 40;
+  assert.equal(score.rehearsalDecision(slid, freshInk, 20000), null,
+    'a dragged first tap is not a calm double-tap');
+  assert.equal(score.rehearsalDecision(calmDoubleTaps(), [], 20000), null, 'no ink, no summons');
+  assert.equal(score.rehearsalDecision(calmDoubleTaps(), [tastefulInk(20000 - 60000)], 20000), null,
+    'a long-expired line must not rehearse');
+});
+
+test('reduced motion re-reads the same ink as the same rehearsal', () => {
+  const quiet = score.rehearsalDecision(calmDoubleTaps(), freshInk, 20000, true);
+  assert.ok(quiet && quiet.line.born === 19000,
+    'reduced motion still picks the newest readable line for a quiet repeat');
+});
+
+test('broken inputs are safe', () => {
+  assert.equal(score.rehearsalDecision(null, freshInk, 20000), null, 'no tap history is safe');
+  assert.equal(score.rehearsalDecision([], freshInk, 20000), null, 'empty taps are safe');
+  assert.equal(score.rehearsalDecision(calmDoubleTaps(), freshInk, NaN), null, 'broken clock is safe');
+  const junk = calmDoubleTaps();
+  junk[0].x = NaN;
+  assert.equal(score.rehearsalDecision(junk, freshInk, 20000), null, 'a broken coordinate is safe');
+});

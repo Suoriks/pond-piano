@@ -262,9 +262,39 @@
   const LOOP_FIRST_DELAY_MS = 900;
   const LOOP_PASS_GAP_MS = 1500;
   const MAX_LOOP_PASSES = 6;
+  // Shared constants for the rehearsal double-tap: what the surface counts as
+  // a single calm tap far enough apart from a held chord or drag, how recent
+  // the rhythm must be, and how much history the pond keeps around.
+  const REHEARSAL_TAP_HOLD_MS = 260;
+  const REHEARSAL_TAP_MOVE = 7;
+  const REHEARSAL_WINDOW_MS = 1100;
+  const REHEARSAL_MAX_TAPS = 4;
 
-  // A poured phrase may quietly keep circling while its ink still holds:
-  // a bounded schedule of passes over the same anchors, each later pass
+  function rehearsalDecision(taps = [], ink = [], now = 0, reducedMotion = false, options = {}) {
+    const windowMs = Math.max(200, Math.min(2500, Number.isFinite(options.windowMs) ? options.windowMs : REHEARSAL_WINDOW_MS));
+    const calmMove = Math.max(2, Math.min(30, Number.isFinite(options.calmMove) ? options.calmMove : 9));
+    // taps are normalized to the surface (0..1), so the place spread is too
+    const spread = Math.max(0.05, Math.min(1, Number.isFinite(options.spread) ? options.spread : 0.3));
+    const minGap = Math.max(40, Math.min(600, Number.isFinite(options.minGap) ? options.minGap : 140));
+    if (!Array.isArray(taps) || !Array.isArray(ink) || !Number.isFinite(now)) return null;
+    const recent = taps
+      .filter(tap => tap && Number.isFinite(tap.at) && now - tap.at <= windowMs && now - tap.at >= 0)
+      .sort((a, b) => a.at - b.at);
+    if (recent.length !== 2) return null;
+    if (recent.some(tap => !Number.isFinite(tap.moved) || tap.moved > calmMove)) return null;
+    const [first, second] = recent;
+    if (second.at - first.at < minGap) return null;
+    if (!Number.isFinite(first.x) || !Number.isFinite(first.y) ||
+        !Number.isFinite(second.x) || !Number.isFinite(second.y)) return null;
+    if (Math.hypot(second.x - first.x, second.y - first.y) > spread) return null;
+    const line = pourableInk(ink, now, reducedMotion)
+      .filter(entry => inkVisibility(entry, now, reducedMotion) > .25)
+      .reduce((newest, entry) => newest === null || entry.born > newest.born ? entry : newest, null);
+    if (!line) return null;
+    return { line, at: second.at };
+  }
+
+
   // arriving wider apart (triangular spacing keeps the circulation
   // breathing instead of metronomic), that never outlives the line's
   // visibility. Broken input and expired lines produce no schedule.
@@ -546,6 +576,7 @@
     melodyAnchors, serializePhrase, restorePhrase,
     MAX_INK, INK_LIFE_MS, phraseInk, appendPhraseInk, inkLifeMs, inkVisibility, pourableInk,
     LOOP_FIRST_DELAY_MS, LOOP_PASS_GAP_MS, MAX_LOOP_PASSES, loopSchedule, loopProbe,
+    rehearsalDecision, REHEARSAL_TAP_HOLD_MS, REHEARSAL_TAP_MOVE, REHEARSAL_WINDOW_MS, REHEARSAL_MAX_TAPS,
     INVITE_BREATH_MS, INVITE_RING_MS, invitation,
     phraseScroll, phraseScrollText, parseScrollText, inkFromScroll, scrollSummary,
     whisperState, whisperHint, whisperVisibility,

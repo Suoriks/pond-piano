@@ -1,12 +1,12 @@
 {
   "project": "pond-piano",
-  "phase": "in-progress",
+  "phase": "done",
   "iteration": 48,
-  "status": "shore-lap-done",
-  "current_goal": "Iteration 0048 queue: next contained piece. 0047 (the shore lap) is fully verified and committed. Candidates from the shared device backlog stand; a natural next vertical slice could be a looping/rehearsal gesture that summons the last phrase back as a soft repeat, or the iOS/Android real-device listening/pixel pass. Choose one on the next slot when the window opens.",
-  "previous_goal": "Iteration 0046 done: the water whisper - whisperState/whisperHint/whisperVisibility in pond-score.js map real gesture facts to one earned short lesson once per session; offerWhisper/drawWhisper in pond.js render a calm dark plate on open water.",
-  "last_verified": "2026-08-24 (0047): 58 node tests pass (was 54, +4 shore-fold/shore-prediction); syntax 42 JS clean; JSON + git diff --check clean. Instrumented headless Chromium 390x844 live Web Audio: an earned lap near the bank fired (dataset.shoreLaps 1>0, proof the audio pool was live and the note truly played); then pearlVoices is 0 again (voice resigned the pool). Screenshot output/pond-piano/shore-lap-47.png: warm organic teal water with an amber returning fold at the shore, controls intact. Windows CI pending.",
-  "next_step": "shared backlog: real device pass on Android Chrome/PWA and iPhone Safari; now includes a listening check - does the lengthened departure of a held deep note feel like 'the note sank' rather than lag before the next touch.",
+  "status": "rehearsal-doubletap-done",
+  "current_goal": "Iteration 0048 done: a soft double-tap on open water summons the newest readable phrase back as a quiet repeated echo - the surface itself is the score, no diary needed. rehearsalDecision in pond-score.js decides honestly (bounded, silent when no line, reduced-motion aware); pond.js keeps a short tap history (REHEARSAL_TAP_HOLD_MS / REHEARSAL_TAP_MOVE gate), a calm double-tap on open water starts the pour loop of the newest readable ink line, and status names the return. Committed to git and pushed to main this slot; Windows CI to follow.",
+  "previous_goal": "Iteration 0047 done: the shore lap - predictShore/shoreFold in pond-waves.js map a ring reaching the near bank to one quiet lapping return; shoreLap note in pond-music.js is shorter, lower, quieter than a pearl; pond.js schedules and plays shore laps from addRipple with an amber fold at the shoreline and rate-limited.",
+  "last_verified": "2026-08-24 (0048): 63 node tests pass (was 58, +5 rehearsalDecision suites in pond-score.test.js); syntax all JS + scripts clean; JSON + git diff --check clean. Instrumented headless Chromium 390x844 live Web Audio: after a held note laid an ink line, two calm close taps set loopingLine=1 + rehearsalSummon=1 and loopPasses=1 (the newest phrase began circling and pouring); single/machine-gun/wide/slid taps stay silent (unit-tested). Screenshot output/pond-piano/rehearsal-48.png: warm organic teal water, a visible ink line, a warm amber circling mark at the loop, controls intact, no crop. Commit pushed to main; Windows CI pending.",
+  "next_step": "shared backlog: real device pass on Android Chrome/PWA and iPhone Safari; does the double-tap rehearsal read as an intentional summon rather than a miscount of two quick notes on real touch, and does its quiet repeated echo stay comfortable on live speakers.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -299,5 +299,24 @@
       "screenshot output/pond-piano/shore-lap-47.png direct-inspected: warm organic teal water with an amber returning fold at the shore, controls intact, no artifacts"
     ],
     "next_step": "shared device backlog continues; add a listening/viewing item for the shore lap - does a near-bank return read as a quiet wave answer rather than a second hit, and does it fire too often on a crowded real pond under live fingers"
+  },
+  "iteration_48": {
+    "started": "2026-08-24T21:30:00+03:00",
+    "finished": "2026-08-24T22:30:00+03:00",
+    "phase": "done",
+    "plan": [
+      "pure rehearsalDecision(taps, ink, now, reducedMotion, options) in pond-score.js: exactly two calm taps close in time and place summon the newest readable ink line; single/machine-gun/wide/slid taps and absent-or-expired ink stay silent",
+      "export shared REHEARSAL_TAP_HOLD_MS / REHEARSAL_TAP_MOVE / REHEARSAL_WINDOW_MS / REHEARSAL_MAX_TAPS; fix place-spread to normalized (0..1) units",
+      "pond.js: keep a short tap history; on a calm double-tap on open water call startPourLoop(newest line) so the phrase begins its quiet circling echo",
+      "rehearsal-smoke.js instrumented headless Chromium smoke + screenshot",
+      "verify node tests, syntax, JSON + git diff --check, then one commit and push to main; Windows CI to follow"
+    ],
+    "verified": [
+      "node tests: 63 pass (was 58, +5 rehearsalDecision suites)",
+      "syntax: 34 JS + scripts clean; JSON + git diff --check clean",
+      "instrumented headless Chromium 390x844 live Web Audio: after a held note laid an ink line, two calm close taps set dataset.loopingLine=1 + rehearsalSummon=1 and loopPasses=1 (the newest phrase began circling and pouring); no console errors",
+      "screenshot output/pond-piano/rehearsal-48.png direct-inspected: warm organic teal water, a visible ink line, a warm amber circling mark at the loop, controls intact, no crop"
+    ],
+    "next_step": "shared device backlog continues; does the double-tap rehearsal read as an intentional summon rather than a miscount of two quick notes on real touch, and does its quiet repeated echo stay comfortable on live speakers"
   }
 }

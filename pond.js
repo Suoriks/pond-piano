@@ -108,6 +108,11 @@
   if (invitationLine && pondHasPlayed) invitationLine.classList.add('is-gone');
   let collisionAnnounced = false, skipAnnounced = false, scoreEchoAnnounced = false, pourAnnounced = false;
   let phraseNoteIndex = 0;
+  // A soft double-tap on open water wakes the newest readable phrase as a
+  // quiet repeated echo. Pure touch history keeps recent taps (any kind), so
+  // the decision itself stays in the score layer.
+  let tapHistory = [];
+
   // The water whisper: earned gesture hints, one quiet line at a time.
   let whisper = score.whisperState();
   let whisperHint = null;
@@ -2162,6 +2167,21 @@
     pointers.delete(event.pointerId);
     canvas.dataset.eddyVoices = String([...pointers.values()].filter(pointer => pointer.eddy?.active).length);
     if (skipPlan) scheduleStoneSkips(skipPlan, now);
+    // A quick, calm press-release counts as a tap on the surface. Keep a
+    // short rhythm history so a soft double-tap can wake a phrase to circle.
+    const heldMsForTap = Math.max(0, now - active.born);
+    const movedForTap = active.movedDuringHold ?? 0;
+    if (!skipPlan && heldMsForTap <= score.REHEARSAL_TAP_HOLD_MS && movedForTap <= score.REHEARSAL_TAP_MOVE ) {
+      tapHistory.push({ at: now, x: active.x / Math.max(1, width), y: active.y / Math.max(1, height), moved: movedForTap });
+      const rehearsal = score.rehearsalDecision(tapHistory, phraseInk, now, reduced.matches);
+      if (rehearsal && rehearsal.line && loopingLine !== rehearsal.line) {
+        tapHistory = tapHistory.filter(tap => now - tap.at <= score.REHEARSAL_WINDOW_MS);
+        startPourLoop(rehearsal.line);
+        canvas.dataset.rehearsalSummon = '1';
+      }
+      tapHistory = tapHistory.slice(-score.REHEARSAL_MAX_TAPS);
+    }
+
     // A finished gesture may carry its earned lesson: the eddy it raised,
     // or a fast straight release that became a skipping stone.
     if (pondHasPlayed) {
