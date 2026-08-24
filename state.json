@@ -1,11 +1,11 @@
 {
   "project": "pond-piano",
-  "phase": "done",
-  "iteration": 45,
-  "status": "idle",
-  "current_goal": "Iteration 0045: the visible departure. Iteration 0044 taught the sound to leave the way it lived (hold+depth stretch the audio tail); this slot teaches the LIGHT the same story. New pure releaseGlint(depth, releaseSeconds, now, born, reducedMotion) in pond-waves.js: after a note ends, a soft pool of light sinks away at its place, drifting down and dimming along a life derived from the real waterRelease stretch (bounded, NaN-safe, reduced motion keeps a calm still glow with no sink). pond.js endVoice spawns it (voice remembers its last x/y), drawReleaseGlint renders it budget-aware, resize re-seats it.",
-  "previous_goal": "Iteration 0044 done: a note leaves the water the way it lived. waterRelease(holdMs, depth, baseSeconds) in pond-music.js grows the release tail with the note's real hold (smoothstep to 1.6s) and water depth (+0.18s), bounded by a 1.15s ceiling; endVoice() schedules the sustain trio + eddy stop at the stretched moment with a matching fade tau (releaseSeconds / 3.2). A quick tap keeps today's brisk material exit; a long-settled deep note sinks away on a longer warm tail.",
-  "last_verified": "2026-08-24 (0045): 51 node tests pass (incl 4 new releaseGlint asserts); syntax 39 JS clean; JSON + git diff --check clean. Instrumented headless Chromium 390x844 with live Web Audio: deep hold 1.65s -> lastRelease .707s, visible glint life ~950ms vs expected ~900ms from the waterRelease stretch; quick mid tap 642ms bounded shorter; releaseGlints counter returns to 0 after departure and stays; relative same-frame pixel probe spot +169 vs same-band control; no console errors. Screenshot output/pond-piano/departure-glint-45.png. Windows CI pending for the new commit.",
+  "phase": "in-progress",
+  "iteration": 47,
+  "status": "whisper-done",
+  "current_goal": "Iteration 0047 queue: next contained piece. 0046 (the water whisper) is fully verified and committed. Candidates from the shared device backlog stand; a natural next vertical slice could be a looping/rehearsal gesture that summons the last phrase back onto the water as a soft repeat, or the iOS/Android real-device listening pass. Choose one on the next slot when the window opens.",
+  "previous_goal": "Iteration 0045 done: the visible departure - releaseGlint(depth, releaseSeconds, now, born, reducedMotion) in pond-waves.js; after a note ends a soft pool of light sinks away at its place along the real waterRelease stretch; pond.js endVoice spawns it budget-aware.",
+  "last_verified": "2026-08-24 (0046): 54 node tests pass (incl 3 whisper asserts); syntax 41 JS clean; JSON + git diff --check clean. Instrumented headless Chromium 390x844 with live Web Audio: no whisper before first touch; 1.25s hold earned settle (alpha 0.606, status names it), plate changes its band beyond ambient drift; second settle silent (once per session); flick inside the pause earned but declined; after 16s pause a flick earns the stone lesson (alpha 0.875); reload resets whispers and keeps played-state; screenshot water-whisper-46.png. Windows CI pending for the new commit.",
   "next_step": "shared backlog: real device pass on Android Chrome/PWA and iPhone Safari; now includes a listening check - does the lengthened departure of a held deep note feel like 'the note sank' rather than lag before the next touch.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
@@ -258,5 +258,26 @@
       "no console/page errors"
     ],
     "next_step": "done; shared device-pass backlog now includes watching+listening: does the stretched departure of a held deep note feel like \"the note sank, light going with it\" rather than a pause before the next touch"
+  },
+  "iteration_46": {
+    "started": "2026-08-24T18:40:00+03:00",
+    "finished": "2026-08-24T20:15:00+03:00",
+    "phase": "done",
+    "plan": [
+      "add pure whisperState/whisperHint/whisperVisibility to pond-score.js mapping real gesture facts to one short lesson at a time",
+      "add whisper tests (once per session, honest pause, reduced-motion life, refuse broken inputs)",
+      "wire pond.js: offerWhisper only after first play, never while a hand/keyboard voice sounds, once per session, gather earned eddy/stone/settle at release",
+      "drawWhisper renders a calm dark plate on open water; dataset.whisperAlpha for instrumentation",
+      "index.html eyebrow 46, sw.js shell v43, README sentence",
+      "scripts/whisper-smoke.js instrumented headless Chromium smoke + screenshot",
+      "verify node tests, syntax, JSON + git diff --check, then one commit and push to main"
+    ],
+    "verified": [
+      "node tests: 54 pass (was 51, +3 whisper asserts)",
+      "syntax: 41 JS files clean; JSON + git diff --check clean",
+      "instrumented headless Chromium 390x844 live Web Audio: no whispers before first touch; 1.25s hold earns settle (alpha 0.606, status names it), plate moves its band beyond ambient drift (box -20.7 vs edge +0.9); second hold silent (once per session); flick in pause earned but declined; after 16s pause a fast straight flick earns the stone lesson (alpha 0.875, status names it); reload resets whispers and keeps played; no console errors",
+      "screenshot output/pond-piano/water-whisper-46.png direct-inspected: calm dark whisper plate on open water, organic composition, controls intact, no crop"
+    ],
+    "next_step": "shared device backlog continues; for the whisper add a live-listening item: does the one-line lesson read as a quiet whisper rather than copy, and is the 16s pause comfortable on a real device"
   }
 }

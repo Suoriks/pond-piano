@@ -1,4 +1,4 @@
-const CACHE = 'pond-piano-shell-v42';
+const CACHE = 'pond-piano-shell-v43';
 // Iteration 0045: the visible departure - the resting light of an ended
 // note sinks away along the same stretched tail its sound uses.
 const SHELL = [

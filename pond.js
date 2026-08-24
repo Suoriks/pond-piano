@@ -93,6 +93,7 @@
   let tuningFamily = loadTuningFamily();
   let echoSerial = 0;
   let rippleSerial = 0;
+  let earnedEddyHint = false;
   let collisionSerial = 0;
   let skipSerial = 0;
   let lastCollisionAt = -Infinity;
@@ -104,6 +105,9 @@
   if (invitationLine && pondHasPlayed) invitationLine.classList.add('is-gone');
   let collisionAnnounced = false, skipAnnounced = false, scoreEchoAnnounced = false, pourAnnounced = false;
   let phraseNoteIndex = 0;
+  // The water whisper: earned gesture hints, one quiet line at a time.
+  let whisper = score.whisperState();
+  let whisperHint = null;
 
   function pitchAt(x) {
     return music.frequencyAt(x / Math.max(1, width));
@@ -1462,6 +1466,65 @@
     try { localStorage.setItem(INVITATION_STORAGE_KEY, 'played'); } catch {}
   }
 
+  // The water whisper offers one short lesson after a real gesture earns it.
+  // It stays strictly a listener's companion: never while a hand or the
+  // keyboard voice is still down, once per session per gesture, and only
+  // when the pond has been played at least once (the first visit belongs
+  // to the invitation).
+  function offerWhisper(events, now) {
+    if (!pondHasPlayed) return;
+    const soundingPointers = [...pointers.values()].some(pointer => pointer.sounding);
+    if (soundingPointers || keyboard.sounding || whisperHint) return;
+    const hint = score.whisperHint(whisper, events, now);
+    if (!hint) return;
+    whisperHint = hint;
+    status.textContent = hint.text;
+  }
+
+  function drawWhisper(now) {
+    if (!whisperHint) { canvas.dataset.whisperAlpha = '0'; return; }
+    const alpha = score.whisperVisibility(whisperHint, now, reduced.matches);
+    canvas.dataset.whisperAlpha = alpha.toFixed(3);
+    if (alpha <= 0 && now > whisperHint.born) {
+      whisperHint = null;
+      return;
+    }
+    if (alpha <= 0) return;
+    const text = whisperHint.text;
+    const texts = Object.values(score.WHISPER_TEXTS);
+    ctx.save();
+    ctx.font = '500 13px ui-monospace, monospace';
+    ctx.textAlign = 'center';
+    const widest = Math.ceil(texts.reduce((max, line) => Math.max(max, ctx.measureText(line).width), 0));
+    const boxWidth = Math.min(width * .86, widest + 34);
+    const boxHeight = 40;
+    const cx = width / 2, cy = height * .16;
+    const radius = 14;
+    ctx.globalAlpha = alpha * .78;
+    ctx.fillStyle = '#04100e';
+    ctx.strokeStyle = 'rgba(190, 214, 182, .30)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    if (ctx.roundRect) {
+      ctx.roundRect(cx - boxWidth / 2, cy - boxHeight / 2, boxWidth, boxHeight, radius);
+    } else {
+      ctx.moveTo(cx - boxWidth / 2 + radius, cy - boxHeight / 2);
+      ctx.arcTo(cx + boxWidth / 2, cy - boxHeight / 2, cx + boxWidth / 2, cy + boxHeight / 2, radius);
+      ctx.arcTo(cx + boxWidth / 2, cy + boxHeight / 2, cx - boxWidth / 2, cy + boxHeight / 2, radius);
+      ctx.arcTo(cx - boxWidth / 2, cy + boxHeight / 2, cx - boxWidth / 2, cy - boxHeight / 2, radius);
+      ctx.arcTo(cx - boxWidth / 2, cy - boxHeight / 2, cx + boxWidth / 2, cy - boxHeight / 2, radius);
+      ctx.closePath();
+    }
+    ctx.fill();
+    ctx.globalAlpha = alpha;
+    ctx.stroke();
+    ctx.fillStyle = '#dcead8';
+    ctx.shadowColor = '#00100d';
+    ctx.shadowBlur = 10;
+    ctx.fillText(text, cx, cy + 4);
+    ctx.restore();
+  }
+
   function drawInvitation(now) {
     if (!width || !height) return;
     if (pondHasPlayed) { canvas.dataset.inviteAlpha = '0'; return; }
@@ -1863,7 +1926,7 @@
       pitchX: p.x / Math.max(1, width), mapping: null, precisionActive: false, precisionAmount: 0, precisionOriginX: null,
       currentAnnounced: false, sampledX: p.x, sampledY: p.y, sampledAt: now,
       eddy: null, eddyVisual: null, eddyPitchX: null, eddyDepthY: null,
-      distanceTraveled: 0, resonanceX: p.x, resonanceY: p.y, resonatedMemories: new Set(),
+      distanceTraveled: 0, movedDuringHold: 0, resonanceX: p.x, resonanceY: p.y, resonatedMemories: new Set(),
       scoreSamples: sounding ? [{ x: p.x / Math.max(1, width), y: p.y / Math.max(1, height), pitch: p.x / Math.max(1, width), at: now, pressure: attack }] : []
     });
     addRipple(p.x, p.y, attack);
@@ -1899,6 +1962,7 @@
         const heldBeforeMovement = Math.max(0, now - active.lastMotion);
         const previousRawX = active.x / Math.max(1, width);
         active.distanceTraveled += moved;
+        active.movedDuringHold += moved;
         const elapsed = Math.max(8, now - active.movedAt);
         active.motionSpeed = music.movementSpeed(moved, elapsed, Math.max(1, Math.min(width, height)));
         const brushDistance = Math.hypot(p.x - active.originX, p.y - active.originY);
@@ -1928,6 +1992,8 @@
           active.eddyDepthY = active.eddy.centerY;
           addRipple(active.eddy.centerX, active.eddy.centerY, active.pressure, .48,
             active.mapping?.frequency ?? pitchAt(active.eddy.centerX));
+          // A real circle raised a real eddy: its whisper may follow later.
+          earnedEddyHint = true;
           if (!eddyAnnounced) {
             status.textContent = 'Малый круг поднял водоворот; звук мягко дрожит, широкий взмах сразу его распустит';
             eddyAnnounced = true;
@@ -2018,6 +2084,19 @@
     pointers.delete(event.pointerId);
     canvas.dataset.eddyVoices = String([...pointers.values()].filter(pointer => pointer.eddy?.active).length);
     if (skipPlan) scheduleStoneSkips(skipPlan, now);
+    // A finished gesture may carry its earned lesson: the eddy it raised,
+    // or a fast straight release that became a skipping stone.
+    if (pondHasPlayed) {
+      const events = [];
+      if (earnedEddyHint) { events.push({ kind: 'eddy', happened: true }); earnedEddyHint = false; }
+      if (skipPlan) events.push({ kind: 'stone', happened: true });
+      const heldMs = Math.max(0, now - active.born);
+      if (!skipPlan && heldMs >= score.WHISPER_HOLD_MS && active.movedDuringHold < 8) {
+        events.push({ kind: 'settle', happened: true });
+      }
+      // Born exactly at release time so the very next frame can draw it.
+      if (events.length) offerWhisper(events, now);
+    }
   }
 
   function keyboardPoint() { return { x: keyboard.x * width, y: keyboard.y * height }; }
@@ -2093,8 +2172,12 @@
       event.preventDefault();
       const p = keyboardPoint(), now = performance.now();
       rememberContact(keyboard, p.x, p.y, now, .48);
+      const heldMs = Math.max(0, now - keyboard.born), moved = keyboard.distanceTraveled;
       keyboard.sounding = false; endVoice('keyboard');
       addRipple(p.x, p.y, .48, .55, keyboard.mapping?.frequency ?? pitchAt(p.x));
+      // The keyboard voice earns the settle lesson by the same measure as
+      // a held touch: a long quiet stay before its first movement.
+      if (heldMs >= score.WHISPER_HOLD_MS && moved < 8) offerWhisper([{ kind: 'settle', happened: true }], now);
     }
   });
   canvas.addEventListener('blur', () => {
@@ -2715,6 +2798,7 @@
     drawTide(now);
     drawMotes(now);
     drawInvitation(now);
+    drawWhisper(now);
     memories = memories.filter(memory => now >= memory.born && now < memory.born + score.lifeMs(reduced.matches));
     phraseInk = phraseInk.filter(line => now >= line.born && now < line.born + score.inkLifeMs(reduced.matches));
     // The stone counts readable lines: their number also changes when ink

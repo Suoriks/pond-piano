@@ -452,6 +452,63 @@
     });
   }
 
+  // ---- The water whisper -------------------------------------------------
+  // After the first invitation is gone, the pond still knows gestures the
+  // surface never names: a long hold settles into precision, a small circle
+  // raises an eddy, a fast straight release sends a skipping stone. A new
+  // player deserves to meet them, so each real gesture may leave one short,
+  // quiet hint on the water - once per session per gesture, never while a
+  // hand is still down, and never two whispers at once.
+
+  const WHISPER_HOLD_MS = 900;
+  const WHISPER_PAUSE_MS = 16000;
+  const WHISPER_LIFE_MS = 6200;
+  const WHISPER_REDUCED_LIFE_MS = 9800;
+  const WHISPER_MAX_SHOWN = 3;
+  const WHISPER_KEYS = ['settle', 'eddy', 'stone'];
+  const WHISPER_TEXTS = Object.freeze({
+    settle: 'Задержите касание — вода подскажет высоту точнее',
+    eddy: 'Обведите малый круг — родится тихий водоворот',
+    stone: 'Быстрый прямой взмах отпускает камешек'
+  });
+
+  function whisperState() {
+    return {
+      shown: { settle: false, eddy: false, stone: false },
+      lastShownAt: -Infinity
+    };
+  }
+
+  function whisperHint(state, events, now = 0) {
+    if (!state || typeof state !== 'object' || !state.shown) return null;
+    const list = (Array.isArray(events) ? events : []).filter(Boolean);
+    for (const event of list) {
+      if (!event || !WHISPER_KEYS.includes(event.kind)) continue;
+      if (event.happened === false || state.shown[event.kind]) continue;
+      if (!(now - state.lastShownAt >= WHISPER_PAUSE_MS)) return null;
+      state.shown[event.kind] = true;
+      state.lastShownAt = now;
+      return {
+        kind: event.kind,
+        text: WHISPER_TEXTS[event.kind],
+        born: Number.isFinite(now) ? now : 0,
+        lifeMs: WHISPER_LIFE_MS,
+        reducedLifeMs: WHISPER_REDUCED_LIFE_MS
+      };
+    }
+    return null;
+  }
+
+  function whisperVisibility(hint, now = 0, reduced = false) {
+    if (!hint || !Number.isFinite(now) || now < hint.born) return 0;
+    const lifeMs = reduced ? hint.reducedLifeMs : hint.lifeMs;
+    const age = now - hint.born;
+    if (age >= lifeMs) return 0;
+    const fadeIn = smoothstep(0, 700, age);
+    const fadeOut = 1 - smoothstep(lifeMs * .62, lifeMs, age);
+    return Math.max(0, Math.min(1, Math.min(fadeIn, fadeOut)));
+  }
+
   function restorePhrase(serialized, nowPerf, nowEpoch) {
     const stamped = Number.isFinite(nowPerf) ? nowPerf : 0;
     const epoch = Number.isFinite(nowEpoch) ? nowEpoch : 0;
@@ -490,6 +547,8 @@
     MAX_INK, INK_LIFE_MS, phraseInk, appendPhraseInk, inkLifeMs, inkVisibility, pourableInk,
     LOOP_FIRST_DELAY_MS, LOOP_PASS_GAP_MS, MAX_LOOP_PASSES, loopSchedule, loopProbe,
     INVITE_BREATH_MS, INVITE_RING_MS, invitation,
-    phraseScroll, phraseScrollText, parseScrollText, inkFromScroll, scrollSummary
+    phraseScroll, phraseScrollText, parseScrollText, inkFromScroll, scrollSummary,
+    whisperState, whisperHint, whisperVisibility,
+    WHISPER_HOLD_MS, WHISPER_PAUSE_MS, WHISPER_LIFE_MS, WHISPER_REDUCED_LIFE_MS, WHISPER_MAX_SHOWN, WHISPER_TEXTS
   });
 });

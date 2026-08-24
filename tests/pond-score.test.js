@@ -1,6 +1,7 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const test = require('node:test');
 const score = require('../pond-score.js');
 
 const samples = Array.from({ length: 80 }, (_, index) => ({
@@ -343,3 +344,57 @@ console.log('pond-score: bounded paths, fading, motifs, playable path crossings,
   const wild = score.scrollSummary({ ...fresh, durationMs: 999999 });
   assert.ok(wild.durationMs <= 8000, 'a wild duration is calmed for the reader');
 }
+
+// ---- The water whisper (iteration 0046) ------------------------------------
+
+test('a real long hold whispers the settle hint once, then never again', () => {
+  const state = score.whisperState();
+  const hint = score.whisperHint(state, [{ kind: 'settle', happened: true }], 12000);
+  assert.ok(hint, 'the first earned hold earns its whisper');
+  assert.equal(hint.kind, 'settle');
+  assert.ok(hint.text.includes('Задержите'), 'the hint speaks plainly about the gesture');
+  assert.equal(hint.born, 12000);
+  assert.ok(hint.lifeMs > 0 && hint.reducedLifeMs >= hint.lifeMs, 'reduced motion rests longer, not shorter');
+  for (const now of [13000, 20000, 40000]) {
+    assert.equal(score.whisperHint(state, [{ kind: 'settle', happened: true }], now), null,
+      'one gesture whispers once per session');
+  }
+});
+
+test('hints queue honestly and respect the calm pause between whispers', () => {
+  const state = score.whisperState();
+  const first = score.whisperHint(state, [{ kind: 'eddy', happened: true }, { kind: 'stone', happened: true }], 5000);
+  assert.equal(first.kind, 'eddy', 'the earliest earned gesture speaks first');
+  assert.equal(score.whisperHint(state, [{ kind: 'stone', happened: true }], first.born + 1000), null,
+    'no second whisper while the first still breathes');
+  assert.equal(score.whisperHint(state, [{ kind: 'stone', happened: true }], first.born + score.WHISPER_PAUSE_MS - 1), null,
+    'the pause is honest to the last millisecond before it');
+  const second = score.whisperHint(state, [{ kind: 'stone', happened: true }], first.born + score.WHISPER_PAUSE_MS);
+  assert.equal(second.kind, 'stone', 'after the pause the next earned gesture may speak');
+});
+
+test('an event that did not truly happen stays silent; junk input is safe', () => {
+  const state = score.whisperState();
+  assert.equal(score.whisperHint(state, [{ kind: 'settle', happened: false }], 1000), null,
+    'a short tap must not pretend to be a settle');
+  assert.equal(score.whisperHint(state, [null, { kind: 'vibrato' }, {}, 42], 2000), null,
+    'unknown kinds pass without marking anything shown');
+  assert.deepEqual(state.shown, { settle: false, eddy: false, stone: false });
+  assert.equal(score.whisperHint(null, [{ kind: 'settle' }], 3000), null);
+  assert.equal(score.whisperHint(undefined, [], 3000), null);
+});
+
+test('visibility fades in, holds and fades out; reduced motion lives longer', () => {
+  const state = score.whisperState();
+  const hint = score.whisperHint(state, [{ kind: 'stone', happened: true }], 1000);
+  assert.equal(score.whisperVisibility(null, 1100), 0);
+  assert.equal(score.whisperVisibility(hint, 900), 0, 'nothing before birth');
+  assert.ok(score.whisperVisibility(hint, 1150) > 0 && score.whisperVisibility(hint, 1150) < .2, 'gentle fade-in');
+  assert.equal(score.whisperVisibility(hint, 1000 + hint.lifeMs * .4), 1, 'fully readable mid-life');
+  const nearEnd = score.whisperVisibility(hint, 1000 + hint.lifeMs * .95);
+  assert.ok(nearEnd > 0 && nearEnd < .3, 'fades out instead of vanishing mid-word');
+  assert.equal(score.whisperVisibility(hint, 1000 + hint.lifeMs + 10), 0, 'strict end');
+  const lateReduced = score.whisperVisibility(hint, 1000 + hint.lifeMs + 600, true);
+  assert.ok(lateReduced > .5, 'reduced motion keeps the line readable longer');
+  assert.equal(score.whisperVisibility({ ...hint, born: NaN }, 1200), 0, 'broken clock stays quiet');
+});
