@@ -1,7 +1,6 @@
-const CACHE = 'pond-piano-shell-v41';
-// Iteration 0044: a note leaves the water the way it lived - a quick tap
-// departs with the brisk material exit, while a long-settled deep note
-// sinks away on a longer warm tail instead of one flat constant.
+const CACHE = 'pond-piano-shell-v42';
+// Iteration 0045: the visible departure - the resting light of an ended
+// note sinks away along the same stretched tail its sound uses.
 const SHELL = [
   './',
   './index.html',

@@ -61,6 +61,9 @@
   // `pointers` is `let`: a resize re-seats live contacts into a fresh Map
   // via the repose layer, so every closure keeps reading the current one.
   const ripples = [], trails = [], splashes = [], scoreEchoes = [], collisionPearls = [], collisionGlints = [], stoneFlights = [];
+  // The visible departure: resting lights of ended notes sinking away.
+  const releaseGlints = [];
+  const RELEASE_GLINT_MAX = 12;
   let pointers = new Map();
   const coronas = [], pourEchoes = [], pouredInk = [];
   let motes = caustic.createMotes(caustic.DEFAULT_COUNT, 7);
@@ -567,6 +570,9 @@
     if (voice.reflectionSend) {
       voice.reflectionSend.gain.setTargetAtTime(music.depthReflection(depth.normalizedDepth).sendGain, now, .08);
     }
+    // The departure needs the water's real place: remember where the note
+    // last rested so its light can sink away from exactly there.
+    voice.lastX = x; voice.lastY = y; voice.lastDepth = depth.normalizedDepth;
     voice.materialBias = material.brushBias;
     voice.materialDepth = material.effectiveDepth;
     voice.materialLevel = material.levelCompensation;
@@ -622,6 +628,18 @@
     const releaseSeconds = music.waterRelease(holdMs, voice.materialDepth, voice.releaseSeconds);
     const fadeTau = releaseSeconds / 3.2;
     canvas.dataset.lastRelease = releaseSeconds.toFixed(3);
+    // The visible departure: the resting light of the note sinks away along
+    // the same stretched tail the sound uses, from the water's real place.
+    if (Number.isFinite(voice.lastX) && Number.isFinite(voice.lastY)) {
+      releaseGlints.push({
+        x: voice.lastX,
+        y: voice.lastY,
+        born: performance.now(),
+        depth: Number.isFinite(voice.lastDepth) ? voice.lastDepth : voice.materialDepth,
+        releaseSeconds
+      });
+      if (releaseGlints.length > RELEASE_GLINT_MAX) releaseGlints.shift();
+    }
     voice.gain.gain.cancelScheduledValues(now);
     voice.gain.gain.setTargetAtTime(.0001, now, fadeTau);
     voice.oscillator.stop(now + releaseSeconds); voice.overtone.stop(now + releaseSeconds); voice.undertow.stop(now + releaseSeconds);
@@ -1414,6 +1432,9 @@
       collisionPearls.length = 0; collisionPearls.push(...movedPearls);
       const movedGlints = repose.reposePoints(collisionGlints, from, to);
       collisionGlints.length = 0; collisionGlints.push(...movedGlints);
+      // The departing lights keep their place on the new water too.
+      const movedReleases = repose.reposePoints(releaseGlints, from, to);
+      releaseGlints.length = 0; releaseGlints.push(...movedReleases);
       const movedFlights = repose.reposeFlights(stoneFlights, from, to);
       stoneFlights.length = 0; stoneFlights.push(...movedFlights);
       pointers = repose.reposePointers(pointers, from, to);
@@ -1423,6 +1444,7 @@
       ripples.length = 0; trails.length = 0; splashes.length = 0;
       coronas.length = 0; collisionPearls.length = 0;
       collisionGlints.length = 0; stoneFlights.length = 0; pointers.clear();
+      releaseGlints.length = 0;
     }
     // Wave appointments were predicted against the old geometry: dissolve
     // them cleanly instead of answering at a place the new water never saw.
@@ -2298,6 +2320,30 @@
     return flare.progress < 1;
   }
 
+  // The visible departure of a note (iteration 0045): a soft pool of light
+  // resting where the voice last sounded, sinking gently downward and
+  // dimming along the same stretched tail the audio uses. Budget-aware like
+  // the collision flare; reduced motion keeps a calm still glow with no
+  // sink. Pure timing/colour comes from pond-waves.
+  function drawReleaseGlint(glint, now) {
+    const tideGate = budget.style(waterBudget, 'ink');
+    if (tideGate <= 0.02) return true; // keep the lifetime ticking, stay quiet
+    const pool = waves.releaseGlint(glint.depth, glint.releaseSeconds, now, glint.born, reduced.matches);
+    if (pool.alpha <= 0 || pool.radius <= 0) return pool.progress < 1;
+    const pxRadius = pool.radius * Math.max(22, Math.min(38, Math.min(width, height) * .06));
+    const hue = 152 + 30 * (1 - glint.y / Math.max(1, height));
+    const light = pool.alpha;
+    const sinkPx = pool.sink * Math.max(10, Math.min(34, height * .04));
+    const y = glint.y + sinkPx;
+    const glow = ctx.createRadialGradient(glint.x, y, 0, glint.x, y, pxRadius * 2.2);
+    glow.addColorStop(0, `hsla(${hue + 14 + 26 * (pool.warmth - .72)} 74% 86% / ${light * .8})`);
+    glow.addColorStop(.45, `hsla(${hue + 20 * (pool.warmth - .72)} 68% 76% / ${light * .3})`);
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(glint.x, y, pxRadius * 2.2, 0, Math.PI * 2); ctx.fill();
+    return pool.progress < 1;
+  }
+
   function drawCorona(corona, now) {
     const { x, y, spray } = corona;
     const age = Math.max(0, (now - corona.born) / 1000);
@@ -2708,6 +2754,9 @@
       if (!drawCollisionPearl(collisionPearls[i], now)) collisionPearls.splice(i, 1);
     }
     for (const pointer of pointers.values()) drawEddy(pointer, now);
+    // Instrumentation: how many departing lights are alive right now.
+    canvas.dataset.releaseGlints = String(releaseGlints.length);
+    for (let i = releaseGlints.length - 1; i >= 0; i--) if (!drawReleaseGlint(releaseGlints[i], now)) releaseGlints.splice(i, 1);
     for (const pointer of pointers.values()) drawContact(pointer, now);
     if (keyboardVisual) drawContact(keyboardVisual, now);
     // The water frame budget: record the observed render cost, then let the

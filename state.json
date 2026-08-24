@@ -1,12 +1,12 @@
 {
   "project": "pond-piano",
   "phase": "done",
-  "iteration": 44,
-  "status": "active",
-  "current_goal": "Iteration 0044 done: a note leaves the water the way it lived. waterRelease(holdMs, depth, baseSeconds) in pond-music.js grows the release tail with the note's real hold (smoothstep to 1.6s) and water depth (+0.18s), bounded by a 1.15s ceiling; endVoice() schedules the sustain trio + eddy stop at the stretched moment with a matching fade tau (releaseSeconds / 3.2). A quick tap keeps today's brisk material exit; a long-settled deep note sinks away on a longer warm tail.",
-  "previous_goal": "Iteration 0042 done: a phrase that left the pond can come home. The diary gains a return stone in the panel: it reads a pasted scroll back from the clipboard, re-seats it as fresh ink with a new birth, and lays it back on the water where it ages and dissolves like any other. Pure parseScrollText/inkFromScroll layer in pond-score.js with round-trip tests; no network, no audio engine, no DOM.",
-  "last_verified": "2026-08-24 (0043): 47 node tests pass across suites (incl new scrollSummary asserts); syntax 37 JS clean; JSON + git diff --check clean. Instrumented headless Chromium 390x844: take shows a real leaf ('Фраза: контур из 22 точек / высота 64 · глубина 49 · ход 1.1 с · течение dawn'), Tab travels leaf<->return stone, leaf click seats the phrase back (inkLines 1->2, status announces it), clipboard path still works beside it (2->3); no console errors. Screenshots output/pond-piano/shore-leaf-open-43.png + shore-leaf-43.png; pixel probe confirms the light paper band over dark water (61/75/62 vs 23/60/58); vision model unavailable (limit). Windows CI run 32667988930 green (2m08s), artifact Pond-Piano-0.1.0-Windows-x64-1dcf8d0.",
-  "next_step": "shared backlog: real device pass on Android Chrome/PWA and iPhone Safari; now includes leaf readability and touch target on a live screen plus leaf behavior through device rotation.",
+  "iteration": 45,
+  "status": "idle",
+  "current_goal": "Iteration 0045: the visible departure. Iteration 0044 taught the sound to leave the way it lived (hold+depth stretch the audio tail); this slot teaches the LIGHT the same story. New pure releaseGlint(depth, releaseSeconds, now, born, reducedMotion) in pond-waves.js: after a note ends, a soft pool of light sinks away at its place, drifting down and dimming along a life derived from the real waterRelease stretch (bounded, NaN-safe, reduced motion keeps a calm still glow with no sink). pond.js endVoice spawns it (voice remembers its last x/y), drawReleaseGlint renders it budget-aware, resize re-seats it.",
+  "previous_goal": "Iteration 0044 done: a note leaves the water the way it lived. waterRelease(holdMs, depth, baseSeconds) in pond-music.js grows the release tail with the note's real hold (smoothstep to 1.6s) and water depth (+0.18s), bounded by a 1.15s ceiling; endVoice() schedules the sustain trio + eddy stop at the stretched moment with a matching fade tau (releaseSeconds / 3.2). A quick tap keeps today's brisk material exit; a long-settled deep note sinks away on a longer warm tail.",
+  "last_verified": "2026-08-24 (0045): 51 node tests pass (incl 4 new releaseGlint asserts); syntax 39 JS clean; JSON + git diff --check clean. Instrumented headless Chromium 390x844 with live Web Audio: deep hold 1.65s -> lastRelease .707s, visible glint life ~950ms vs expected ~900ms from the waterRelease stretch; quick mid tap 642ms bounded shorter; releaseGlints counter returns to 0 after departure and stays; relative same-frame pixel probe spot +169 vs same-band control; no console errors. Screenshot output/pond-piano/departure-glint-45.png. Windows CI pending for the new commit.",
+  "next_step": "shared backlog: real device pass on Android Chrome/PWA and iPhone Safari; now includes a listening check - does the lengthened departure of a held deep note feel like 'the note sank' rather than lag before the next touch.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -52,8 +52,6 @@
   "git_sync": "synced_public_github",
   "git_remote": "https://github.com/Suoriks/pond-piano.git",
   "git_branch": "main",
-  "last_verified": "2026-08-24 (0044): 47 node tests pass across suites (incl 11 new waterRelease asserts); syntax 38 JS clean; JSON + git diff --check clean. Instrumented headless Chromium 390x844 with live Web Audio, two gesture pairs at the same spots: mid-water tap .502s -> 1.65s hold .590s, deep tap .578s -> .722s; scheduled stops follow exactly (stop span = gesture time + tail: 0.64/2.28 mid, 0.73/2.43 deep); all nine smoke checks green (scripts/release-smoke.js), no console errors. Screenshot output/pond-piano/water-release-44.png pixel probe: center 163.8 vs shore background 47.2, 23 light patches of tide/ripple; vision model unavailable (limit). Windows CI run 32671339754 green for 277f0ba.",
-  "next_step": "shared backlog: real device pass on Android Chrome/PWA and iPhone Safari; now includes a listening check - does the lengthened departure of a held deep note feel like 'the note sank' rather than lag before the next touch.",
   "iteration_40": {
     "started": "2026-08-23T21:50:00+03:00",
     "finished": "2026-08-23T22:25:00+03:00",
@@ -238,5 +236,27 @@
       "screenshot output/pond-piano/water-release-44.png; pixel probe center 163.8 vs shore 47.2, 23 bright patches; vision model unavailable (limit)"
     ],
     "next_step": "done; device-pass backlog now includes whether the stretched deep-note departure feels like sinking, not lag"
+  },
+  "iteration_45": {
+    "started": "2026-08-24T02:20:00+03:00",
+    "phase": "done",
+    "plan": [
+      "pure releaseGlint(depth, releaseSeconds, now, born, reducedMotion) in pond-waves.js: life from the stretched release (bounded min/max), sink progress, warmth by depth, broken-input safe",
+      "tests/pond-waves.test.js: tap keeps short visible life, hold/deep lives longer and bounded, sink grows with progress and reduced motion cancels it, broken clocks bounded, strict end",
+      "pond.js: voices remember last x/y; endVoice pushes releaseGlints (cap 12); drawReleaseGlint budget-gated like collision glint; resize repose + fallback drop; dataset.releaseGlints live counter",
+      "departure-glint-smoke.js instrumented probe: held-deep glint visible life follows waterRelease stretch (950ms vs ~900ms), quick tap shorter+bounded (642ms), counter returns to 0 and stays, relative same-frame pixel delta +169",
+      "sw.js shell v42, eyebrow 45, README sentence about the light departing with the sound",
+      "verify: node suites (51), syntax (39 JS), JSON + git diff --check, instrumented headless Chromium smoke + screenshot",
+      "KAIZEN 0045, state final, one commit, push main, watch Windows CI"
+    ],
+    "finished": "2026-08-24T11:20:00+03:00",
+    "verified": [
+      "node tests: 51 pass (incl 4 new releaseGlint asserts: life follows the stretched tail, dims/sinks monotonically, strict end + broken-clock safety, reduced motion rests instead of sinking)",
+      "syntax: 39 JS files clean; JSON validity + git diff --check clean",
+      "instrumented headless Chromium 390x844 live-audio smoke green: deep hold 1.65s -> lastRelease .707s, glint visible life ~950ms vs expected ~900ms (measured rAF-to-rAF from mouse.up), quick mid tap 642ms (shorter and bounded), dataset.releaseGlints returns to 0 after departure and stays 0",
+      "relative same-frame pixel probe: glint spot +169 vs same-band control point; screenshot output/pond-piano/departure-glint-45.png",
+      "no console/page errors"
+    ],
+    "next_step": "done; shared device-pass backlog now includes watching+listening: does the stretched departure of a held deep note feel like \"the note sank, light going with it\" rather than a pause before the next touch"
   }
 }

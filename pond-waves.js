@@ -46,6 +46,8 @@
   }
 
   const GLINT_LIFE_MS = 760;
+  const RELEASE_LIFE_MIN_S = .45;
+  const RELEASE_LIFE_MAX_S = 1.9;
 
   // A wave meeting answers with one quiet pearl *and a local glint on the
   // water itself*: a bounded soft radial flare at the collision node. Pure
@@ -75,6 +77,48 @@
       radius: spread,
       alpha: reducedMotion ? fade * .8 : fade,
       warmth: .72 + depthValue * .5  // shallow stays herbal, deep folds amber
+    });
+  }
+
+  // The visible departure: after a note ends, its resting light sinks away
+  // along the same stretched tail the sound uses (iteration 0044 taught the
+  // ear; this teaches the eye). Life derives from the real waterRelease
+  // seconds plus the water depth, stays bounded, and the pool drifts
+  // downward as it dims. Reduced motion keeps a calm still glow with no
+  // sink. Broken clocks and junk inputs stay bounded.
+  function releaseLifeSeconds(depth = .5, releaseSeconds = .55) {
+    const depthValue = clamp(Number.isFinite(depth) ? depth : .5);
+    const base = Number.isFinite(releaseSeconds) && releaseSeconds > 0 ? releaseSeconds : .55;
+    return Math.min(RELEASE_LIFE_MAX_S, Math.max(RELEASE_LIFE_MIN_S, base * (1 + depthValue * .35)));
+  }
+
+  function releaseGlint(depth = .5, releaseSeconds = .55, now = 0, born = 0, reducedMotion = false) {
+    const life = Math.round(releaseLifeSeconds(depth, releaseSeconds) * 1000);
+    const depthValue = clamp(Number.isFinite(depth) ? depth : .5);
+    const at = Number.isFinite(now) ? now : 0;
+    const start = Number.isFinite(born) ? born : at;
+    const warmth = .72 + depthValue * .5; // shallow herbal, deep folds amber
+    if (at < start) {
+      // Not yet departed: the water has not answered.
+      return Object.freeze({ age: 0, life, progress: 0, fade: 0, sink: 0, radius: 0, alpha: 0, warmth });
+    }
+    const age = Math.min(at - start, life);
+    if (age >= life) {
+      return Object.freeze({ age: life, life, progress: 1, fade: 0, sink: 0, radius: 0, alpha: 0, warmth });
+    }
+    const progress = age / life;
+    const fade = Math.pow(1 - progress, 1.5) * (.5 + depthValue * .38);
+    // Settle first, then descend: smoothstep keeps the very start calm.
+    const eased = progress * progress * (3 - 2 * progress);
+    return Object.freeze({
+      age,
+      life,
+      progress,
+      fade,
+      sink: reducedMotion ? 0 : eased,
+      radius: reducedMotion ? .42 : .42 + progress * .3,
+      alpha: reducedMotion ? fade * .85 : fade,
+      warmth
     });
   }
 
@@ -132,6 +176,10 @@
     radiusAt,
     speed,
     GLINT_LIFE_MS,
-    collisionGlint
+    collisionGlint,
+    RELEASE_LIFE_MIN_S,
+    RELEASE_LIFE_MAX_S,
+    releaseLifeSeconds,
+    releaseGlint
   });
 });

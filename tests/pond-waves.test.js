@@ -88,3 +88,52 @@ test('reduced motion keeps a calm still glow with no expansion', () => {
   assert.ok(calm.alpha < lively.alpha, 'reduced motion keeps the glow quieter');
   assert.ok(calm.fade > 0 && calm.alpha > 0, 'but the answer still shows on the water');
 });
+
+test('release glint lives exactly as long as the note\'s stretched departure', () => {
+  const tap = waves.releaseGlint(0, .5, 150, 0);
+  assert.equal(tap.life, Math.round(waves.releaseLifeSeconds(0, .5) * 1000));
+  assert.ok(tap.progress > 0 && tap.progress < 1);
+  assert.equal(tap.alpha, tap.fade);
+  assert.ok(tap.fade > 0);
+  assert.ok(tap.sink > 0, 'the light visibly descends while it fades');
+
+  const quick = waves.releaseLifeSeconds(0, .5);
+  const settledDeep = waves.releaseLifeSeconds(1, .8);
+  assert.ok(settledDeep > quick, 'a long-settled deep note departs visibly longer');
+  assert.ok(settledDeep <= waves.RELEASE_LIFE_MAX_S && quick >= waves.RELEASE_LIFE_MIN_S,
+    'the visible life stays bounded like the audio tail');
+});
+
+test('release glint dims monotonically and sinks further with progress', () => {
+  const early = waves.releaseGlint(.6, .7, 100, 0);
+  const late = waves.releaseGlint(.6, .7, early.life * .75, 0);
+  assert.ok(late.fade < early.fade, 'the pool keeps dimming toward silence');
+  assert.ok(late.sink > early.sink, 'and keeps descending while it dims');
+  const mid = waves.releaseGlint(.2, .5, 10, 0);
+  assert.ok(mid.sink > 0 && mid.sink < 1, 'sink stays a bounded progress value');
+});
+
+test('release glint ends on schedule and survives broken inputs', () => {
+  const life = waves.releaseLifeSeconds(.5, .6) * 1000;
+  const finished = waves.releaseGlint(.5, .6, 5000 + life + 1, 5000);
+  assert.equal(finished.progress, 1);
+  assert.equal(finished.fade, 0);
+  assert.equal(finished.radius, 0);
+  assert.equal(finished.alpha, 0);
+
+  const beforeDeparture = waves.releaseGlint(.5, .6, 900, 1200);
+  assert.equal(beforeDeparture.age, 0, 'light cannot sink before the note leaves');
+  assert.equal(beforeDeparture.fade, 0);
+
+  const junk = waves.releaseGlint(NaN, NaN, NaN, NaN);
+  [junk.fade, junk.sink, junk.radius, junk.warmth].every(v => assert.ok(Number.isFinite(v)));
+  assert.ok(junk.life / 1000 >= waves.RELEASE_LIFE_MIN_S && junk.life / 1000 <= waves.RELEASE_LIFE_MAX_S);
+});
+
+test('reduced motion lets the departure rest instead of sinking', () => {
+  const calm = waves.releaseGlint(.9, 1.05, 260, 0, true);
+  const lively = waves.releaseGlint(.9, 1.05, 260, 0, false);
+  assert.equal(calm.sink, 0, 'no descent under reduced motion');
+  assert.ok(calm.fade > 0 && calm.alpha > 0, 'but the light still rests on the water');
+  assert.ok(calm.radius < lively.radius, 'and stays more gathered than the drifting pool');
+});
