@@ -46,6 +46,7 @@
   }
 
   const GLINT_LIFE_MS = 760;
+  const SHORE_FOLD_MS = 640;
   const RELEASE_LIFE_MIN_S = .45;
   const RELEASE_LIFE_MAX_S = 1.9;
 
@@ -122,6 +123,63 @@
     });
   }
 
+  // The visible bank is part of the instrument. When a ripple's expanding
+  // ring first reaches the near shoreline it does not stop flat: it folds
+  // back as one quiet lapping return, bounded and cheap, so a loud meeting
+  // near the shore can be heard without a ripple track crossing the whole
+  // water. Broken clocks, far births and already-past rings produce no lap.
+  function shoreFold(energy = .3, depth = .5, now = 0, born = 0, reducedMotion = false) {
+    const force = clamp(Number.isFinite(energy) ? energy : .3);
+    const depthValue = clamp(Number.isFinite(depth) ? depth : .5);
+    const at = Number.isFinite(now) ? now : 0;
+    const start = Number.isFinite(born) ? born : at;
+    if (at < start) return Object.freeze({ age: 0, life: SHORE_FOLD_MS, progress: 0, fold: 0, fade: 0, alpha: 0 });
+    const age = Math.min(Math.max(0, at - start), SHORE_FOLD_MS);
+    if (age >= SHORE_FOLD_MS) {
+      return Object.freeze({ age: SHORE_FOLD_MS, life: SHORE_FOLD_MS, progress: 1, fold: 0, fade: 0, alpha: 0 });
+    }
+    const progress = age / SHORE_FOLD_MS;
+    // Fold in quickly (a lap returns), then rest; strong shallow meetings lap
+    // a little wider and brighter.
+    const fade = Math.pow(1 - progress, 1.5) * (.4 + force * .32);
+    const fold = reducedMotion ? 0 : progress;
+    return Object.freeze({
+      age, life: SHORE_FOLD_MS, progress, fold, fade,
+      radius: reducedMotion ? .3 : .3 + fold * .4,
+      alpha: reducedMotion ? fade * .7 : fade,
+      warmth: .7 + depthValue * .5
+    });
+  }
+
+  function predictShore(a, now = a?.born ?? 0, bounds = {}) {
+    if (!a || !Number.isFinite(now) || !Number.isFinite(bounds.height) || !Number.isFinite(bounds.width)) return null;
+    const beginsAt = Math.max(now, a.born);
+    if (!isAlive(a, beginsAt)) return null;
+    if (!Number.isFinite(a.x) || !Number.isFinite(a.y)) return null;
+    const shoreTop = Number.isFinite(bounds.shoreTop) ? bounds.shoreTop : bounds.height * .78;
+    if (a.y >= shoreTop) return null; // already resting on the bank
+    const ry = radiusAt(a, beginsAt) * Y_RADIUS_RATIO;
+    const gap = shoreTop - (a.y + ry); // pixels of ring travel left to the shore
+    if (gap <= 0) return null; // ring is already lapping
+    const delayMs = gap / (speed(a) * Y_RADIUS_RATIO) * 1000;
+    if (delayMs < MIN_COLLISION_DELAY_MS || delayMs > MAX_COLLISION_DELAY_MS) return null;
+    const at = beginsAt + delayMs;
+    if (!isAlive(a, at)) return null;
+    const energy = clamp(
+      a.pressure * (1 - delayMs / (MAX_COLLISION_DELAY_MS * 1.35)), 0, 1
+    );
+    if (energy < .12) return null;
+    return Object.freeze({
+      key: `shore:${a.id}`,
+      at,
+      delayMs,
+      x: a.x,
+      y: shoreTop,
+      energy,
+      parentFrequency: a.frequency
+    });
+  }
+
   function predictCollision(a, b, now = Math.max(a?.born ?? 0, b?.born ?? 0)) {
     if (!a || !b || a.id === b.id || ![now, a.x, a.y, b.x, b.y].every(Number.isFinite)) return null;
     const beginsAt = Math.max(now, a.born, b.born);
@@ -173,6 +231,9 @@
     lifeMs,
     pairKey,
     predictCollision,
+    predictShore,
+    shoreFold,
+    SHORE_FOLD_MS,
     radiusAt,
     speed,
     GLINT_LIFE_MS,

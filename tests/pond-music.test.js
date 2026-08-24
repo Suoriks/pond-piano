@@ -172,6 +172,18 @@ assert.ok(shallowPearl.startFrequency > shallowPearl.frequency,
   'the pearl must fall into its derived parent pitch');
 assert.equal(deepPearl.scaleFamily, 'dusk', 'the current shoreline family must guide the pearl pitch');
 
+const shallowLap = music.shoreLap(Math.sqrt(220 * 440), .1, .28, 'dawn');
+const deepLap = music.shoreLap(Math.sqrt(220 * 440), .9, .8, 'dusk');
+assert.ok(shallowLap.peakGain < shallowPearl.peakGain && deepLap.peakGain < deepPearl.peakGain,
+  'a shore lap must be a quieter fold than a collision pearl');
+assert.ok(shallowLap.durationSeconds < deepLap.durationSeconds && deepLap.durationSeconds < .2,
+  'deep laps may settle a touch longer but must stay a short transient');
+assert.ok(shallowLap.startFrequency > shallowLap.frequency,
+  'the lap settles down into its derived pitch like a returning ring');
+assert.ok(shallowLap.cutoffHz > deepLap.cutoffHz,
+  'shallow lapping stays brighter; a deep return folds warmer');
+assert.equal(deepLap.scaleFamily, 'dusk', 'the family must guide the folding lap pitch');
+
 const firstSkip = music.stoneSkip(440, .18, .72, 0);
 const lastSkip = music.stoneSkip(660, .82, .35, 2);
 assert.ok(firstSkip.startFrequency > firstSkip.frequency && firstSkip.endFrequency < firstSkip.frequency,

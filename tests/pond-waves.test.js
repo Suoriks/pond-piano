@@ -137,3 +137,50 @@ test('reduced motion lets the departure rest instead of sinking', () => {
   assert.ok(calm.fade > 0 && calm.alpha > 0, 'but the light still rests on the water');
   assert.ok(calm.radius < lively.radius, 'and stays more gathered than the drifting pool');
 });
+
+test('predicts a ripple ring lapping the near shore', () => {
+  const wave = waves.createWave({ id: 9, x: 120, y: 620, born: 1000, pressure: .95, strength: 1, frequency: 330 });
+  const bounds = { width: 390, height: 844, shoreTop: 690 };
+  const lap = waves.predictShore(wave, 1000, bounds);
+  assert.ok(lap, 'a rising ring below the bank should fold');
+  assert.ok(lap.at > 1000 && lap.delayMs <= waves.MAX_COLLISION_DELAY_MS);
+  assert.equal(lap.y, 690, 'the fold lands on the shoreline');
+  assert.ok(lap.energy > 0 && lap.energy <= 1, 'energy stays bounded');
+  assert.equal(lap.parentFrequency, 330, 'the lap keeps the ring\'s pitch');
+});
+
+test('shore prediction stays quiet for resting, expired and broken rings', () => {
+  const resting = waves.createWave({ id: 'r', x: 100, y: 780, born: 0, pressure: .5 });
+  assert.equal(waves.predictShore(resting, 0, { width: 390, height: 844, shoreTop: 690 }), null,
+    'a ring already on the bank does not lap again');
+  const expired = waves.createWave({ id: 'e', x: 60, y: 200, born: 0, pressure: .5 });
+  assert.equal(waves.predictShore(expired, 9000, { width: 390, height: 844, shoreTop: 690 }), null,
+    'an expired ring cannot reach the shore');
+  const broken = waves.createWave({ id: 'b', x: NaN, y: 100, born: 0 });
+  assert.equal(waves.predictShore(broken, 0, { width: 390, height: 844, shoreTop: 690 }), null,
+    'broken rings never fold');
+  assert.equal(waves.predictShore(null, 0, { width: 390, height: 844, shoreTop: 690 }), null);
+});
+
+test('shore fold is a bounded quiet return curl', () => {
+  const fold = waves.shoreFold(.5, .6, 200, 0);
+  assert.ok(fold.progress > 0 && fold.progress < 1);
+  assert.ok(fold.alpha > 0 && fold.fade > 0, 'the lap shows while it returns');
+  assert.ok(fold.fold > 0 && fold.fold < 1, 'return curl is a bounded progress');
+  const late = waves.shoreFold(.5, .6, 5000 + waves.SHORE_FOLD_MS, 5000);
+  assert.equal(late.progress, 1);
+  assert.equal(late.fade, 0);
+  assert.equal(late.alpha, 0);
+  const before = waves.shoreFold(.5, .6, 900, 1100);
+  assert.equal(before.age, 0, 'no lap before the ring reaches the bank');
+  const junk = waves.shoreFold(NaN, NaN, NaN, NaN);
+  [junk.fade, junk.fold, junk.radius, junk.warmth].every(v => assert.ok(Number.isFinite(v)));
+});
+
+test('reduced motion calms the lapping return', () => {
+  const calm = waves.shoreFold(.9, .5, 200, 0, true);
+  const lively = waves.shoreFold(.9, .5, 200, 0, false);
+  assert.equal(calm.fold, 0, 'no returning motion under reduced motion');
+  assert.ok(calm.fade > 0 && calm.alpha > 0, 'but the lap still shows on the water');
+  assert.ok(calm.radius < lively.radius, 'and stays gathered');
+});

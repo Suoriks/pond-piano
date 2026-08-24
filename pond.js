@@ -51,6 +51,7 @@
   const MAX_VOICES = 6;
   const ECHO_COOLDOWN_MS = 3200;
   const COLLISION_RATE_LIMIT_MS = 230;
+  const SHORE_RATE_LIMIT_MS = 260;
   const MAX_PENDING_COLLISIONS = 8;
   const MAX_COLLISION_VOICES = 3;
   const SKIP_PLAN_RATE_LIMIT_MS = 240;
@@ -60,7 +61,7 @@
   const MAX_PENDING_POURS = 6;
   // `pointers` is `let`: a resize re-seats live contacts into a fresh Map
   // via the repose layer, so every closure keeps reading the current one.
-  const ripples = [], trails = [], splashes = [], scoreEchoes = [], collisionPearls = [], collisionGlints = [], stoneFlights = [];
+  const ripples = [], trails = [], splashes = [], scoreEchoes = [], collisionPearls = [], collisionGlints = [], shoreLapGlints = [], stoneFlights = [];
   // The visible departure: resting lights of ended notes sinking away.
   const releaseGlints = [];
   const RELEASE_GLINT_MAX = 12;
@@ -72,6 +73,7 @@
   const echoCooldowns = new WeakMap();
   const collisionPairs = new Map();
   const collisionTimers = new Map();
+  const shoreTimers = new Map();
   const skipTimers = new Set();
   const echoTimers = new Set();
   const pourTimers = new Set();
@@ -97,6 +99,7 @@
   let collisionSerial = 0;
   let skipSerial = 0;
   let lastCollisionAt = -Infinity;
+  let lastShoreAt = -Infinity;
   let lastSkipPlanAt = -Infinity;
   let width = 0, height = 0, dpr = 1, last = performance.now(), announced = false, scoreAnnounced = false, dynamicsAnnounced = false, textureAnnounced = false, precisionAnnounced = false, freedomAnnounced = false, eddyAnnounced = false;
   let pondHasPlayed = false;
@@ -315,6 +318,8 @@
     for (const timer of collisionTimers.values()) clearTimeout(timer);
     collisionTimers.clear();
     collisionPairs.clear();
+    for (const timer of shoreTimers.values()) clearTimeout(timer);
+    shoreTimers.clear();
     for (const timer of skipTimers) clearTimeout(timer);
     skipTimers.clear();
     for (const timer of echoTimers) clearTimeout(timer);
@@ -1436,6 +1441,8 @@
       collisionPearls.length = 0; collisionPearls.push(...movedPearls);
       const movedGlints = repose.reposePoints(collisionGlints, from, to);
       collisionGlints.length = 0; collisionGlints.push(...movedGlints);
+      const movedLaps = repose.reposePoints(shoreLapGlints, from, to);
+      shoreLapGlints.length = 0; shoreLapGlints.push(...movedLaps);
       // The departing lights keep their place on the new water too.
       const movedReleases = repose.reposePoints(releaseGlints, from, to);
       releaseGlints.length = 0; releaseGlints.push(...movedReleases);
@@ -1447,7 +1454,7 @@
       // artifacts in dead coordinates: they leave with the old space.
       ripples.length = 0; trails.length = 0; splashes.length = 0;
       coronas.length = 0; collisionPearls.length = 0;
-      collisionGlints.length = 0; stoneFlights.length = 0; pointers.clear();
+      collisionGlints.length = 0; shoreLapGlints.length = 0; stoneFlights.length = 0; pointers.clear();
       releaseGlints.length = 0;
     }
     // Wave appointments were predicted against the old geometry: dissolve
@@ -1455,6 +1462,8 @@
     for (const timer of collisionTimers.values()) clearTimeout(timer);
     collisionTimers.clear();
     collisionPairs.clear();
+    for (const timer of shoreTimers.values()) clearTimeout(timer);
+    shoreTimers.clear();
   }
 
   // The pond invites its first gesture itself: one breathing ring of light
@@ -1642,6 +1651,72 @@
     return true;
   }
 
+  // The visible bank answers. A ripple whose ring reaches the near shore
+  // folds back as one quiet lap: a softer, shorter note than a pearl (no new
+  // sustain voice, shares the collision voice pool) plus a warm returning curl
+  // of light right on the shoreline. Rate-limited so a crowded surface can't
+  // lap endlessly; reduced motion keeps the curl still.
+  function playShoreLap(lap) {
+    const engine = audio;
+    const visualNow = performance.now();
+    if (!engine || engine.context.state !== 'running' ||
+        engine.collisionVoices.size >= MAX_COLLISION_VOICES ||
+        visualNow - lastShoreAt < SHORE_RATE_LIMIT_MS) return false;
+    const depth = Math.max(0, Math.min(1, lap.y / Math.max(1, height)));
+    const response = music.shoreLap(lap.parentFrequency, depth, lap.energy, tuningFamily);
+    const now = engine.context.currentTime;
+    const oscillator = engine.context.createOscillator();
+    const filter = engine.context.createBiquadFilter();
+    const gain = engine.context.createGain();
+    const panner = typeof engine.context.createStereoPanner === 'function' ? engine.context.createStereoPanner() : null;
+    const reflectionSend = engine.reflection ? engine.context.createGain() : null;
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(response.startFrequency, now);
+    oscillator.frequency.exponentialRampToValueAtTime(response.frequency, now + response.durationSeconds * .4);
+    oscillator.frequency.exponentialRampToValueAtTime(response.frequency * .99, now + response.durationSeconds);
+    filter.type = 'lowpass'; filter.frequency.value = response.cutoffHz; filter.Q.value = 1.5;
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.exponentialRampToValueAtTime(response.peakGain, now + .014);
+    gain.gain.exponentialRampToValueAtTime(.0001, now + response.durationSeconds);
+    oscillator.connect(filter).connect(gain);
+    let output = gain;
+    if (panner) {
+      panner.pan.value = music.spatialPan(lap.x / Math.max(1, width));
+      gain.connect(panner);
+      output = panner;
+    }
+    output.connect(engine.master);
+    if (reflectionSend) {
+      reflectionSend.gain.value = music.depthReflection(depth).sendGain * .4;
+      output.connect(reflectionSend).connect(engine.reflection.input);
+    }
+    const pearl = { oscillator, nodes: [oscillator, filter, gain, panner, reflectionSend] };
+    engine.collisionVoices.add(pearl);
+    canvas.dataset.pearlVoices = String(engine.collisionVoices.size);
+    canvas.dataset.shoreLaps = String((Number(canvas.dataset.shoreLaps) || 0) + 1);
+    shoreLapGlints.push({ x: lap.x, y: lap.y, born: visualNow, energy: lap.energy, depth });
+    if (shoreLapGlints.length > 6) shoreLapGlints.shift();
+    lastShoreAt = visualNow;
+    oscillator.addEventListener('ended', () => disconnectCollisionVoice(engine, pearl), { once: true });
+    engine.collisionVoices.delete(pearl); // lap already resigned the pool after its short fold
+    oscillator.start();
+    oscillator.stop(now + response.durationSeconds + .02);
+    return true;
+  }
+
+  function scheduleShoreLaps(ripple, now) {
+    const lap = waves.predictShore(ripple, now, {
+      width, height, shoreTop: Math.max(0, Math.min(height, height * .82))
+    });
+    if (!lap) return;
+    if (shoreTimers.has(lap.key)) return; // already planned one fold for this ripple
+    const timer = setTimeout(() => {
+      shoreTimers.delete(lap.key);
+      playShoreLap(lap);
+    }, Math.max(0, lap.at - now));
+    shoreTimers.set(lap.key, timer);
+  }
+
   function disconnectSkipVoice(engine, skip) {
     if (!engine.skipVoices?.delete(skip)) return;
     for (const node of skip.nodes) {
@@ -1750,7 +1825,10 @@
     const born = performance.now();
     const ripple = waves.createWave({ id: ++rippleSerial, x, y, born, pressure, strength, frequency });
     if (!ripple) return;
-    if (reactive) scheduleWaveCollisions(ripple, born);
+    if (reactive) {
+      scheduleWaveCollisions(ripple, born);
+      scheduleShoreLaps(ripple, born);
+    }
     ripples.push({ ...ripple, hue: 152 + 30 * (1 - y / height) });
     // A note stirs the reading: the whole surface keeps a long quiet afterglow near the site.
     tidalStirs = tide.stir(tidalStirs, x / Math.max(1, width), y / Math.max(1, height), .12 + Math.min(.5, pressure * .7));
@@ -2403,6 +2481,27 @@
     return flare.progress < 1;
   }
 
+  // The bank's lapping answer: a warm return curl at the shoreline (iteration
+  // 0047). Softer and wider than the collision flare; reduced motion keeps a
+  // calm still glow. Pure timing/colour from pond-waves.shoreFold.
+  function drawShoreLap(lap, now) {
+    const tideGate = budget.style(waterBudget, 'ink');
+    if (tideGate <= 0.02) return true;
+    const fold = waves.shoreFold(lap.energy, lap.depth, now, lap.born, reduced.matches);
+    if (fold.alpha <= 0 || fold.radius <= 0) return fold.progress < 1;
+    const pxRadius = fold.radius * Math.max(20, Math.min(34, Math.min(width, height) * .055));
+    const light = fold.alpha;
+    const y = lap.y;
+    const glow = ctx.createRadialGradient(lap.x, y, 0, lap.x, y, pxRadius * 2.4);
+    glow.addColorStop(0, `hsla(${172 + 26 * (fold.warmth - .7)} 76% 84% / ${light * .7})`);
+    glow.addColorStop(.5, `hsla(${172 + 20 * (fold.warmth - .7)} 70% 78% / ${light * .32})`);
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(lap.x, y, pxRadius * 2.4, 0, Math.PI * 2); ctx.fill();
+    return fold.progress < 1;
+  }
+
+
   // The visible departure of a note (iteration 0045): a soft pool of light
   // resting where the voice last sounded, sinking gently downward and
   // dimming along the same stretched tail the audio uses. Budget-aware like
@@ -2833,6 +2932,9 @@
     for (let i = ripples.length - 1; i >= 0; i--) if (!drawRipple(ripples[i], now)) ripples.splice(i, 1);
     for (let i = collisionGlints.length - 1; i >= 0; i--) {
       if (!drawCollisionGlint(collisionGlints[i], now)) collisionGlints.splice(i, 1);
+    }
+    for (let i = shoreLapGlints.length - 1; i >= 0; i--) {
+      if (!drawShoreLap(shoreLapGlints[i], now)) shoreLapGlints.splice(i, 1);
     }
     for (let i = collisionPearls.length - 1; i >= 0; i--) {
       if (!drawCollisionPearl(collisionPearls[i], now)) collisionPearls.splice(i, 1);

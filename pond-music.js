@@ -247,6 +247,26 @@
     });
   }
 
+  // The bank answers a returning ring with a quieter, softer lap than a
+  // full pearl: shorter, lower, less peak, so a ripple reaching the shore
+  // reads as a gentle fold rather than a second impact. Shallow lapping stays
+  // herbal and bright; a deep return folds warmer and a touch longer.
+  function shoreLap(parentFrequency, normalizedDepth, energy = .3, familyId = DEFAULT_SCALE_FAMILY) {
+    const source = Math.max(BASE_FREQUENCY, Number.isFinite(parentFrequency) ? parentFrequency : BASE_FREQUENCY);
+    const depth = clamp(normalizedDepth);
+    const force = clamp(energy);
+    const current = mapPitch(normalizedAtFrequency(source), 980, 0, familyId);
+    const frequency = current.frequency * .96;
+    return {
+      frequency,
+      startFrequency: frequency * (1.16 - depth * .08),
+      durationSeconds: .10 + depth * .05 + force * .02,
+      peakGain: .0032 + force * .008,
+      cutoffHz: 1500 + (1 - depth) * 1400,
+      scaleFamily: current.scaleFamily
+    };
+  }
+
   function collisionPearl(parentFrequency, normalizedDepth, energy = .35, familyId = DEFAULT_SCALE_FAMILY) {
     const source = Math.max(BASE_FREQUENCY, Number.isFinite(parentFrequency) ? parentFrequency : BASE_FREQUENCY);
     const depth = clamp(normalizedDepth);
@@ -440,6 +460,7 @@
     MATERIAL_BRUSH_DEPTH,
     attackIntensity,
     collisionPearl,
+    shoreLap,
     echoNote,
     depthReflection,
     hasExpressivePressure,

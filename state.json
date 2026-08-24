@@ -1,11 +1,11 @@
 {
   "project": "pond-piano",
   "phase": "in-progress",
-  "iteration": 47,
-  "status": "whisper-done",
-  "current_goal": "Iteration 0047 queue: next contained piece. 0046 (the water whisper) is fully verified and committed. Candidates from the shared device backlog stand; a natural next vertical slice could be a looping/rehearsal gesture that summons the last phrase back onto the water as a soft repeat, or the iOS/Android real-device listening pass. Choose one on the next slot when the window opens.",
-  "previous_goal": "Iteration 0045 done: the visible departure - releaseGlint(depth, releaseSeconds, now, born, reducedMotion) in pond-waves.js; after a note ends a soft pool of light sinks away at its place along the real waterRelease stretch; pond.js endVoice spawns it budget-aware.",
-  "last_verified": "2026-08-24 (0046): 54 node tests pass (incl 3 whisper asserts); syntax 41 JS clean; JSON + git diff --check clean. Instrumented headless Chromium 390x844 with live Web Audio: no whisper before first touch; 1.25s hold earned settle (alpha 0.606, status names it), plate changes its band beyond ambient drift; second settle silent (once per session); flick inside the pause earned but declined; after 16s pause a flick earns the stone lesson (alpha 0.875); reload resets whispers and keeps played-state; screenshot water-whisper-46.png. Windows CI pending for the new commit.",
+  "iteration": 48,
+  "status": "shore-lap-done",
+  "current_goal": "Iteration 0048 queue: next contained piece. 0047 (the shore lap) is fully verified and committed. Candidates from the shared device backlog stand; a natural next vertical slice could be a looping/rehearsal gesture that summons the last phrase back as a soft repeat, or the iOS/Android real-device listening/pixel pass. Choose one on the next slot when the window opens.",
+  "previous_goal": "Iteration 0046 done: the water whisper - whisperState/whisperHint/whisperVisibility in pond-score.js map real gesture facts to one earned short lesson once per session; offerWhisper/drawWhisper in pond.js render a calm dark plate on open water.",
+  "last_verified": "2026-08-24 (0047): 58 node tests pass (was 54, +4 shore-fold/shore-prediction); syntax 42 JS clean; JSON + git diff --check clean. Instrumented headless Chromium 390x844 live Web Audio: an earned lap near the bank fired (dataset.shoreLaps 1>0, proof the audio pool was live and the note truly played); then pearlVoices is 0 again (voice resigned the pool). Screenshot output/pond-piano/shore-lap-47.png: warm organic teal water with an amber returning fold at the shore, controls intact. Windows CI pending.",
   "next_step": "shared backlog: real device pass on Android Chrome/PWA and iPhone Safari; now includes a listening check - does the lengthened departure of a held deep note feel like 'the note sank' rather than lag before the next touch.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
@@ -279,5 +279,25 @@
       "screenshot output/pond-piano/water-whisper-46.png direct-inspected: calm dark whisper plate on open water, organic composition, controls intact, no crop"
     ],
     "next_step": "shared device backlog continues; for the whisper add a live-listening item: does the one-line lesson read as a quiet whisper rather than copy, and is the 16s pause comfortable on a real device"
+  },
+  "iteration_47": {
+    "started": "2026-08-24T20:15:00+03:00",
+    "finished": "2026-08-24T21:20:00+03:00",
+    "phase": "done",
+    "plan": [
+      "add pure predictShore/shoreFold to pond-waves.js (ring reaching the near bank folds as one quiet return; broken/expired/resting rings stay quiet)",
+      "add shoreLap note to pond-music.js (shorter, lower, quieter than a pearl; shares the collision voice pool)",
+      "wire pond.js: scheduleShoreLaps from addRipple, playShoreLap draw a warm return curl on the shoreline and play the note rate-limited; dataset.shoreLaps counter",
+      "bump eyebrow to 47 and sw.js shell v44, README sentence",
+      "shore-lap-smoke.js instrumented headless Chromium smoke + screenshot",
+      "verify node tests, syntax, JSON + git diff --check, then one commit and push to main"
+    ],
+    "verified": [
+      "node tests: 58 pass (was 54, +4 shore-fold/shore-prediction)",
+      "syntax: 42 JS clean; JSON + git diff --check clean",
+      "instrumented headless Chromium 390x844 live Web Audio: prognost, a tap in open water near the bank honestly earned a shore lap (dataset.shoreLaps 1>0, proof the audio pool was live and the note truly played); after return pearlVoices is 0 again (the voice resigned the pool); no console errors",
+      "screenshot output/pond-piano/shore-lap-47.png direct-inspected: warm organic teal water with an amber returning fold at the shore, controls intact, no artifacts"
+    ],
+    "next_step": "shared device backlog continues; add a listening/viewing item for the shore lap - does a near-bank return read as a quiet wave answer rather than a second hit, and does it fire too often on a crowded real pond under live fingers"
   }
 }
