@@ -184,3 +184,44 @@ test('reduced motion calms the lapping return', () => {
   assert.ok(calm.fade > 0 && calm.alpha > 0, 'but the lap still shows on the water');
   assert.ok(calm.radius < lively.radius, 'and stays gathered');
 });
+
+// The pond reads its own score: a ripple whose ring first touches a still
+// readable ink line is predicted in pure geometry, exact px, earliest time.
+const mkLine = (points, born = 0, life = 60000) => ({
+  born, life,
+  points: points.map(([x, y, pitch]) => ({
+    x, y, pitch: Number.isFinite(pitch) ? pitch : x
+  }))
+});
+
+test('predicts the first crossing of a ripple with a readable ink line', () => {
+  // A line running down the middle of the pond; a ring born at the left.
+  const line = mkLine([[.5, .3], [.5, .8]], 0, 60000);
+  const wave = waves.createWave({ id: 'w', x: 150, y: 420, born: 0, pressure: .5, frequency: 330 });
+  const read = waves.predictInkRead(wave, 0, line, { width: 390, height: 844 });
+  assert.ok(read, 'a ring near a fresh line must predict a crossing');
+  assert.ok(read.at > 0 && read.delayMs > 0, 'crossing lies in the future');
+  assert.ok(Math.abs(read.nx - .5) < .02, 'crossing sits on the vertical line');
+  assert.ok(read.nx >= 0 && read.nx <= 1 && read.ny >= 0 && read.ny <= 1, 'normalized inside the pond');
+  assert.ok(read.energy > 0 && read.energy <= 1, 'energy stays bounded');
+  assert.equal(read.parentFrequency, 330, 'keeps the ripple pitch');
+});
+
+test('no prediction for standing, expired or misplaced ink', () => {
+  // A line whose endpoint sits exactly under the born ring: already touching.
+  const atOrigin = mkLine([[60 / 390, 200 / 844], [.15, .3]], 0, 60000);
+  const wave = waves.createWave({ id: 'w', x: 60, y: 200, born: 0, pressure: .5, frequency: 220 });
+  assert.equal(waves.predictInkRead(wave, 0, atOrigin, { width: 390, height: 844 }), null,
+    'a ring already past the spot cannot read it');
+  // Fresh ripple but the line is already gone before either can meet.
+  const dying = mkLine([[.5, .3], [.5, .8]], 100000, 60000);
+  assert.equal(waves.predictInkRead(wave, 0, dying, { width: 390, height: 844 }), null,
+    'a line that died before the meeting never answers');
+  // Ripple already expired.
+  assert.equal(waves.predictInkRead(wave, 9000, atOrigin, { width: 390, height: 844 }), null);
+  // Broken inputs.
+  const goodLine = mkLine([[.5, .3], [.5, .8]], 0, 60000);
+  assert.equal(waves.predictInkRead(null, 0, goodLine, { width: 390, height: 844 }), null);
+  assert.equal(waves.predictInkRead(wave, 0, { points: [] }, { width: 390, height: 844 }), null);
+  assert.equal(waves.predictInkRead(wave, 0, mkLine([[.5, .3]]), { width: 390, height: 844 }), null);
+});

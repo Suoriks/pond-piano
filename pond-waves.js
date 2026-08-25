@@ -180,6 +180,71 @@
     });
   }
 
+  // The pond reads its own score while it plays. A ripple whose expanding
+  // ring first touches a still-readable ink polyline is predicted here, in
+  // pure geometry: the earliest wall-clock crossing inside both the ripple's
+  // life and the line's remaining life, in exact px. The caller re-strikes
+  // the phrase's own place there. Broken inputs stay bounded (return null).
+  // `line` carries normalized points plus a `born` and a `life` (ink life ms).
+  function predictInkRead(a, now, line, bounds = {}) {
+    if (!a || !line || !Number.isFinite(now) ||
+        !Number.isFinite(bounds.width) || !Number.isFinite(bounds.height) ||
+        ![a.x, a.y, a.born].every(Number.isFinite)) return null;
+    const beginsAt = Math.max(now, a.born);
+    if (!isAlive(a, beginsAt)) return null;
+    const points = Array.isArray(line?.points) ? line.points.filter(pt =>
+      pt && Number.isFinite(pt.x) && Number.isFinite(pt.y)) : [];
+    if (points.length < 2) return null;
+    const w = bounds.width, h = bounds.height;
+    const lineBorn = Number.isFinite(line.born) ? line.born : beginsAt;
+    const lineLife = Math.max(80, Number.isFinite(line.life) ? line.life : 0);
+    // Closest approach of the ring to each segment, in the same y-compressed
+    // plane collisions use, so the ring stays an ellipse against the shore.
+    let best = null;
+    for (let index = 0; index + 1 < points.length; index += 1) {
+      const p1 = { x: points[index].x * w, y: points[index].y * h };
+      const p2 = { x: points[index + 1].x * w, y: points[index + 1].y * h };
+      const sx = p2.x - p1.x, sy = p2.y - p1.y;
+      const lenSq = sx * sx + sy * sy;
+      let t = lenSq > 0 ? clamp(((a.x - p1.x) * sx + (a.y - p1.y) * sy) / lenSq) : 0;
+      const cx = p1.x + sx * t, cy = p1.y + sy * t;
+      const dx = a.x - cx, dy = (a.y - cy) / Y_RADIUS_RATIO;
+      const dScaled = Math.hypot(dx, dy);
+      const gap = dScaled - BASE_RADIUS_PX;
+      if (gap < 0) continue; // ring already past this spot
+      const delayMs = gap / speed(a) * 1000;
+      if (!Number.isFinite(delayMs)) continue;
+      const at = beginsAt + delayMs;
+      if (at < lineBorn || at >= lineBorn + lineLife || !isAlive(a, at)) continue;
+      if (!best || at < best.at) {
+        // Local pitch: blend the segment's endpoint pitch by the touch `t`.
+        const pa = Number.isFinite(points[index].pitch) ? points[index].pitch : points[index].x;
+        const pb = Number.isFinite(points[index + 1].pitch) ? points[index + 1].pitch : points[index + 1].x;
+        best = {
+          at,
+          delayMs,
+          x: cx,
+          y: cy,
+          pitch: clamp(pa + (pb - pa) * t),
+          energy: clamp(a.pressure * (1 - delayMs / 1800), .04, 1)
+        };
+      }
+    }
+    if (!best) return null;
+    return Object.freeze({
+      key: `ink:${a.id}:${line.born}`,
+      at: best.at,
+      delayMs: best.delayMs,
+      x: best.x,
+      y: best.y,
+      nx: best.x / w,
+      ny: best.y / h,
+      pitch: best.pitch,
+      energy: best.energy,
+      parentFrequency: a.frequency
+    });
+  }
+
   function predictCollision(a, b, now = Math.max(a?.born ?? 0, b?.born ?? 0)) {
     if (!a || !b || a.id === b.id || ![now, a.x, a.y, b.x, b.y].every(Number.isFinite)) return null;
     const beginsAt = Math.max(now, a.born, b.born);
@@ -231,6 +296,7 @@
     lifeMs,
     pairKey,
     predictCollision,
+    predictInkRead,
     predictShore,
     shoreFold,
     SHORE_FOLD_MS,

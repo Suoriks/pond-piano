@@ -57,11 +57,12 @@
   const SKIP_PLAN_RATE_LIMIT_MS = 240;
   const MAX_PENDING_SKIPS = 3;
   const MAX_SKIP_VOICES = 2;
+  const INK_READ_RATE_LIMIT_MS = 380;
   const MAX_ECHO_VOICES = 3;
   const MAX_PENDING_POURS = 6;
   // `pointers` is `let`: a resize re-seats live contacts into a fresh Map
   // via the repose layer, so every closure keeps reading the current one.
-  const ripples = [], trails = [], splashes = [], scoreEchoes = [], collisionPearls = [], collisionGlints = [], shoreLapGlints = [], stoneFlights = [];
+  const ripples = [], trails = [], splashes = [], scoreEchoes = [], collisionPearls = [], collisionGlints = [], shoreLapGlints = [], inkReadGlints = [], stoneFlights = [];
   // The visible departure: resting lights of ended notes sinking away.
   const releaseGlints = [];
   const RELEASE_GLINT_MAX = 12;
@@ -74,6 +75,8 @@
   const collisionPairs = new Map();
   const collisionTimers = new Map();
   const shoreTimers = new Map();
+  const inkReadSeen = new WeakSet();
+  const inkReadTimers = new Set();
   const skipTimers = new Set();
   const echoTimers = new Set();
   const pourTimers = new Set();
@@ -100,6 +103,7 @@
   let skipSerial = 0;
   let lastCollisionAt = -Infinity;
   let lastShoreAt = -Infinity;
+  let lastInkReadAt = -Infinity;
   let lastSkipPlanAt = -Infinity;
   let width = 0, height = 0, dpr = 1, last = performance.now(), announced = false, scoreAnnounced = false, dynamicsAnnounced = false, textureAnnounced = false, precisionAnnounced = false, freedomAnnounced = false, eddyAnnounced = false;
   let pondHasPlayed = false;
@@ -1448,6 +1452,8 @@
       collisionGlints.length = 0; collisionGlints.push(...movedGlints);
       const movedLaps = repose.reposePoints(shoreLapGlints, from, to);
       shoreLapGlints.length = 0; shoreLapGlints.push(...movedLaps);
+      const movedReads = repose.reposePoints(inkReadGlints, from, to);
+      inkReadGlints.length = 0; inkReadGlints.push(...movedReads);
       // The departing lights keep their place on the new water too.
       const movedReleases = repose.reposePoints(releaseGlints, from, to);
       releaseGlints.length = 0; releaseGlints.push(...movedReleases);
@@ -1459,7 +1465,7 @@
       // artifacts in dead coordinates: they leave with the old space.
       ripples.length = 0; trails.length = 0; splashes.length = 0;
       coronas.length = 0; collisionPearls.length = 0;
-      collisionGlints.length = 0; shoreLapGlints.length = 0; stoneFlights.length = 0; pointers.clear();
+      collisionGlints.length = 0; shoreLapGlints.length = 0; inkReadGlints.length = 0; stoneFlights.length = 0; pointers.clear();
       releaseGlints.length = 0;
     }
     // Wave appointments were predicted against the old geometry: dissolve
@@ -1722,7 +1728,83 @@
     shoreTimers.set(lap.key, timer);
   }
 
-  function disconnectSkipVoice(engine, skip) {
+  // The pond reads its own score while it plays (iteration 0049). When a
+  // ripple's ring first reaches a still-readable ink line, the surface
+  // re-strikes one quiet anchor of that same phrase's place: a soft echo of
+  // the line's own pitch at the crossing node, plus a warm glint exactly
+  // there. Shares the limited echo-voice pool already used by pour/loop so a
+  // crowded pond can't ring forever; rate-limited and non-recursive inside
+  // addRipple (never calls addRipple). Reduced motion keeps the glint calm.
+  function scheduleInkReads(ripple, now) {
+    if (!audio || audio.context.state !== 'running') return;
+    if (inkReadTimers.size >= MAX_ECHO_VOICES) return;
+    for (const line of phraseInk) {
+      const read = waves.predictInkRead(ripple, now, { ...line, life: score.inkLifeMs(reduced.matches) }, { width, height });
+      if (!read) continue;
+      if (inkReadSeen.has(line)) continue; // one quiet answer per readable line
+      const timer = setTimeout(() => {
+        inkReadTimers.delete(timer);
+        if (score.inkVisibility(line, performance.now(), reduced.matches) > .02 && !inkReadSeen.has(line)) {
+          playInkRead(line, read);
+          inkReadSeen.add(line);
+        }
+      }, Math.max(0, read.at - performance.now()));
+      inkReadTimers.add(timer);
+    }
+  }
+
+  // One quiet re-strike of a phrase's own place as a ring passes over its ink.
+  function playInkRead(line, read) {
+    const engine = audio;
+    const visualNow = performance.now();
+    if (!engine || engine.context.state !== 'running' ||
+        engine.echoVoices.size >= MAX_ECHO_VOICES ||
+        visualNow - lastInkReadAt < INK_READ_RATE_LIMIT_MS) return false;
+    const response = music.echoNote(read.pitch, read.ny, .14 + line.pressure * .18, 0, 1);
+    const now = engine.context.currentTime;
+    const oscillator = engine.context.createOscillator();
+    const filter = engine.context.createBiquadFilter();
+    const gain = engine.context.createGain();
+    const panner = typeof engine.context.createStereoPanner === 'function' ? engine.context.createStereoPanner() : null;
+    const reflectionSend = engine.reflection ? engine.context.createGain() : null;
+    oscillator.type = 'triangle';
+    oscillator.frequency.setValueAtTime(response.startFrequency, now);
+    oscillator.frequency.exponentialRampToValueAtTime(response.frequency, now + response.durationSeconds * .42);
+    oscillator.frequency.exponentialRampToValueAtTime(response.frequency * .992, now + response.durationSeconds);
+    filter.type = 'lowpass'; filter.frequency.value = response.cutoffHz; filter.Q.value = 1.2;
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.exponentialRampToValueAtTime(response.peakGain, now + .01);
+    gain.gain.exponentialRampToValueAtTime(.0001, now + response.durationSeconds);
+    oscillator.connect(filter).connect(gain);
+    let output = gain;
+    if (panner) { panner.pan.value = music.spatialPan(read.nx); gain.connect(panner); output = panner; }
+    output.connect(engine.master);
+    if (reflectionSend) {
+      reflectionSend.gain.value = music.depthReflection(read.ny).sendGain * .4;
+      output.connect(reflectionSend).connect(engine.reflection.input);
+    }
+    const echo = { oscillator, nodes: [oscillator, filter, gain, panner, reflectionSend] };
+    engine.echoVoices.add(echo);
+    canvas.dataset.echoVoices = String(engine.echoVoices.size);
+    canvas.dataset.peakEchoVoices = String(Math.max(Number(canvas.dataset.peakEchoVoices) || 0, engine.echoVoices.size));
+    inkReadGlints.push({
+      x: read.x, y: read.y, birth: read.at, born: visualNow, energy: read.energy, depth: read.ny
+    });
+    if (inkReadGlints.length > 8) inkReadGlints.shift();
+    canvas.dataset.inkReads = String((Number(canvas.dataset.inkReads) || 0) + 1);
+    lastInkReadAt = visualNow;
+    oscillator.addEventListener('ended', () => {
+      if (engine.echoVoices?.delete(echo)) {
+        for (const node of echo.nodes) { try { node?.disconnect(); } catch {} }
+        canvas.dataset.echoVoices = String(engine.echoVoices.size);
+      }
+    }, { once: true });
+    oscillator.start();
+    oscillator.stop(now + response.durationSeconds + .025);
+    return true;
+  }
+
+function disconnectSkipVoice(engine, skip) {
     if (!engine.skipVoices?.delete(skip)) return;
     for (const node of skip.nodes) {
       try { node?.disconnect(); } catch {}
@@ -1833,6 +1915,7 @@
     if (reactive) {
       scheduleWaveCollisions(ripple, born);
       scheduleShoreLaps(ripple, born);
+      scheduleInkReads(ripple, born);
     }
     ripples.push({ ...ripple, hue: 152 + 30 * (1 - y / height) });
     // A note stirs the reading: the whole surface keeps a long quiet afterglow near the site.
@@ -2521,6 +2604,26 @@
     return fold.progress < 1;
   }
 
+  // The pool answers as a ring passes over its ink (iteration 0049): a warm
+  // crossing glint exactly where the phrase was re-read. Budget-aware and
+  // reduced-motion calm like the other glints.
+  function drawInkRead(glint, now) {
+    const tideGate = budget.style(waterBudget, 'ink');
+    if (tideGate <= 0.02) return true; // keep the lifetime ticking, stay quiet
+    const flare = waves.collisionGlint(glint.energy, glint.depth, now, glint.born, reduced.matches);
+    if (flare.alpha <= 0 || flare.radius <= 0) return flare.progress < 1;
+    const pxRadius = flare.radius * Math.max(22, Math.min(36, Math.min(width, height) * .05));
+    const light = flare.alpha;
+    const glow = ctx.createRadialGradient(glint.x, glint.y, 0, glint.x, glint.y, pxRadius * 2.4);
+    glow.addColorStop(0, `hsla(${182 + 26 * flare.warmth} 74% 86% / ${light * .85})`);
+    glow.addColorStop(.45, `hsla(${170 + 22 * flare.warmth} 70% 78% / ${light * .34})`);
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(glint.x, glint.y, pxRadius * 2.4, 0, Math.PI * 2); ctx.fill();
+    return flare.progress < 1;
+  }
+
+
 
   // The visible departure of a note (iteration 0045): a soft pool of light
   // resting where the voice last sounded, sinking gently downward and
@@ -2955,6 +3058,9 @@
     }
     for (let i = shoreLapGlints.length - 1; i >= 0; i--) {
       if (!drawShoreLap(shoreLapGlints[i], now)) shoreLapGlints.splice(i, 1);
+    }
+    for (let i = inkReadGlints.length - 1; i >= 0; i--) {
+      if (!drawInkRead(inkReadGlints[i], now)) inkReadGlints.splice(i, 1);
     }
     for (let i = collisionPearls.length - 1; i >= 0; i--) {
       if (!drawCollisionPearl(collisionPearls[i], now)) collisionPearls.splice(i, 1);
