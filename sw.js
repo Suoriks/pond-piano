@@ -1,5 +1,5 @@
-const CACHE = 'pond-piano-shell-v47';
-// Iteration 0050: both banks answer — warm near-shore lap, cool far-edge skim.
+const CACHE = 'pond-piano-shell-v48';
+// Iteration 0051: desktop and PWA shells load the same complete water core.
 const SHELL = [
   './',
   './index.html',
