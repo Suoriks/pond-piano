@@ -47,6 +47,7 @@
 
   const GLINT_LIFE_MS = 760;
   const SHORE_FOLD_MS = 640;
+  const SKIM_FOLD_MS = 560;
   const RELEASE_LIFE_MIN_S = .45;
   const RELEASE_LIFE_MAX_S = 1.9;
 
@@ -148,6 +149,71 @@
       radius: reducedMotion ? .3 : .3 + fold * .4,
       alpha: reducedMotion ? fade * .7 : fade,
       warmth: .7 + depthValue * .5
+    });
+  }
+
+  // The far edge is the delicate mirror of the near bank. When a ripple ring
+  // first reaches the top of the pond it does not stop flat: it folds back as
+  // a thin cooler skim - a higher, shorter, quieter return than the bottom
+  // lap, so the water reads as having two deep banks, not one wall and one
+  // shore. Pure geometry and colour only, bounded and cheap. Broken clocks,
+  // rings not alive at the crossing and rings already past the far edge
+  // produce no skim.
+  function farSkimFold(energy = .3, depth = .5, now = 0, born = 0, reducedMotion = false) {
+    const force = clamp(Number.isFinite(energy) ? energy : .3);
+    const depthValue = clamp(Number.isFinite(depth) ? depth : .5);
+    const at = Number.isFinite(now) ? now : 0;
+    const start = Number.isFinite(born) ? born : at;
+    if (at < start) return Object.freeze({ age: 0, life: SKIM_FOLD_MS, progress: 0, fold: 0, fade: 0, alpha: 0 });
+    const age = Math.min(Math.max(0, at - start), SKIM_FOLD_MS);
+    if (age >= SKIM_FOLD_MS) {
+      return Object.freeze({ age: SKIM_FOLD_MS, life: SKIM_FOLD_MS, progress: 1, fold: 0, fade: 0, alpha: 0 });
+    }
+    const progress = age / SKIM_FOLD_MS;
+    // A skim is thinner and cries off faster than a lap; the far edge stays
+    // cool and slightly brighter (it is the shallower, glassier end of the
+    // y-grammar), so it never reads as a warm bank.
+    const fade = Math.pow(1 - progress, 1.6) * (.34 + force * .24);
+    const fold = reducedMotion ? 0 : progress;
+    return Object.freeze({
+      age, life: SKIM_FOLD_MS, progress, fold, fade,
+      radius: reducedMotion ? .24 : .24 + fold * .3,
+      alpha: reducedMotion ? fade * .72 : fade,
+      warmth: .30 + depthValue * .22   // cool: herbal glass, not amber
+    });
+  }
+
+  // The far (top) bank as pure geometry: when the ring first reaches the top
+  // edge it folds a skim (massed below), analogous to predictShore but for the
+  // far side. Now is the reference time; bounds carries the far edge y in
+  // screen px. Rings born past the edge, already past it, or not alive at the
+  // moment of arrival produce no skim.
+  function predictFarSkim(a, now = a?.born ?? 0, bounds = {}) {
+    if (!a || !Number.isFinite(now) || !Number.isFinite(bounds.height) || !Number.isFinite(bounds.width)) return null;
+    const beginsAt = Math.max(now, a.born);
+    if (!isAlive(a, beginsAt)) return null;
+    if (!Number.isFinite(a.x) || !Number.isFinite(a.y)) return null;
+    const skimTop = Number.isFinite(bounds.skimTop) ? bounds.skimTop : bounds.height * .10;
+    if (a.y <= skimTop) return null; // already resting on the far bank
+    const ry = radiusAt(a, beginsAt) * Y_RADIUS_RATIO;
+    const gap = (a.y - ry) - skimTop; // px of ring travel left to the top edge
+    if (gap <= 0) return null; // ring is already lapping the top
+    const delayMs = gap / (speed(a) * Y_RADIUS_RATIO) * 1000;
+    if (delayMs < MIN_COLLISION_DELAY_MS || delayMs > MAX_COLLISION_DELAY_MS) return null;
+    const at = beginsAt + delayMs;
+    if (!isAlive(a, at)) return null;
+    const energy = clamp(
+      a.pressure * (1 - delayMs / (MAX_COLLISION_DELAY_MS * 1.35)), 0, 1
+    );
+    if (energy < .12) return null;
+    return Object.freeze({
+      key: `skim:${a.id}`,
+      at,
+      delayMs,
+      x: a.x,
+      y: skimTop,
+      energy,
+      parentFrequency: a.frequency
     });
   }
 
@@ -298,8 +364,11 @@
     predictCollision,
     predictInkRead,
     predictShore,
+    predictFarSkim,
+    farSkimFold,
     shoreFold,
     SHORE_FOLD_MS,
+    SKIM_FOLD_MS,
     radiusAt,
     speed,
     GLINT_LIFE_MS,

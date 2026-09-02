@@ -52,6 +52,7 @@
   const ECHO_COOLDOWN_MS = 3200;
   const COLLISION_RATE_LIMIT_MS = 230;
   const SHORE_RATE_LIMIT_MS = 260;
+  const SKIM_RATE_LIMIT_MS = 320;
   const MAX_PENDING_COLLISIONS = 8;
   const MAX_COLLISION_VOICES = 3;
   const SKIP_PLAN_RATE_LIMIT_MS = 240;
@@ -62,7 +63,7 @@
   const MAX_PENDING_POURS = 6;
   // `pointers` is `let`: a resize re-seats live contacts into a fresh Map
   // via the repose layer, so every closure keeps reading the current one.
-  const ripples = [], trails = [], splashes = [], scoreEchoes = [], collisionPearls = [], collisionGlints = [], shoreLapGlints = [], inkReadGlints = [], stoneFlights = [];
+  const ripples = [], trails = [], splashes = [], scoreEchoes = [], collisionPearls = [], collisionGlints = [], shoreLapGlints = [], skimGlints = [], inkReadGlints = [], stoneFlights = [];
   // The visible departure: resting lights of ended notes sinking away.
   const releaseGlints = [];
   const RELEASE_GLINT_MAX = 12;
@@ -74,7 +75,7 @@
   const echoCooldowns = new WeakMap();
   const collisionPairs = new Map();
   const collisionTimers = new Map();
-  const shoreTimers = new Map();
+  const bankTimers = new Map();
   const inkReadSeen = new WeakSet();
   const inkReadTimers = new Set();
   const skipTimers = new Set();
@@ -103,6 +104,7 @@
   let skipSerial = 0;
   let lastCollisionAt = -Infinity;
   let lastShoreAt = -Infinity;
+  let lastSkimAt = -Infinity;
   let lastInkReadAt = -Infinity;
   let lastSkipPlanAt = -Infinity;
   let width = 0, height = 0, dpr = 1, last = performance.now(), announced = false, scoreAnnounced = false, dynamicsAnnounced = false, textureAnnounced = false, precisionAnnounced = false, freedomAnnounced = false, eddyAnnounced = false;
@@ -327,8 +329,8 @@
     for (const timer of collisionTimers.values()) clearTimeout(timer);
     collisionTimers.clear();
     collisionPairs.clear();
-    for (const timer of shoreTimers.values()) clearTimeout(timer);
-    shoreTimers.clear();
+    for (const timer of bankTimers.values()) clearTimeout(timer);
+    bankTimers.clear();
     for (const timer of skipTimers) clearTimeout(timer);
     skipTimers.clear();
     for (const timer of echoTimers) clearTimeout(timer);
@@ -1452,6 +1454,8 @@
       collisionGlints.length = 0; collisionGlints.push(...movedGlints);
       const movedLaps = repose.reposePoints(shoreLapGlints, from, to);
       shoreLapGlints.length = 0; shoreLapGlints.push(...movedLaps);
+      const movedSkims = repose.reposePoints(skimGlints, from, to);
+      skimGlints.length = 0; skimGlints.push(...movedSkims);
       const movedReads = repose.reposePoints(inkReadGlints, from, to);
       inkReadGlints.length = 0; inkReadGlints.push(...movedReads);
       // The departing lights keep their place on the new water too.
@@ -1465,7 +1469,7 @@
       // artifacts in dead coordinates: they leave with the old space.
       ripples.length = 0; trails.length = 0; splashes.length = 0;
       coronas.length = 0; collisionPearls.length = 0;
-      collisionGlints.length = 0; shoreLapGlints.length = 0; inkReadGlints.length = 0; stoneFlights.length = 0; pointers.clear();
+      collisionGlints.length = 0; shoreLapGlints.length = 0; skimGlints.length = 0; inkReadGlints.length = 0; stoneFlights.length = 0; pointers.clear();
       releaseGlints.length = 0;
     }
     // Wave appointments were predicted against the old geometry: dissolve
@@ -1473,8 +1477,8 @@
     for (const timer of collisionTimers.values()) clearTimeout(timer);
     collisionTimers.clear();
     collisionPairs.clear();
-    for (const timer of shoreTimers.values()) clearTimeout(timer);
-    shoreTimers.clear();
+    for (const timer of bankTimers.values()) clearTimeout(timer);
+    bankTimers.clear();
   }
 
   // The pond invites its first gesture itself: one breathing ring of light
@@ -1709,7 +1713,6 @@
     if (shoreLapGlints.length > 6) shoreLapGlints.shift();
     lastShoreAt = visualNow;
     oscillator.addEventListener('ended', () => disconnectCollisionVoice(engine, pearl), { once: true });
-    engine.collisionVoices.delete(pearl); // lap already resigned the pool after its short fold
     oscillator.start();
     oscillator.stop(now + response.durationSeconds + .02);
     return true;
@@ -1720,12 +1723,74 @@
       width, height, shoreTop: Math.max(0, Math.min(height, height * .82))
     });
     if (!lap) return;
-    if (shoreTimers.has(lap.key)) return; // already planned one fold for this ripple
+    if (bankTimers.has(lap.key)) return; // already planned one fold for this ripple
     const timer = setTimeout(() => {
-      shoreTimers.delete(lap.key);
+      bankTimers.delete(lap.key);
       playShoreLap(lap);
     }, Math.max(0, lap.at - now));
-    shoreTimers.set(lap.key, timer);
+    bankTimers.set(lap.key, timer);
+  }
+
+  // The far bank mirrors the warm near-shore lap with a thinner, cooler
+  // skim. It uses the same bounded transient pool but keeps its own cadence,
+  // so one edge never starves the other and neither becomes a second hit.
+  function playFarSkim(skim) {
+    const engine = audio;
+    const visualNow = performance.now();
+    if (!engine || engine.context.state !== 'running' ||
+        engine.collisionVoices.size >= MAX_COLLISION_VOICES ||
+        visualNow - lastSkimAt < SKIM_RATE_LIMIT_MS) return false;
+    const depth = Math.max(0, Math.min(1, skim.y / Math.max(1, height)));
+    const response = music.farSkim(skim.parentFrequency, depth, skim.energy, tuningFamily);
+    const now = engine.context.currentTime;
+    const oscillator = engine.context.createOscillator();
+    const filter = engine.context.createBiquadFilter();
+    const gain = engine.context.createGain();
+    const panner = typeof engine.context.createStereoPanner === 'function' ? engine.context.createStereoPanner() : null;
+    const reflectionSend = engine.reflection ? engine.context.createGain() : null;
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(response.startFrequency, now);
+    oscillator.frequency.exponentialRampToValueAtTime(response.frequency, now + response.durationSeconds * .34);
+    oscillator.frequency.exponentialRampToValueAtTime(response.frequency * 1.006, now + response.durationSeconds);
+    filter.type = 'lowpass'; filter.frequency.value = response.cutoffHz; filter.Q.value = 1.2;
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.exponentialRampToValueAtTime(response.peakGain, now + .009);
+    gain.gain.exponentialRampToValueAtTime(.0001, now + response.durationSeconds);
+    oscillator.connect(filter).connect(gain);
+    let output = gain;
+    if (panner) {
+      panner.pan.value = music.spatialPan(skim.x / Math.max(1, width));
+      gain.connect(panner);
+      output = panner;
+    }
+    output.connect(engine.master);
+    if (reflectionSend) {
+      reflectionSend.gain.value = music.depthReflection(depth).sendGain * .24;
+      output.connect(reflectionSend).connect(engine.reflection.input);
+    }
+    const voice = { oscillator, nodes: [oscillator, filter, gain, panner, reflectionSend] };
+    engine.collisionVoices.add(voice);
+    canvas.dataset.pearlVoices = String(engine.collisionVoices.size);
+    canvas.dataset.farSkims = String((Number(canvas.dataset.farSkims) || 0) + 1);
+    skimGlints.push({ x: skim.x, y: skim.y, born: visualNow, energy: skim.energy, depth });
+    if (skimGlints.length > 6) skimGlints.shift();
+    lastSkimAt = visualNow;
+    oscillator.addEventListener('ended', () => disconnectCollisionVoice(engine, voice), { once: true });
+    oscillator.start();
+    oscillator.stop(now + response.durationSeconds + .02);
+    return true;
+  }
+
+  function scheduleFarSkims(ripple, now) {
+    const skim = waves.predictFarSkim(ripple, now, {
+      width, height, skimTop: Math.max(0, Math.min(height, height * .10))
+    });
+    if (!skim || bankTimers.has(skim.key)) return;
+    const timer = setTimeout(() => {
+      bankTimers.delete(skim.key);
+      playFarSkim(skim);
+    }, Math.max(0, skim.at - now));
+    bankTimers.set(skim.key, timer);
   }
 
   // The pond reads its own score while it plays (iteration 0049). When a
@@ -1915,6 +1980,7 @@ function disconnectSkipVoice(engine, skip) {
     if (reactive) {
       scheduleWaveCollisions(ripple, born);
       scheduleShoreLaps(ripple, born);
+      scheduleFarSkims(ripple, born);
       scheduleInkReads(ripple, born);
     }
     ripples.push({ ...ripple, hue: 152 + 30 * (1 - y / height) });
@@ -2604,6 +2670,28 @@ function disconnectSkipVoice(engine, skip) {
     return fold.progress < 1;
   }
 
+  // The far bank's skim is the cool countershape to the warm near-bank lap:
+  // a narrow fold below the upper edge. Reduced motion keeps a small still
+  // glint, and the same frame budget may suppress it without touching audio.
+  function drawFarSkim(skim, now) {
+    const tideGate = budget.style(waterBudget, 'ink');
+    if (tideGate <= 0.02) return true;
+    const fold = waves.farSkimFold(skim.energy, skim.depth, now, skim.born, reduced.matches);
+    if (fold.alpha <= 0 || fold.radius <= 0) return fold.progress < 1;
+    const pxRadius = fold.radius * Math.max(18, Math.min(30, Math.min(width, height) * .05));
+    const light = fold.alpha;
+    const inwardY = skim.y + (reduced.matches ? 0 : fold.fold * pxRadius * .75);
+    const glow = ctx.createRadialGradient(skim.x, inwardY, 0, skim.x, inwardY, pxRadius * 2.7);
+    glow.addColorStop(0, `hsla(${184 + 18 * fold.warmth} 72% 88% / ${light * .72})`);
+    glow.addColorStop(.46, `hsla(${176 + 16 * fold.warmth} 68% 78% / ${light * .3})`);
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.ellipse(skim.x, inwardY, pxRadius * 2.7, Math.max(2, pxRadius * .72), 0, 0, Math.PI * 2);
+    ctx.fill();
+    return fold.progress < 1;
+  }
+
   // The pool answers as a ring passes over its ink (iteration 0049): a warm
   // crossing glint exactly where the phrase was re-read. Budget-aware and
   // reduced-motion calm like the other glints.
@@ -3058,6 +3146,9 @@ function disconnectSkipVoice(engine, skip) {
     }
     for (let i = shoreLapGlints.length - 1; i >= 0; i--) {
       if (!drawShoreLap(shoreLapGlints[i], now)) shoreLapGlints.splice(i, 1);
+    }
+    for (let i = skimGlints.length - 1; i >= 0; i--) {
+      if (!drawFarSkim(skimGlints[i], now)) skimGlints.splice(i, 1);
     }
     for (let i = inkReadGlints.length - 1; i >= 0; i--) {
       if (!drawInkRead(inkReadGlints[i], now)) inkReadGlints.splice(i, 1);

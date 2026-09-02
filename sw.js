@@ -1,7 +1,5 @@
-const CACHE = 'pond-piano-shell-v46';
-// Iteration 0047: the shore lap - a returning ring folds back as one quiet
-// lapping answer when it reaches the near bank.
-// note sinks away along the same stretched tail its sound uses.
+const CACHE = 'pond-piano-shell-v47';
+// Iteration 0050: both banks answer — warm near-shore lap, cool far-edge skim.
 const SHELL = [
   './',
   './index.html',

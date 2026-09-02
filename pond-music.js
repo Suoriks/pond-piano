@@ -251,6 +251,25 @@
   // full pearl: shorter, lower, less peak, so a ripple reaching the shore
   // reads as a gentle fold rather than a second impact. Shallow lapping stays
   // herbal and bright; a deep return folds warmer and a touch longer.
+  function farSkim(parentFrequency, normalizedDepth, energy = .3, familyId = DEFAULT_SCALE_FAMILY) {
+    // The far edge is the delicate mirror: a skim is higher, thinner and
+    // quieter than the warm bottom lap. It folds fast and stays glassy, so it
+    // reads as a cool upper bank rather than a second warm shore.
+    const source = Math.max(BASE_FREQUENCY, Number.isFinite(parentFrequency) ? parentFrequency : BASE_FREQUENCY);
+    const depth = clamp(normalizedDepth);
+    const force = clamp(energy);
+    const current = mapPitch(normalizedAtFrequency(source), 980, 0, familyId);
+    const frequency = current.frequency * 1.06; // the top sits a touch higher
+    return {
+      frequency,
+      startFrequency: frequency * (1.22 - depth * .06),
+      durationSeconds: .075 + depth * .04 + force * .018,
+      peakGain: .0026 + force * .006,       // quieter than the bottom lap
+      cutoffHz: 1700 + (1 - depth) * 1500,  // thinner, brighter glass
+      scaleFamily: current.scaleFamily
+    };
+  }
+
   function shoreLap(parentFrequency, normalizedDepth, energy = .3, familyId = DEFAULT_SCALE_FAMILY) {
     const source = Math.max(BASE_FREQUENCY, Number.isFinite(parentFrequency) ? parentFrequency : BASE_FREQUENCY);
     const depth = clamp(normalizedDepth);
@@ -461,6 +480,7 @@
     attackIntensity,
     collisionPearl,
     shoreLap,
+    farSkim,
     echoNote,
     depthReflection,
     hasExpressivePressure,

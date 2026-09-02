@@ -185,6 +185,56 @@ test('reduced motion calms the lapping return', () => {
   assert.ok(calm.radius < lively.radius, 'and stays gathered');
 });
 
+test('predicts a ripple ring skimming the far bank', () => {
+  const wave = waves.createWave({ id: 'far', x: 245, y: 200, born: 1000, pressure: .95, strength: 1, frequency: 440 });
+  const bounds = { width: 390, height: 844, skimTop: 84 };
+  const skim = waves.predictFarSkim(wave, 1000, bounds);
+  assert.ok(skim, 'a strong ring below the far bank should skim it');
+  assert.ok(skim.at > 1000 && skim.delayMs <= waves.MAX_COLLISION_DELAY_MS);
+  assert.equal(skim.x, 245, 'the skim lands above the ring on the same pitch axis');
+  assert.equal(skim.y, 84, 'the skim lands on the far edge');
+  assert.ok(skim.energy > 0 && skim.energy <= 1, 'energy stays bounded');
+  assert.equal(skim.parentFrequency, 440, 'the skim keeps the ring pitch');
+});
+
+test('far-bank prediction stays quiet for resting, expired, weak and broken rings', () => {
+  const resting = waves.createWave({ id: 'rest', x: 100, y: 70, born: 0, pressure: .8 });
+  assert.equal(waves.predictFarSkim(resting, 0, { width: 390, height: 844, skimTop: 84 }), null,
+    'a ring already at the far edge does not skim again');
+  const expired = waves.createWave({ id: 'old', x: 60, y: 300, born: 0, pressure: .9 });
+  assert.equal(waves.predictFarSkim(expired, 9000, { width: 390, height: 844, skimTop: 84 }), null,
+    'an expired ring cannot reach the far bank');
+  const weak = waves.createWave({ id: 'weak', x: 80, y: 200, born: 0, pressure: .04 });
+  assert.equal(waves.predictFarSkim(weak, 0, { width: 390, height: 844, skimTop: 84 }), null,
+    'a spent ring stays silent');
+  assert.equal(waves.predictFarSkim(null, 0, { width: 390, height: 844, skimTop: 84 }), null);
+  assert.equal(waves.predictFarSkim(expired, 0, { width: NaN, height: 844, skimTop: 84 }), null);
+});
+
+test('far-bank skim is a bounded cool return fold', () => {
+  const skim = waves.farSkimFold(.7, .12, 180, 0);
+  assert.ok(skim.progress > 0 && skim.progress < 1);
+  assert.ok(skim.alpha > 0 && skim.fade > 0, 'the skim shows while it folds inward');
+  assert.ok(skim.fold > 0 && skim.fold < 1, 'fold motion stays bounded');
+  assert.ok(skim.warmth < waves.shoreFold(.7, .12, 180, 0).warmth,
+    'the far return is cooler than the warm near-bank lap');
+  const late = waves.farSkimFold(.7, .12, 5000 + waves.SKIM_FOLD_MS, 5000);
+  assert.equal(late.progress, 1);
+  assert.equal(late.alpha, 0);
+  const before = waves.farSkimFold(.7, .12, 900, 1100);
+  assert.equal(before.age, 0, 'nothing shows before the ring reaches the far edge');
+  const junk = waves.farSkimFold(NaN, NaN, NaN, NaN);
+  [junk.fade, junk.fold, junk.radius, junk.warmth].every(v => assert.ok(Number.isFinite(v)));
+});
+
+test('reduced motion calms the far-bank skim', () => {
+  const calm = waves.farSkimFold(.9, .12, 180, 0, true);
+  const lively = waves.farSkimFold(.9, .12, 180, 0, false);
+  assert.equal(calm.fold, 0, 'no inward sweep under reduced motion');
+  assert.ok(calm.alpha > 0, 'but the cool bank answer remains visible');
+  assert.ok(calm.radius < lively.radius, 'and stays gathered');
+});
+
 // The pond reads its own score: a ripple whose ring first touches a still
 // readable ink line is predicted in pure geometry, exact px, earliest time.
 const mkLine = (points, born = 0, life = 60000) => ({

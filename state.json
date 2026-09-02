@@ -1,12 +1,12 @@
 {
   "project": "pond-piano",
   "phase": "done",
-  "iteration": 49,
-  "status": "ink-read-strike-done",
-  "current_goal": "Iteration 0049 done: the pond reads its own score while it plays. predictInkRead in pond-waves.js is pure geometry: from a ripple and a still-readable ink polyline it returns the first wall-clock crossing inside both lives, exact px node with local pitch and bounded energy. pond.js scheduleInkReads (from addRipple, non-recursive) plans one quiet re-strike per readable line; playInkRead re-strikes a single echo anchor at the crossing via the shared echo-voice pool, rate-limited, plus a warm crossing glint at the node (reduced-motion calm). Fortnight of iteration: the sheet re-reads itself as its own waves pass, no new UI. 65 node tests pass; instrumented smoke proves a passing ripple re-reads the ink once (inkReads 0->1).",
-  "previous_goal": "Iteration 0048 done: the double-tap rehearsal summons the newest phrase to circle. Iteration 0047 done: the shore lap.",
-  "last_verified": "2026-08-25 (0049): 65 node tests pass (was 63, +2 predictInkRead suites in pond-waves.test.js); syntax 44 JS + smoke clean; JSON + git diff --check clean. Instrumented headless Chromium 390x844 live Web Audio: a gliding hold left 1 ink line, then a quick tap on the opposite side sent a ripple whose ring crossed the line and re-read it once (dataset.inkReads 0 -> 1, echoVoices back to 0 after, no console errors). Screenshot output/pond-piano/ink-read-49.png: warm organic teal water, faint contour ripples, controls intact, no crop. Eyebrow 49, shell cache v46. Commit pushed to main; Windows CI to follow.",
-  "next_step": "shared backlog: real device pass on Android Chrome/PWA and iPhone Safari; does the double-tap rehearsal read as an intentional summon rather than a miscount of two quick notes on real touch, and does its quiet repeated echo stay comfortable on live speakers.",
+  "iteration": 50,
+  "status": "far-bank-skim-done",
+  "current_goal": "Iteration 0050 done: both visible banks answer the same living water in different materials. A ripple reaching the near bank keeps its warm, low lap; one reaching the far/top edge now folds inward as a shorter, higher, cooler skim. Pure geometry predicts the first far-edge crossing, the music layer derives a quiet family-guided transient, and the browser draws a thin cool fold while sharing the existing three-voice collision pool. No child ripple or score entry is created.",
+  "previous_goal": "Iteration 0049 done: the pond reads its own score while it plays.",
+  "last_verified": "2026-09-02 (0050): 69 node tests pass (was 65, +4 far-bank wave suites; music assertions cover quieter/shorter/higher/brighter relation to the near lap); syntax 45 JS files clean; JSON and git diff --check clean. Instrumented Chromium 390x844 with live Web Audio: a top-water tap produced exactly one far skim (dataset 0->1), entered the shared transient pool at size 1, released back to 0, and emitted no page/console errors. The existing near-bank smoke still passes after correcting its transient to remain in the shared pool until ended. Screenshot output/pond-piano/far-bank-50.png inspected: organic full-bleed pond, cool upper-right return remains subtle, title/shore controls intact, no rectangular artifact or crop. Eyebrow 50, shell cache v47.",
+  "next_step": "shared device backlog: on Android Chrome/PWA and iPhone Safari, listen for whether the two banks read as one water body with contrasting depth—not duplicate taps—and verify the very subtle far skim remains legible on bright displays.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -318,5 +318,26 @@
       "screenshot output/pond-piano/rehearsal-48.png direct-inspected: warm organic teal water, a visible ink line, a warm amber circling mark at the loop, controls intact, no crop"
     ],
     "next_step": "shared device backlog continues; does the double-tap rehearsal read as an intentional summon rather than a miscount of two quick notes on real touch, and does its quiet repeated echo stay comfortable on live speakers"
+  },
+  "iteration_50": {
+    "started": "2026-09-02T21:17:00+03:00",
+    "finished": "2026-09-02T21:27:00+03:00",
+    "phase": "done",
+    "resumed_from_interrupted_slot": true,
+    "plan": [
+      "complete pure predictFarSkim/farSkimFold geometry and family-guided farSkim transient",
+      "wire one scheduled far-edge response into the browser using the shared bank timer registry and collision voice pool",
+      "draw and resize a cool inward fold; keep reduced motion still and frame-budget-aware",
+      "add unit coverage and a live-Web-Audio Chromium smoke with screenshot inspection",
+      "update product docs, cache/eyebrow, kaizen state, commit one iteration and push main"
+    ],
+    "verified": [
+      "69 node tests pass; four new wave suites cover prediction/refusal/fold/reduced-motion and music assertions compare the skim with the near-bank lap",
+      "45 JavaScript files pass syntax; JSON validity and git diff --check clean",
+      "instrumented Chromium 390x844: farSkims 0->1, shared transient pool 1 while sounding and 0 after ended, no browser errors",
+      "existing shore-lap smoke remains green; near-bank transient now honestly occupies the shared pool until oscillator ended",
+      "screenshot output/pond-piano/far-bank-50.png inspected: organic full-bleed water, subtle cool upper-right fold, controls/title intact, no clipping or UI rectangle"
+    ],
+    "next_step": "done; real-device pass should compare the warm near lap and cool far skim on phone speakers and bright screens"
   }
 }

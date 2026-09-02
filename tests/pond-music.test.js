@@ -184,6 +184,18 @@ assert.ok(shallowLap.cutoffHz > deepLap.cutoffHz,
   'shallow lapping stays brighter; a deep return folds warmer');
 assert.equal(deepLap.scaleFamily, 'dusk', 'the family must guide the folding lap pitch');
 
+const farSkim = music.farSkim(Math.sqrt(220 * 440), .1, .65, 'mist');
+const nearSkimReference = music.shoreLap(Math.sqrt(220 * 440), .1, .65, 'mist');
+assert.ok(farSkim.peakGain < nearSkimReference.peakGain,
+  'the far-bank skim must stay quieter than the same ring at the near bank');
+assert.ok(farSkim.durationSeconds < nearSkimReference.durationSeconds,
+  'the far-bank skim should leave faster than the warmer lap');
+assert.ok(farSkim.frequency > nearSkimReference.frequency && farSkim.startFrequency > farSkim.frequency,
+  'the skim is a higher thin fall derived from the same ring');
+assert.ok(farSkim.cutoffHz > nearSkimReference.cutoffHz,
+  'the far return stays more glassy than the near-bank fold');
+assert.equal(farSkim.scaleFamily, 'mist', 'the selected current guides the skim pitch');
+
 const firstSkip = music.stoneSkip(440, .18, .72, 0);
 const lastSkip = music.stoneSkip(660, .82, .35, 2);
 assert.ok(firstSkip.startFrequency > firstSkip.frequency && firstSkip.endFrequency < firstSkip.frequency,
