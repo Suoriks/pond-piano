@@ -302,6 +302,30 @@
     };
   }
 
+  // A settled chord gets one shared breath, not another sustained voice.
+  // The logarithmic centre preserves the interval shape, then the selected
+  // current gently seats that centre in the same pitch family as the pond.
+  function chordBloomTone(frequencies, normalizedDepth, energy = .5, familyId = DEFAULT_SCALE_FAMILY) {
+    const valid = Array.isArray(frequencies)
+      ? frequencies.filter(frequency => Number.isFinite(frequency) && frequency >= 20 && frequency <= 20000).slice(0, 6)
+      : [];
+    if (valid.length < 3) return null;
+    const depth = clamp(normalizedDepth);
+    const force = clamp(energy);
+    const geometricMean = Math.exp(valid.reduce((sum, frequency) => sum + Math.log(frequency), 0) / valid.length);
+    const current = mapPitch(normalizedAtFrequency(geometricMean), 980, 0, familyId);
+    const frequency = current.frequency * .5; // a low shared root under the held notes
+    return Object.freeze({
+      frequency,
+      overtoneFrequency: frequency * (2.01 + (1 - depth) * .035),
+      durationSeconds: .72 + depth * .24 + force * .18,
+      peakGain: .003 + force * .0045,
+      overtoneGain: .18 + (1 - depth) * .1,
+      cutoffHz: 1050 + (1 - depth) * 1250,
+      scaleFamily: current.scaleFamily
+    });
+  }
+
   function stoneSkip(frequency, normalizedDepth, energy = .45, index = 0) {
     const pitch = Math.max(20, Number.isFinite(frequency) ? frequency : BASE_FREQUENCY);
     const depth = clamp(normalizedDepth);
@@ -478,6 +502,7 @@
     DROP_MAX_DURATION_SECONDS,
     MATERIAL_BRUSH_DEPTH,
     attackIntensity,
+    chordBloomTone,
     collisionPearl,
     shoreLap,
     farSkim,

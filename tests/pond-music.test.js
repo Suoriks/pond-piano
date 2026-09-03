@@ -172,6 +172,22 @@ assert.ok(shallowPearl.startFrequency > shallowPearl.frequency,
   'the pearl must fall into its derived parent pitch');
 assert.equal(deepPearl.scaleFamily, 'dusk', 'the current shoreline family must guide the pearl pitch');
 
+const chordBloom = music.chordBloomTone([220, 330, 440], .7, .65, 'mist');
+const brightChordBloom = music.chordBloomTone([220, 330, 440], .1, .65, 'dawn');
+assert.ok(chordBloom && brightChordBloom, 'three sounding notes should yield one shared chord breath');
+assert.ok(chordBloom.frequency >= music.BASE_FREQUENCY * .5 && chordBloom.frequency < 440,
+  'the bloom rests under the held chord rather than duplicating one note');
+assert.ok(chordBloom.durationSeconds >= .72 && chordBloom.durationSeconds <= 1.14,
+  'the shared breath is long enough to open but remains a bounded transient');
+assert.ok(chordBloom.peakGain <= .0075 && chordBloom.peakGain > 0,
+  'the bloom stays far below three sustained voices');
+assert.ok(brightChordBloom.cutoffHz > chordBloom.cutoffHz && brightChordBloom.overtoneGain > chordBloom.overtoneGain,
+  'shallow chord-water breathes brighter while deep water stays warm');
+assert.equal(chordBloom.scaleFamily, 'mist', 'the selected current guides the shared chord root');
+assert.equal(music.chordBloomTone([220, 440], .5, .5), null, 'two notes never invent a chord bloom');
+assert.ok(music.chordBloomTone([NaN, 220, 330, 440, Infinity], NaN, NaN),
+  'broken extras are ignored when three healthy frequencies remain');
+
 const shallowLap = music.shoreLap(Math.sqrt(220 * 440), .1, .28, 'dawn');
 const deepLap = music.shoreLap(Math.sqrt(220 * 440), .9, .8, 'dusk');
 assert.ok(shallowLap.peakGain < shallowPearl.peakGain && deepLap.peakGain < deepPearl.peakGain,

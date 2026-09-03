@@ -1,12 +1,12 @@
 {
   "project": "pond-piano",
   "phase": "done",
-  "iteration": 50,
-  "status": "far-bank-skim-done",
-  "current_goal": "Iteration 0050 done: both visible banks answer the same living water in different materials. A ripple reaching the near bank keeps its warm, low lap; one reaching the far/top edge now folds inward as a shorter, higher, cooler skim. Pure geometry predicts the first far-edge crossing, the music layer derives a quiet family-guided transient, and the browser draws a thin cool fold while sharing the existing three-voice collision pool. No child ripple or score entry is created.",
-  "previous_goal": "Iteration 0049 done: the pond reads its own score while it plays.",
-  "last_verified": "2026-09-02 (0051): desktop shell dependency closure repaired. 71 Node tests pass; syntax 47 JS files clean; JSON and git diff --check clean. Exact production loopback server passed Chromium 6/6 with all 12 scripts, live Web Audio voice, rendering, score write and clean release; no HTTP/page/console errors. npm pack dry-run contains every repaired layer. Final screenshot desktop-shell-51.png visually inspected.",
-  "next_step": "release-pass: after push, let Windows CI build the corrected portable artifact and later run that artifact on real Windows; shared Android Chrome/PWA + iPhone Safari device backlog remains unchanged.",
+  "iteration": 52,
+  "status": "chord-bloom-done",
+  "current_goal": "Iteration 0052 done: a calm held chord of 3-6 voices now gathers once into a shared water flower at the real contact centroid. Petals follow finger geometry while one very quiet family-guided harmonic breath sits below the held notes. Unchanged membership is latched; the bloom creates no sustain voice, ripple or score entry, respects reduced motion, and cleans up with the audio lifecycle.",
+  "previous_goal": "Iteration 0051 done: the secure Electron shell once again serves every browser layer required by the live pond, with closure tests binding index scripts to the allowlist and both package manifests.",
+  "last_verified": "2026-09-03 (0052): 76 Node tests pass; syntax 50 JS files clean; JSON, git diff --check and npm pack dry-run clean with pond-chord.js packaged. Production loopback Chromium mobile smoke passed 7/7: three sustain voices produced one audible+visible bloom, unchanged membership stayed latched, changed membership rearmed once, ripple count stayed 3->3, score stayed 0, and sustain/bloom pools returned to zero without page or console errors. chord-bloom-52.png visually inspected.",
+  "next_step": "device-pass: hold a real three-finger chord on Android Chrome/PWA and iPhone Safari; judge the 520ms intent threshold, low shared root on phone speakers and flower legibility under fingers before changing numbers.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -340,7 +340,7 @@
     ],
     "next_step": "done; real-device pass should compare the warm near lap and cool far skim on phone speakers and bright screens"
   },
-  "current_iteration": 51,
+  "current_iteration": 52,
   "iteration_51": {
     "started": "2026-09-02T22:17:00+03:00",
     "phase": "done",
@@ -360,5 +360,25 @@
     ],
     "next_step": "done; Windows CI artifact build follows push, and a real Windows launch remains the release-pass",
     "finished": "2026-09-02T22:22:00+03:00"
+  },
+  "iteration_52": {
+    "started": "2026-09-03T08:17:00+03:00",
+    "phase": "done",
+    "plan": [
+      "add a pure pond-chord.js layer for stable chord membership, weighted centroid/spread/energy and bounded bloom timing",
+      "add a family-guided quiet chord-bloom tone derived from the live frequencies",
+      "wire one latched bloom per unchanged 3-6 voice chord into Canvas/Web Audio without child ripples or score entries; clean it on background",
+      "include the layer in PWA/Electron/package closure and add unit plus instrumented Chromium coverage with screenshot inspection",
+      "update product docs, kaizen state, commit exactly iteration 0052 and push main"
+    ],
+    "verified": [
+      "76 Node tests pass (was 71); five new pure chord suites cover stable membership, held/calm gates, bounded 3-6 voice geometry, malformed input and reduced motion; music assertions bound the family-guided shared tone",
+      "50 JavaScript files pass syntax; package/state JSON and git diff --check are clean; npm pack dry-run contains pond-chord.js and all required shell files",
+      "production Electron loopback Chromium 390x844 passes 7/7: 3 sustain voices -> one audible+visible bloom; unchanged membership stays at event 1; changed membership reaches exactly event 2; ripple count stays 3->3 and score stays 0; sustain and bloom pools both return to zero; no page/console errors",
+      "first smoke exposed and fixed a renderer clock split: performance.now() could sit just ahead of the current rAF timestamp and cull the newborn bloom; visual birth now uses the pure plan rAF clock",
+      "screenshot output/pond-piano/chord-bloom-52.png inspected: three contact centres and their shared organic flower are readable; title and shore stones intact; no clipping or rectangular dashboard artifact"
+    ],
+    "next_step": "done; real-device backlog now includes a three-finger hold to judge the 520ms intent threshold, low root on phone speakers and bloom legibility under fingers",
+    "finished": "2026-09-03T08:25:00+03:00"
   }
 }

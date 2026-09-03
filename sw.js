@@ -1,5 +1,5 @@
-const CACHE = 'pond-piano-shell-v48';
-// Iteration 0051: desktop and PWA shells load the same complete water core.
+const CACHE = 'pond-piano-shell-v49';
+// Iteration 0052: the shared shell carries the held-chord bloom layer.
 const SHELL = [
   './',
   './index.html',
@@ -8,6 +8,7 @@ const SHELL = [
   './pond-gesture.js',
   './pond-score.js',
   './pond-waves.js',
+  './pond-chord.js',
   './pond-repose.js',
   './pond-caustic.js',
   './pond-tide.js',

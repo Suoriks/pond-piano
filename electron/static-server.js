@@ -11,6 +11,7 @@ const APP_FILES = new Map([
   ['/pond-gesture.js', 'pond-gesture.js'],
   ['/pond-score.js', 'pond-score.js'],
   ['/pond-waves.js', 'pond-waves.js'],
+  ['/pond-chord.js', 'pond-chord.js'],
   ['/pond-repose.js', 'pond-repose.js'],
   ['/pond-caustic.js', 'pond-caustic.js'],
   ['/pond-tide.js', 'pond-tide.js'],

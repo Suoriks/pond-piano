@@ -7,6 +7,7 @@
   const gesture = window.PondGesture;
   const score = window.PondScore;
   const waves = window.PondWaves;
+  const chord = window.PondChord;
   const caustic = window.PondCaustic;
   const tide = window.PondTide;
   const budget = window.PondBudget;
@@ -18,6 +19,7 @@
   if (!gesture) throw new Error('Pond gesture mapping did not load');
   if (!score) throw new Error('Pond score mapping did not load');
   if (!waves) throw new Error('Pond wave mapping did not load');
+  if (!chord) throw new Error('Pond chord mapping did not load');
   if (!tide) throw new Error('Pond tide mapping did not load');
   if (!masterModel) throw new Error('Pond master control did not load');
   if (!budget) throw new Error('Pond budget mapping did not load');
@@ -55,6 +57,7 @@
   const SKIM_RATE_LIMIT_MS = 320;
   const MAX_PENDING_COLLISIONS = 8;
   const MAX_COLLISION_VOICES = 3;
+  const MAX_CHORD_BLOOM_VOICES = 1;
   const SKIP_PLAN_RATE_LIMIT_MS = 240;
   const MAX_PENDING_SKIPS = 3;
   const MAX_SKIP_VOICES = 2;
@@ -63,7 +66,7 @@
   const MAX_PENDING_POURS = 6;
   // `pointers` is `let`: a resize re-seats live contacts into a fresh Map
   // via the repose layer, so every closure keeps reading the current one.
-  const ripples = [], trails = [], splashes = [], scoreEchoes = [], collisionPearls = [], collisionGlints = [], shoreLapGlints = [], skimGlints = [], inkReadGlints = [], stoneFlights = [];
+  const ripples = [], trails = [], splashes = [], scoreEchoes = [], collisionPearls = [], collisionGlints = [], shoreLapGlints = [], skimGlints = [], inkReadGlints = [], chordBlooms = [], stoneFlights = [];
   // The visible departure: resting lights of ended notes sinking away.
   const releaseGlints = [];
   const RELEASE_GLINT_MAX = 12;
@@ -107,12 +110,15 @@
   let lastSkimAt = -Infinity;
   let lastInkReadAt = -Infinity;
   let lastSkipPlanAt = -Infinity;
+  let activeChordMembership = null;
+  let activeChordBloomed = false;
+  let chordBloomSerial = 0;
   let width = 0, height = 0, dpr = 1, last = performance.now(), announced = false, scoreAnnounced = false, dynamicsAnnounced = false, textureAnnounced = false, precisionAnnounced = false, freedomAnnounced = false, eddyAnnounced = false;
   let pondHasPlayed = false;
   try { pondHasPlayed = localStorage.getItem(INVITATION_STORAGE_KEY) === 'played'; } catch {}
   const invitationLine = document.querySelector('#water-invitation');
   if (invitationLine && pondHasPlayed) invitationLine.classList.add('is-gone');
-  let collisionAnnounced = false, skipAnnounced = false, scoreEchoAnnounced = false, pourAnnounced = false;
+  let collisionAnnounced = false, chordBloomAnnounced = false, skipAnnounced = false, scoreEchoAnnounced = false, pourAnnounced = false;
   let phraseNoteIndex = 0;
   // A soft double-tap on open water wakes the newest readable phrase as a
   // quiet repeated echo. Pure touch history keeps recent taps (any kind), so
@@ -162,7 +168,7 @@
         console.warn('Water reflection is unavailable; keeping the direct voice', error);
       }
     }
-    audio = { context, master, reflection, voices: new Map(), collisionVoices: new Set(), skipVoices: new Set(), echoVoices: new Set() };
+    audio = { context, master, reflection, voices: new Map(), collisionVoices: new Set(), chordVoices: new Set(), skipVoices: new Set(), echoVoices: new Set() };
     return audio;
   }
 
@@ -312,6 +318,15 @@
       }
     }
     engine.collisionVoices?.clear();
+    for (const bloom of engine.chordVoices ?? []) {
+      for (const oscillator of bloom.oscillators ?? []) {
+        try { oscillator.stop(now); } catch {}
+      }
+      for (const node of bloom.nodes) {
+        try { node?.disconnect(); } catch {}
+      }
+    }
+    engine.chordVoices?.clear();
     for (const skip of engine.skipVoices ?? []) {
       try { skip.oscillator.stop(now); } catch {}
       for (const node of skip.nodes) {
@@ -342,6 +357,7 @@
     hideDiaryLeaf();
     stoneFlights.length = 0;
     canvas.dataset.pearlVoices = '0';
+    canvas.dataset.chordBloomVoices = '0';
     canvas.dataset.skipVoices = '0';
     canvas.dataset.pendingSkips = '0';
     canvas.dataset.echoVoices = '0';
@@ -354,6 +370,8 @@
       try { canvas.releasePointerCapture?.(pointerId); } catch {}
     }
     pointers.clear();
+    activeChordMembership = null;
+    activeChordBloomed = false;
     canvas.dataset.eddyVoices = '0';
     reflectDropVoices(engine);
     keyboard.sounding = false;
@@ -1597,6 +1615,104 @@
     if (last === 1) return 'голос';
     if (last >= 2 && last <= 4) return 'голоса';
     return 'голосов';
+  }
+
+  function disconnectChordBloomVoice(engine, bloomVoice) {
+    if (!engine.chordVoices?.delete(bloomVoice)) return;
+    for (const node of bloomVoice.nodes) {
+      try { node?.disconnect(); } catch {}
+    }
+    canvas.dataset.chordBloomVoices = String(engine.chordVoices.size);
+  }
+
+  // Three or more calm held voices gather once at their shared centre. The
+  // breath is a bounded transient in its own one-voice pool: it cannot steal
+  // a sustain slot, make a child ripple or write itself into the score.
+  function playChordBloom(plan) {
+    const engine = audio;
+    if (!engine || engine.context.state !== 'running' ||
+        engine.chordVoices.size >= MAX_CHORD_BLOOM_VOICES) return false;
+    const response = music.chordBloomTone(plan.frequencies, plan.depth, plan.energy, tuningFamily);
+    if (!response) return false;
+    const now = engine.context.currentTime;
+    const root = engine.context.createOscillator();
+    const overtone = engine.context.createOscillator();
+    const overtoneGain = engine.context.createGain();
+    const filter = engine.context.createBiquadFilter();
+    const gain = engine.context.createGain();
+    const panner = typeof engine.context.createStereoPanner === 'function' ? engine.context.createStereoPanner() : null;
+    const reflectionSend = engine.reflection ? engine.context.createGain() : null;
+
+    root.type = 'sine';
+    root.frequency.setValueAtTime(response.frequency * .985, now);
+    root.frequency.exponentialRampToValueAtTime(response.frequency, now + .24);
+    overtone.type = 'triangle';
+    overtone.frequency.setValueAtTime(response.overtoneFrequency * 1.008, now);
+    overtone.frequency.exponentialRampToValueAtTime(response.overtoneFrequency, now + .34);
+    overtoneGain.gain.value = response.overtoneGain;
+    filter.type = 'lowpass'; filter.frequency.value = response.cutoffHz; filter.Q.value = .72;
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.exponentialRampToValueAtTime(response.peakGain, now + .16);
+    gain.gain.setValueAtTime(response.peakGain, now + Math.max(.18, response.durationSeconds * .42));
+    gain.gain.exponentialRampToValueAtTime(.0001, now + response.durationSeconds);
+    root.connect(filter);
+    overtone.connect(overtoneGain).connect(filter);
+    filter.connect(gain);
+    let output = gain;
+    if (panner) {
+      panner.pan.value = music.spatialPan(plan.x / Math.max(1, width));
+      gain.connect(panner);
+      output = panner;
+    }
+    output.connect(engine.master);
+    if (reflectionSend) {
+      reflectionSend.gain.value = music.depthReflection(plan.depth).sendGain * .62;
+      output.connect(reflectionSend).connect(engine.reflection.input);
+    }
+
+    const bloomVoice = {
+      oscillators: [root, overtone],
+      nodes: [root, overtone, overtoneGain, filter, gain, panner, reflectionSend]
+    };
+    engine.chordVoices.add(bloomVoice);
+    canvas.dataset.chordBloomVoices = String(engine.chordVoices.size);
+    canvas.dataset.chordBloomEvents = String(++chordBloomSerial);
+    chordBlooms.push({
+      ...plan,
+      x: plan.x / Math.max(1, width),
+      y: plan.y / Math.max(1, height),
+      // Keep the renderer clock passed into chordBloom. performance.now()
+      // here can be a fraction ahead of this frame's rAF timestamp, which
+      // would make the newborn bloom look pre-birth and get culled instantly.
+      born: plan.born
+    });
+    if (chordBlooms.length > 4) chordBlooms.shift();
+    const disconnect = () => disconnectChordBloomVoice(engine, bloomVoice);
+    root.addEventListener('ended', disconnect, { once: true });
+    root.start(); overtone.start();
+    root.stop(now + response.durationSeconds + .025);
+    overtone.stop(now + response.durationSeconds + .025);
+    if (!chordBloomAnnounced) {
+      status.textContent = 'Выдержанный аккорд раскрыл общий водный цветок';
+      chordBloomAnnounced = true;
+    }
+    return true;
+  }
+
+  function updateChordBloom(now, contacts) {
+    const membership = chord.membershipKey(contacts);
+    if (!membership) {
+      activeChordMembership = null;
+      activeChordBloomed = false;
+      return;
+    }
+    if (membership !== activeChordMembership) {
+      activeChordMembership = membership;
+      activeChordBloomed = false;
+    }
+    if (activeChordBloomed) return;
+    const plan = chord.chordBloom(contacts, now, { width, height });
+    if (plan && playChordBloom(plan)) activeChordBloomed = true;
   }
 
   function disconnectCollisionVoice(engine, pearl) {
@@ -3101,6 +3217,51 @@ function disconnectSkipVoice(engine, skip) {
     ctx.lineWidth = .8; ctx.stroke(); ctx.restore();
   }
 
+  // The chord's shared flower sits above pairwise interference but below the
+  // fingers. Petal angles come from the real contacts, so it is a temporary
+  // reading of this chord's geometry rather than a generic particle burst.
+  function drawChordBloom(bloom, now) {
+    const visual = chord.bloomVisual(bloom, now, reduced.matches);
+    if (!visual.alive || visual.alpha <= 0) return visual.alive;
+    const x = bloom.x * width, y = bloom.y * height;
+    const hue = 160 + 24 * (1 - bloom.depth);
+    const radius = visual.radius;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(visual.rotation);
+    ctx.globalCompositeOperation = 'lighter';
+    for (let index = 0; index < bloom.petals.length; index += 1) {
+      const angle = bloom.petals[index];
+      const petalLength = radius * (.82 + (index % 3) * .08) * visual.opening;
+      const petalWidth = Math.max(3, radius * (.16 + bloom.energy * .06));
+      ctx.save();
+      ctx.rotate(angle);
+      const glow = ctx.createRadialGradient(petalLength * .45, 0, 0, petalLength * .45, 0, Math.max(8, petalLength));
+      glow.addColorStop(0, `hsla(${hue + index * 5} 72% 86% / ${visual.alpha * .42})`);
+      glow.addColorStop(1, 'transparent');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.ellipse(petalLength * .45, 0, Math.max(4, petalLength * .62), petalWidth, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(petalLength * .42, -petalWidth * .72, petalLength, 0);
+      ctx.quadraticCurveTo(petalLength * .42, petalWidth * .72, 0, 0);
+      ctx.strokeStyle = `hsla(${hue + 12 + index * 4} 70% 88% / ${visual.alpha * .62})`;
+      ctx.lineWidth = .75;
+      ctx.stroke();
+      ctx.restore();
+    }
+    const core = ctx.createRadialGradient(0, 0, 0, 0, 0, Math.max(9, radius * .62));
+    core.addColorStop(0, `hsla(${hue + 24} 78% 91% / ${visual.alpha * .72})`);
+    core.addColorStop(.35, `hsla(${hue + 8} 66% 76% / ${visual.alpha * .22})`);
+    core.addColorStop(1, 'transparent');
+    ctx.fillStyle = core;
+    ctx.beginPath(); ctx.arc(0, 0, Math.max(9, radius * .62), 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    return true;
+  }
+
   function frame(now) {
     const started = performance.now();
     const dt = Math.min((now - last) / 1000, .05); last = now;
@@ -3133,14 +3294,36 @@ function disconnectSkipVoice(engine, skip) {
       keyboardVisual = { ...keyboard, ...p };
     }
 
-    const soundingPointers = [...pointers.values()].filter(pointer => pointer.sounding);
-    if (keyboardVisual) soundingPointers.push(keyboardVisual);
+    const soundingPointers = [];
+    const chordContacts = [];
+    for (const [id, pointer] of pointers) {
+      if (!pointer.sounding) continue;
+      soundingPointers.push(pointer);
+      chordContacts.push({
+        id, x: pointer.x, y: pointer.y, pressure: pointer.pressure,
+        frequency: pointer.mapping?.frequency ?? pitchAt(pointer.x),
+        born: pointer.born, lastMotion: pointer.lastMotion, sounding: true
+      });
+    }
+    if (keyboardVisual) {
+      soundingPointers.push(keyboardVisual);
+      chordContacts.push({
+        id: 'keyboard', x: keyboardVisual.x, y: keyboardVisual.y, pressure: keyboardVisual.pressure,
+        frequency: keyboardVisual.mapping?.frequency ?? pitchAt(keyboardVisual.x),
+        born: keyboardVisual.born, lastMotion: keyboardVisual.lastMotion, sounding: true
+      });
+    }
+    updateChordBloom(now, chordContacts);
     for (const pointer of soundingPointers) drawPitchCurrents(pointer, now);
     for (let i = 0; i < soundingPointers.length; i++) {
       for (let j = i + 1; j < soundingPointers.length; j++) drawResonance(soundingPointers[i], soundingPointers[j], now);
     }
     for (let i = stoneFlights.length - 1; i >= 0; i--) if (!drawStoneFlight(stoneFlights[i], now)) stoneFlights.splice(i, 1);
     for (let i = ripples.length - 1; i >= 0; i--) if (!drawRipple(ripples[i], now)) ripples.splice(i, 1);
+    for (let i = chordBlooms.length - 1; i >= 0; i--) {
+      if (!drawChordBloom(chordBlooms[i], now)) chordBlooms.splice(i, 1);
+    }
+    canvas.dataset.chordBlooms = String(chordBlooms.length);
     for (let i = collisionGlints.length - 1; i >= 0; i--) {
       if (!drawCollisionGlint(collisionGlints[i], now)) collisionGlints.splice(i, 1);
     }
