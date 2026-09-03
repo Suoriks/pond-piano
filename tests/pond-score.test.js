@@ -379,7 +379,7 @@ test('an event that did not truly happen stays silent; junk input is safe', () =
     'a short tap must not pretend to be a settle');
   assert.equal(score.whisperHint(state, [null, { kind: 'vibrato' }, {}, 42], 2000), null,
     'unknown kinds pass without marking anything shown');
-  assert.deepEqual(state.shown, { settle: false, eddy: false, stone: false });
+  assert.deepEqual(state.shown, { settle: false, eddy: false, stone: false, chord: false, gather: false });
   assert.equal(score.whisperHint(null, [{ kind: 'settle' }], 3000), null);
   assert.equal(score.whisperHint(undefined, [], 3000), null);
 });
@@ -462,4 +462,40 @@ test('broken inputs are safe', () => {
   const junk = calmDoubleTaps();
   junk[0].x = NaN;
   assert.equal(score.rehearsalDecision(junk, freshInk, 20000), null, 'a broken coordinate is safe');
+});
+
+test('a real chord bloom whispers the chord lesson once, then never again', () => {
+  const state = score.whisperState();
+  const hint = score.whisperHint(state, [{ kind: 'chord', happened: true }], 25000);
+  assert.ok(hint, 'the first real bloom earns its whisper');
+  assert.equal(hint.kind, 'chord');
+  assert.ok(hint.text.includes('цветок'), 'the hint names the shared water flower');
+  for (const now of [26000, 40000, 60000]) {
+    assert.equal(score.whisperHint(state, [{ kind: 'chord', happened: true }], now), null,
+      'one bloom whispers once per session');
+  }
+});
+
+test('a real gathering whispers the pearl lesson once, then never again', () => {
+  const state = score.whisperState();
+  const hint = score.whisperHint(state, [{ kind: 'gather', happened: true }], 30000);
+  assert.ok(hint, 'the first real gathering earns its whisper');
+  assert.equal(hint.kind, 'gather');
+  assert.ok(hint.text.includes('жемчужина'), 'the hint names the gathered pearl');
+  for (const now of [31000, 45000, 70000]) {
+    assert.equal(score.whisperHint(state, [{ kind: 'gather', happened: true }], now), null,
+      'one gathering whispers once per session');
+  }
+});
+
+test('the golden-path queue lets settle, chord and gather each earn their turn', () => {
+  const state = score.whisperState();
+  const first = score.whisperHint(state, [{ kind: 'settle', happened: true }], 1000);
+  assert.equal(first.kind, 'settle');
+  const hintedChord = score.whisperHint(state, [{ kind: 'chord', happened: true }], first.born + score.WHISPER_PAUSE_MS);
+  assert.equal(hintedChord.kind, 'chord', 'after the calm pause the bloom earns its lesson');
+  const hintedGather = score.whisperHint(state, [{ kind: 'gather', happened: true }], hintedChord.born + score.WHISPER_PAUSE_MS);
+  assert.equal(hintedGather.kind, 'gather', 'after another pause the pearl earns its lesson');
+  assert.equal(score.whisperHint(state, [{ kind: 'chord', happened: true }], hintedGather.born + score.WHISPER_PAUSE_MS), null,
+    'the bloom lesson stays one per session');
 });

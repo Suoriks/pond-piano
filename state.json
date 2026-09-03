@@ -1,12 +1,12 @@
 {
   "project": "pond-piano",
   "phase": "done",
-  "iteration": 53,
-  "status": "gathering-pearl-done",
-  "current_goal": "Iteration 0053 done: two live currents begun safely apart and deliberately drawn inward now gather once into a bright pearl at their stable real midpoint. Two curved water folds and one family-guided high transient answer the pair; parallel/fresh/drifting/three-contact gestures stay ordinary polyphony, and the pearl creates no sustain voice, child ripple or score entry.",
-  "previous_goal": "Iteration 0052 done: a calm held chord of 3-6 voices now gathers once into a shared water flower at the real contact centroid. Petals follow finger geometry while one very quiet family-guided harmonic breath sits below the held notes. Unchanged membership is latched; the bloom creates no sustain voice, ripple or score entry, respects reduced motion, and cleans up with the audio lifecycle.",
-  "last_verified": "2026-09-03 (0053): 76 Node tests pass with expanded gesture/music assertions; syntax 51 JS files clean; JSON, git diff --check and npm pack dry-run clean. Production loopback Chromium mobile smoke passed 6/6: two independent touch sustain voices converged 250->60px into exactly one audible+visible gathering pearl, unchanged membership stayed latched, ripple/score deltas stayed zero, all voice pools returned to zero, and page/console errors stayed empty. gathering-pearl-53.png inspected with eyebrow 53, two organic converging folds, central bead, intact title and shore controls.",
-  "next_step": "device-pass: perform the two-finger gathering on Android Chrome/PWA and iPhone Safari; verify the 240ms gate does not collide with accidental pinch behaviour, the midpoint stays controllable under real fingers and the high bead remains gentle on phone speakers before changing thresholds.",
+  "iteration": 54,
+  "status": "whisper-new-gestures-done",
+  "current_goal": "Iteration 0054 done: the water whisper now teaches the two newest gestures. A real held 3-6 voice chord that blooms once earns its shared-flower lesson, and a real two-finger gathering that forms a pearl earns its pearl lesson - each once per session, after the honest calm pause, never while a hand is down and never two whispers at once. Earned flags retire only when a whisper is truly accepted, so releasing multi-touch fingers one after another lets the last finger of the group speak; long lessons wrap onto two calm lines instead of clipping on a phone.",
+  "previous_goal": "Iteration 0053 done: two live currents begun safely apart and deliberately drawn inward now gather once into a bright pearl at their stable real midpoint. Two curved water folds and one family-guided high transient answer the pair; parallel/fresh/drifting/three-contact gestures stay ordinary polyphony, and the pearl creates no sustain voice, child ripple or score entry.",
+  "last_verified": "2026-09-03 (0054): 79 Node tests pass (was 76) with new whisper keys/tests; syntax 52 JS files clean; JSON, git diff --check clean. Production loopback Chromium mobile smoke passed 6/6: real 3-voice chord bloom earned the flower whisper (alpha .305), real two-finger gathering earned the pearl whisper (alpha .304) after the calm pause, a second gathering stayed silent, page/console errors empty. Screenshot whisper-chord-gather-54.png inspected: two-line lesson plate fully inside the phone screen, title and shore stones intact, no rectangular dashboard artifact.",
+  "next_step": "device-pass: read the two new lessons on Android Chrome/PWA and iPhone Safari - the flower and the pearl hints must stay readable and calm on real screens, and the two-line wrap must not collide with the shore controls or feel cramped.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -399,5 +399,26 @@
       "screenshot output/pond-piano/gathering-pearl-53.png inspected after final shell update: eyebrow 53, two organic converging folds and central bright bead visible between live contacts; title and shore controls intact, no clipping or rectangular dashboard artifact"
     ],
     "next_step": "done; real-device backlog now includes two-finger gathering ergonomics, accidental-pinch rejection and the high pearl tone on phone speakers"
+  },
+  "iteration_54": {
+    "started": "2026-09-03T18:17:00+03:00",
+    "finished": "2026-09-03T18:40:00+03:00",
+    "phase": "done",
+    "plan": [
+      "add chord and gather whisper keys/texts to pond-score.js with whisperState shown map",
+      "earn flags in playChordBloom/playGatheringPearl and emit events in end()",
+      "retire earned flags only when a whisper is accepted, so multi-touch releases let the last finger speak",
+      "wrap long lessons onto two calm lines; size each plate to its own text",
+      "unit tests for the new lessons + golden-path queue",
+      "instrumented Chromium smoke: real chord bloom -> flower whisper, real gathering -> pearl whisper, second gathering silent",
+      "eyebrow 54, shell cache v51, README sentence, KAIZEN entry, commit and push main"
+    ],
+    "verified": [
+      "79 Node tests pass (was 76); new whisper tests cover chord once-per-session, gather once-per-session and the golden-path queue settle->chord->gather with honest pauses",
+      "52 JavaScript files pass syntax; state JSON, git diff --check clean",
+      "whisper-chord-gather-smoke.js production loopback Chromium 390x844: 6/6 - real 3-voice chord bloom earned the flower whisper (alpha .305, text names the shared bloom), real two-finger gathering earned the pearl whisper (alpha .304, text names the pearl), a second gathering stayed whisper-silent; no page/console errors",
+      "screenshot whisper-chord-gather-54.png inspected: two-line lesson plate fully inside the phone screen with side margins, title and shore stones intact, no rectangular dashboard artifact; earlier single-line clipping fixed by the wrap"
+    ],
+    "next_step": "device-pass: read the flower and pearl lessons on Android Chrome/PWA and iPhone Safari"
   }
 }

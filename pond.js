@@ -104,6 +104,8 @@
   let echoSerial = 0;
   let rippleSerial = 0;
   let earnedEddyHint = false;
+  let earnedChordHint = false;
+  let earnedGatherHint = false;
   let collisionSerial = 0;
   let skipSerial = 0;
   let lastCollisionAt = -Infinity;
@@ -1524,13 +1526,19 @@
   // when the pond has been played at least once (the first visit belongs
   // to the invitation).
   function offerWhisper(events, now) {
-    if (!pondHasPlayed) return;
+    if (!pondHasPlayed) return null;
     const soundingPointers = [...pointers.values()].some(pointer => pointer.sounding);
-    if (soundingPointers || keyboard.sounding || whisperHint) return;
+    // A hint must never interrupt a live hand: if another finger is still
+    // sounding or the previous whisper is still breathing, the earned lesson
+    // waits and returns null so the browser layer keeps its flag. The multi-
+    // touch gestures (chord, gather) release their fingers one after another,
+    // so only the last release of the group may actually speak.
+    if (soundingPointers || keyboard.sounding || whisperHint) return null;
     const hint = score.whisperHint(whisper, events, now);
-    if (!hint) return;
+    if (!hint) return null;
     whisperHint = hint;
     status.textContent = hint.text;
+    return hint.kind;
   }
 
   function drawWhisper(now) {
@@ -1543,13 +1551,27 @@
     }
     if (alpha <= 0) return;
     const text = whisperHint.text;
-    const texts = Object.values(score.WHISPER_TEXTS);
     ctx.save();
     ctx.font = '500 13px ui-monospace, monospace';
     ctx.textAlign = 'center';
-    const widest = Math.ceil(texts.reduce((max, line) => Math.max(max, ctx.measureText(line).width), 0));
-    const boxWidth = Math.min(width * .86, widest + 34);
-    const boxHeight = 40;
+    // Long lessons stay readable on a phone: wrap at word boundaries into up
+    // to two calm lines instead of clipping one sentence. Each hint's plate
+    // sizes itself to its own words, so short lessons keep their small plate.
+    const maxWidth = Math.max(120, Math.min(width * .86, 340));
+    const words = text.split(' ');
+    let lines = [text];
+    if (ctx.measureText(text).width > maxWidth) {
+      for (let split = 1; split < words.length; split += 1) {
+        const first = words.slice(0, split).join(' ');
+        const second = words.slice(split).join(' ');
+        if (ctx.measureText(first).width <= maxWidth && ctx.measureText(second).width <= maxWidth) {
+          lines = [first, second];
+          break;
+        }
+      }
+    }
+    const boxWidth = Math.min(width * .86, lines.reduce((max, line) => Math.max(max, ctx.measureText(line).width), 0) + 34);
+    const boxHeight = lines.length > 1 ? 58 : 40;
     const cx = width / 2, cy = height * .16;
     const radius = 14;
     ctx.globalAlpha = alpha * .78;
@@ -1573,7 +1595,12 @@
     ctx.fillStyle = '#dcead8';
     ctx.shadowColor = '#00100d';
     ctx.shadowBlur = 10;
-    ctx.fillText(text, cx, cy + 4);
+    if (lines.length > 1) {
+      ctx.fillText(lines[0], cx, cy - 4);
+      ctx.fillText(lines[1], cx, cy + 20);
+    } else {
+      ctx.fillText(lines[0], cx, cy + 4);
+    }
     ctx.restore();
   }
 
@@ -1706,6 +1733,7 @@
       status.textContent = 'Выдержанный аккорд раскрыл общий водный цветок';
       chordBloomAnnounced = true;
     }
+    earnedChordHint = true;
     return true;
   }
 
@@ -1785,6 +1813,7 @@
       status.textContent = 'Два течения сошлись; вода собрала между пальцами светлую жемчужину';
       gatheringAnnounced = true;
     }
+    earnedGatherHint = true;
     return true;
   }
 
@@ -2537,17 +2566,27 @@ function disconnectSkipVoice(engine, skip) {
     }
 
     // A finished gesture may carry its earned lesson: the eddy it raised,
-    // or a fast straight release that became a skipping stone.
+    // a fast straight release that became a skipping stone, a chord that
+    // bloomed into a shared flower, or two currents that gathered into a
+    // pearl. The whisper layer shows one short hint per real gesture; an
+    // earned flag is retired only when the lesson is actually accepted, so a
+    // release while another finger still sounds simply waits for the last
+    // finger of the group.
     if (pondHasPlayed) {
       const events = [];
-      if (earnedEddyHint) { events.push({ kind: 'eddy', happened: true }); earnedEddyHint = false; }
+      if (earnedEddyHint) events.push({ kind: 'eddy', happened: true });
       if (skipPlan) events.push({ kind: 'stone', happened: true });
+      if (earnedChordHint) events.push({ kind: 'chord', happened: true });
+      if (earnedGatherHint) events.push({ kind: 'gather', happened: true });
       const heldMs = Math.max(0, now - active.born);
       if (!skipPlan && heldMs >= score.WHISPER_HOLD_MS && active.movedDuringHold < 8) {
         events.push({ kind: 'settle', happened: true });
       }
       // Born exactly at release time so the very next frame can draw it.
-      if (events.length) offerWhisper(events, now);
+      const acceptedKind = offerWhisper(events, now);
+      if (acceptedKind === 'eddy') earnedEddyHint = false;
+      if (acceptedKind === 'chord') earnedChordHint = false;
+      if (acceptedKind === 'gather') earnedGatherHint = false;
     }
   }
 

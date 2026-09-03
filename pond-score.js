@@ -494,17 +494,19 @@
   const WHISPER_PAUSE_MS = 16000;
   const WHISPER_LIFE_MS = 6200;
   const WHISPER_REDUCED_LIFE_MS = 9800;
-  const WHISPER_MAX_SHOWN = 3;
-  const WHISPER_KEYS = ['settle', 'eddy', 'stone'];
+  const WHISPER_MAX_SHOWN = 5;
+  const WHISPER_KEYS = ['settle', 'eddy', 'stone', 'chord', 'gather'];
   const WHISPER_TEXTS = Object.freeze({
     settle: 'Задержите касание — вода подскажет высоту точнее',
     eddy: 'Обведите малый круг — родится тихий водоворот',
-    stone: 'Быстрый прямой взмах отпускает камешек'
+    stone: 'Быстрый прямой взмах отпускает камешек',
+    chord: 'Задержите три и больше касаний — аккорд раскроет общий цветок',
+    gather: 'Сведите два касания навстречу — родится светлая жемчужина'
   });
 
   function whisperState() {
     return {
-      shown: { settle: false, eddy: false, stone: false },
+      shown: { settle: false, eddy: false, stone: false, chord: false, gather: false },
       lastShownAt: -Infinity
     };
   }

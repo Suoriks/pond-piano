@@ -1,4 +1,4 @@
-const CACHE = 'pond-piano-shell-v50';
+const CACHE = 'pond-piano-shell-v51';
 // Iteration 0053: the shared shell carries the two-current gathering gesture.
 const SHELL = [
   './',
