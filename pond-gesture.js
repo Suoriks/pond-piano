@@ -14,9 +14,22 @@
   const SKIP_MIN_SPEED = .72;
   const SKIP_MIN_STRAIGHTNESS = .86;
   const SKIP_MIN_TRAVEL = .055;
+  const GATHER_MIN_HOLD_MS = 240;
+  const GATHER_MIN_START_DISTANCE = .22;
+  const GATHER_MAX_START_DISTANCE = .72;
+  const GATHER_MAX_END_DISTANCE = .18;
+  const GATHER_TRIGGER_RATIO = .52;
+  const GATHER_MIN_INWARD_TRAVEL = .055;
+  const GATHER_MAX_MIDPOINT_DRIFT = .09;
+  const GATHER_LIFE_MS = 1120;
+  const GATHER_REDUCED_LIFE_MS = 1480;
   const TAU = Math.PI * 2;
 
   const clamp = (value, minimum = 0, maximum = 1) => Math.max(minimum, Math.min(maximum, value));
+  const smoothstep = value => {
+    const t = clamp(value);
+    return t * t * (3 - 2 * t);
+  };
   const wrapAngle = angle => {
     let wrapped = angle;
     while (wrapped > Math.PI) wrapped -= TAU;
@@ -181,6 +194,89 @@
     });
   }
 
+  function gatheringContacts(contacts) {
+    if (!Array.isArray(contacts)) return [];
+    return contacts.filter(contact => contact && contact.sounding !== false &&
+      (typeof contact.id === 'string' || Number.isFinite(contact.id)) &&
+      [contact.x, contact.y, contact.originX, contact.originY, contact.born, contact.frequency]
+        .every(Number.isFinite) && contact.frequency > 0);
+  }
+
+  function gatheringKey(contacts) {
+    const pair = gatheringContacts(contacts);
+    if (pair.length !== 2) return null;
+    return pair.map(contact => String(contact.id)).sort().join('|');
+  }
+
+  // Two live currents can be deliberately pulled into one pearl. Both
+  // contacts must begin safely apart, travel towards their original shared
+  // midpoint, and close most of the distance without dragging that midpoint
+  // across the pond. This rejects parallel swipes, ordinary two-note chords,
+  // edge pinches and a third finger before the browser layer ever makes sound.
+  function gatheringPearl(contacts, now, bounds) {
+    const width = Number(bounds?.width), height = Number(bounds?.height);
+    if (!Number.isFinite(now) || !Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return null;
+    const pair = gatheringContacts(contacts);
+    if (pair.length !== 2 || pair.some(contact => now - contact.born < GATHER_MIN_HOLD_MS)) return null;
+    const span = Math.max(1, Math.min(width, height));
+    const [a, b] = pair;
+    const startDx = b.originX - a.originX, startDy = b.originY - a.originY;
+    const startDistance = Math.hypot(startDx, startDy);
+    const startRatio = startDistance / span;
+    if (startRatio < GATHER_MIN_START_DISTANCE || startRatio > GATHER_MAX_START_DISTANCE) return null;
+
+    const startMidX = (a.originX + b.originX) / 2, startMidY = (a.originY + b.originY) / 2;
+    const endMidX = (a.x + b.x) / 2, endMidY = (a.y + b.y) / 2;
+    const endDistance = Math.hypot(b.x - a.x, b.y - a.y);
+    const endRatio = endDistance / span;
+    const closure = 1 - endDistance / startDistance;
+    if (endRatio > GATHER_MAX_END_DISTANCE || endDistance / startDistance > GATHER_TRIGGER_RATIO) return null;
+    if (Math.hypot(endMidX - startMidX, endMidY - startMidY) / span > GATHER_MAX_MIDPOINT_DRIFT) return null;
+
+    const inwardTravel = pair.map(contact => {
+      const inwardX = startMidX - contact.originX, inwardY = startMidY - contact.originY;
+      const inwardLength = Math.max(1e-6, Math.hypot(inwardX, inwardY));
+      return ((contact.x - contact.originX) * inwardX + (contact.y - contact.originY) * inwardY) / inwardLength / span;
+    });
+    if (inwardTravel.some(distance => distance < GATHER_MIN_INWARD_TRAVEL)) return null;
+
+    const x = clamp(endMidX, 0, width), y = clamp(endMidY, 0, height);
+    const energy = clamp(.34 + closure * .52 + Math.min(...inwardTravel) * .8, .42, .88);
+    return Object.freeze({
+      key: gatheringKey(pair),
+      x,
+      y,
+      depth: clamp(y / height),
+      energy,
+      closure: clamp(closure),
+      frequencies: Object.freeze(pair.map(contact => contact.frequency)),
+      arms: Object.freeze(pair.map(contact => Object.freeze({
+        x: clamp(contact.originX / width),
+        y: clamp(contact.originY / height)
+      }))),
+      born: now
+    });
+  }
+
+  function gatheringVisual(pearl, now, reducedMotion = false) {
+    const born = Number.isFinite(pearl?.born) ? pearl.born : 0;
+    const life = reducedMotion ? GATHER_REDUCED_LIFE_MS : GATHER_LIFE_MS;
+    const beforeBirth = !Number.isFinite(now) || now < born;
+    const age = beforeBirth ? 0 : clamp(now - born, 0, life);
+    const progress = age / life;
+    const envelope = beforeBirth || progress >= 1 ? 0 : Math.sin(progress * Math.PI);
+    const energy = clamp(Number.isFinite(pearl?.energy) ? pearl.energy : .5);
+    return Object.freeze({
+      life,
+      progress,
+      alpha: envelope * (.28 + energy * .34),
+      fold: reducedMotion ? .82 : smoothstep(Math.min(1, progress * 2.7)),
+      radius: 3.5 + energy * 4.5 + (reducedMotion ? 0 : smoothstep(progress) * 3.5),
+      halo: 14 + energy * 18 + (reducedMotion ? 0 : smoothstep(progress) * 16),
+      alive: !beforeBirth && progress < 1
+    });
+  }
+
   return Object.freeze({
     EDDY_ARM_HOLD_MS,
     EDDY_CANDIDATE_TIMEOUT_MS,
@@ -193,9 +289,21 @@
     SKIP_MIN_SPEED,
     SKIP_MIN_STRAIGHTNESS,
     SKIP_MIN_TRAVEL,
+    GATHER_MIN_HOLD_MS,
+    GATHER_MIN_START_DISTANCE,
+    GATHER_MAX_START_DISTANCE,
+    GATHER_MAX_END_DISTANCE,
+    GATHER_TRIGGER_RATIO,
+    GATHER_MIN_INWARD_TRAVEL,
+    GATHER_MAX_MIDPOINT_DRIFT,
+    GATHER_LIFE_MS,
+    GATHER_REDUCED_LIFE_MS,
     beginEddy,
     updateEddy,
     eddyExpression,
-    skippingStone
+    skippingStone,
+    gatheringKey,
+    gatheringPearl,
+    gatheringVisual
   });
 });

@@ -95,4 +95,49 @@ const staleRelease = gesture.skippingStone([
 ], 1120, { width: 390, height: 844 });
 assert.equal(staleRelease, null, 'a pause before release must disarm the skipping gesture');
 
-console.log('pond-gesture: circular eddy and bounded straight-release skipping gesture verified');
+const gatherContact = (id, originX, originY, x, y, frequency, extra = {}) => ({
+  id, originX, originY, x, y, frequency, born: 0, sounding: true, ...extra
+});
+const gatherBounds = { width: 390, height: 844 };
+const inwardPair = [
+  gatherContact(8, 70, 420, 165, 425, 220),
+  gatherContact(3, 320, 420, 225, 415, 440)
+];
+const gathered = gesture.gatheringPearl(inwardPair, 420, gatherBounds);
+assert.ok(gathered, 'two held currents moving meaningfully inward must gather a pearl');
+assert.equal(gathered.key, '3|8');
+assert.ok(gathered.x > 185 && gathered.x < 205 && gathered.y > 410 && gathered.y < 430);
+assert.ok(gathered.depth > 0 && gathered.depth < 1);
+assert.ok(gathered.energy >= .42 && gathered.energy <= .88);
+assert.equal(gathered.frequencies.length, 2);
+assert.equal(gathered.arms.length, 2);
+assert.equal(gesture.gatheringKey([...inwardPair].reverse()), '3|8', 'the pair latch must ignore contact order');
+
+const tooFresh = inwardPair.map(contact => ({ ...contact, born: 300 }));
+assert.equal(gesture.gatheringPearl(tooFresh, 420, gatherBounds), null, 'a casual fresh pinch must stay an ordinary two-note glide');
+const parallel = [
+  gatherContact(1, 70, 420, 145, 420, 220),
+  gatherContact(2, 320, 420, 380, 420, 440)
+];
+assert.equal(gesture.gatheringPearl(parallel, 420, gatherBounds), null, 'parallel motion must not masquerade as inward gathering');
+const driftingMidpoint = [
+  gatherContact(1, 70, 420, 245, 420, 220),
+  gatherContact(2, 320, 420, 305, 420, 440)
+];
+assert.equal(gesture.gatheringPearl(driftingMidpoint, 420, gatherBounds), null, 'a translated pinch must not drag a pearl across the pond');
+assert.equal(gesture.gatheringPearl([...inwardPair, gatherContact(4, 195, 200, 195, 200, 330)], 420, gatherBounds), null,
+  'three contacts belong to chord grammar, not the two-finger pearl');
+assert.equal(gesture.gatheringPearl(inwardPair, NaN, gatherBounds), null);
+assert.equal(gesture.gatheringPearl(inwardPair, 420, { width: 0, height: 844 }), null);
+
+const gatherEarly = gesture.gatheringVisual(gathered, gathered.born + 120, false);
+const gatherOpen = gesture.gatheringVisual(gathered, gathered.born + 620, false);
+const gatherReduced = gesture.gatheringVisual(gathered, gathered.born + 620, true);
+assert.ok(gatherEarly.alive && gatherEarly.alpha > 0);
+assert.ok(gatherOpen.fold > gatherEarly.fold && gatherOpen.radius > gatherEarly.radius);
+assert.equal(gatherReduced.fold, .82, 'reduced motion keeps a calm gathered shape instead of animated convergence');
+assert.ok(gatherReduced.alpha > 0);
+assert.equal(gesture.gatheringVisual(gathered, gathered.born - 1, false).alpha, 0);
+assert.equal(gesture.gatheringVisual(gathered, gathered.born + gesture.GATHER_LIFE_MS, false).alive, false);
+
+console.log('pond-gesture: eddy, skipping release and deliberate two-current gathering verified');

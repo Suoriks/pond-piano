@@ -338,6 +338,18 @@ assert.ok(tinted.dropScale < 1 && Math.abs(tinted.dropScale - base.dropScale) >=
   'the drop transient must shorten for a clear shade');
 const deepShade = music.waterMaterial(.5, 0, shade2);
 assert.ok(deepShade.dropScale > 1 && deepShade.dropScale <= 1.2, 'a deep shade lingers the drop within a safe bound');
+
+const gatheredDawn = music.gatheringPearlTone([220, 440], .48, .7, 'dawn');
+const gatheredDusk = music.gatheringPearlTone([220, 440], .48, .7, 'dusk');
+assert.ok(gatheredDawn && gatheredDusk, 'two live pitches must condense into a family-guided pearl');
+assert.ok(gatheredDawn.frequency > Math.sqrt(220 * 440), 'the gathered bead must sit above both converging currents');
+assert.notEqual(gatheredDawn.frequency, gatheredDusk.frequency, 'the chosen current must guide the shared pitch');
+assert.ok(gatheredDawn.durationSeconds >= .19 && gatheredDawn.durationSeconds <= .3);
+assert.ok(gatheredDawn.peakGain > .003 && gatheredDawn.peakGain < .012,
+  'the gathered pearl stays a bounded transient below a sustain voice');
+assert.ok(gatheredDawn.startFrequency > gatheredDawn.frequency && gatheredDawn.cutoffHz >= 2100 && gatheredDawn.cutoffHz <= 4000);
+assert.equal(music.gatheringPearlTone([220], .5, .5), null);
+assert.equal(music.gatheringPearlTone([220, NaN], .5, .5), null);
 assert.ok(tinted.levelCompensation >= .9 && tinted.levelCompensation <= 1.1,
   'a tinted shade must never leave the safe level range (stronger tint stays inside the budget)');
 

@@ -1,5 +1,5 @@
-const CACHE = 'pond-piano-shell-v49';
-// Iteration 0052: the shared shell carries the held-chord bloom layer.
+const CACHE = 'pond-piano-shell-v50';
+// Iteration 0053: the shared shell carries the two-current gathering gesture.
 const SHELL = [
   './',
   './index.html',

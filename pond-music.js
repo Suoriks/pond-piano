@@ -326,6 +326,30 @@
     });
   }
 
+  // A deliberate two-finger gathering condenses both live pitches into one
+  // translucent bead an octave above their logarithmic centre. The selected
+  // current seats the pitch first, keeping the response related to the pond
+  // rather than adding an arbitrary effect preset.
+  function gatheringPearlTone(frequencies, normalizedDepth, energy = .5, familyId = DEFAULT_SCALE_FAMILY) {
+    const valid = Array.isArray(frequencies)
+      ? frequencies.filter(frequency => Number.isFinite(frequency) && frequency >= 20 && frequency <= 20000).slice(0, 2)
+      : [];
+    if (valid.length !== 2) return null;
+    const depth = clamp(normalizedDepth);
+    const force = clamp(energy);
+    const geometricMean = Math.sqrt(valid[0] * valid[1]);
+    const current = mapPitch(normalizedAtFrequency(geometricMean), 980, 0, familyId);
+    const frequency = Math.min(4200, current.frequency * 2);
+    return Object.freeze({
+      frequency,
+      startFrequency: frequency * (1.26 - depth * .08),
+      durationSeconds: .19 + depth * .07 + force * .035,
+      peakGain: .0038 + force * .0082,
+      cutoffHz: 2100 + (1 - depth) * 1900,
+      scaleFamily: current.scaleFamily
+    });
+  }
+
   function stoneSkip(frequency, normalizedDepth, energy = .45, index = 0) {
     const pitch = Math.max(20, Number.isFinite(frequency) ? frequency : BASE_FREQUENCY);
     const depth = clamp(normalizedDepth);
@@ -503,6 +527,7 @@
     MATERIAL_BRUSH_DEPTH,
     attackIntensity,
     chordBloomTone,
+    gatheringPearlTone,
     collisionPearl,
     shoreLap,
     farSkim,

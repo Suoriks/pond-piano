@@ -55,6 +55,7 @@
   const COLLISION_RATE_LIMIT_MS = 230;
   const SHORE_RATE_LIMIT_MS = 260;
   const SKIM_RATE_LIMIT_MS = 320;
+  const GATHER_RATE_LIMIT_MS = 420;
   const MAX_PENDING_COLLISIONS = 8;
   const MAX_COLLISION_VOICES = 3;
   const MAX_CHORD_BLOOM_VOICES = 1;
@@ -66,7 +67,7 @@
   const MAX_PENDING_POURS = 6;
   // `pointers` is `let`: a resize re-seats live contacts into a fresh Map
   // via the repose layer, so every closure keeps reading the current one.
-  const ripples = [], trails = [], splashes = [], scoreEchoes = [], collisionPearls = [], collisionGlints = [], shoreLapGlints = [], skimGlints = [], inkReadGlints = [], chordBlooms = [], stoneFlights = [];
+  const ripples = [], trails = [], splashes = [], scoreEchoes = [], collisionPearls = [], collisionGlints = [], shoreLapGlints = [], skimGlints = [], inkReadGlints = [], chordBlooms = [], gatheringPearls = [], stoneFlights = [];
   // The visible departure: resting lights of ended notes sinking away.
   const releaseGlints = [];
   const RELEASE_GLINT_MAX = 12;
@@ -106,6 +107,7 @@
   let collisionSerial = 0;
   let skipSerial = 0;
   let lastCollisionAt = -Infinity;
+  let lastGatherAt = -Infinity;
   let lastShoreAt = -Infinity;
   let lastSkimAt = -Infinity;
   let lastInkReadAt = -Infinity;
@@ -113,12 +115,15 @@
   let activeChordMembership = null;
   let activeChordBloomed = false;
   let chordBloomSerial = 0;
+  let activeGatherMembership = null;
+  let activeGathered = false;
+  let gatheringSerial = 0;
   let width = 0, height = 0, dpr = 1, last = performance.now(), announced = false, scoreAnnounced = false, dynamicsAnnounced = false, textureAnnounced = false, precisionAnnounced = false, freedomAnnounced = false, eddyAnnounced = false;
   let pondHasPlayed = false;
   try { pondHasPlayed = localStorage.getItem(INVITATION_STORAGE_KEY) === 'played'; } catch {}
   const invitationLine = document.querySelector('#water-invitation');
   if (invitationLine && pondHasPlayed) invitationLine.classList.add('is-gone');
-  let collisionAnnounced = false, chordBloomAnnounced = false, skipAnnounced = false, scoreEchoAnnounced = false, pourAnnounced = false;
+  let collisionAnnounced = false, chordBloomAnnounced = false, gatheringAnnounced = false, skipAnnounced = false, scoreEchoAnnounced = false, pourAnnounced = false;
   let phraseNoteIndex = 0;
   // A soft double-tap on open water wakes the newest readable phrase as a
   // quiet repeated echo. Pure touch history keeps recent taps (any kind), so
@@ -358,6 +363,7 @@
     stoneFlights.length = 0;
     canvas.dataset.pearlVoices = '0';
     canvas.dataset.chordBloomVoices = '0';
+    canvas.dataset.gatheringPearlVoices = '0';
     canvas.dataset.skipVoices = '0';
     canvas.dataset.pendingSkips = '0';
     canvas.dataset.echoVoices = '0';
@@ -372,6 +378,8 @@
     pointers.clear();
     activeChordMembership = null;
     activeChordBloomed = false;
+    activeGatherMembership = null;
+    activeGathered = false;
     canvas.dataset.eddyVoices = '0';
     reflectDropVoices(engine);
     keyboard.sounding = false;
@@ -1476,6 +1484,8 @@
       skimGlints.length = 0; skimGlints.push(...movedSkims);
       const movedReads = repose.reposePoints(inkReadGlints, from, to);
       inkReadGlints.length = 0; inkReadGlints.push(...movedReads);
+      const movedGathering = repose.reposePoints(gatheringPearls, from, to);
+      gatheringPearls.length = 0; gatheringPearls.push(...movedGathering);
       // The departing lights keep their place on the new water too.
       const movedReleases = repose.reposePoints(releaseGlints, from, to);
       releaseGlints.length = 0; releaseGlints.push(...movedReleases);
@@ -1487,7 +1497,7 @@
       // artifacts in dead coordinates: they leave with the old space.
       ripples.length = 0; trails.length = 0; splashes.length = 0;
       coronas.length = 0; collisionPearls.length = 0;
-      collisionGlints.length = 0; shoreLapGlints.length = 0; skimGlints.length = 0; inkReadGlints.length = 0; stoneFlights.length = 0; pointers.clear();
+      collisionGlints.length = 0; shoreLapGlints.length = 0; skimGlints.length = 0; inkReadGlints.length = 0; gatheringPearls.length = 0; stoneFlights.length = 0; pointers.clear();
       releaseGlints.length = 0;
     }
     // Wave appointments were predicted against the old geometry: dissolve
@@ -1713,6 +1723,85 @@
     if (activeChordBloomed) return;
     const plan = chord.chordBloom(contacts, now, { width, height });
     if (plan && playChordBloom(plan)) activeChordBloomed = true;
+  }
+
+  // Two fingers that begin safely apart and travel deliberately towards
+  // their original midpoint gather their live currents into one bright bead.
+  // It shares the bounded collision transient pool, but makes no child ring,
+  // sustain voice or score entry and is latched until the pair changes.
+  function playGatheringPearl(plan) {
+    const engine = audio;
+    const visualNow = plan.born;
+    if (!engine || engine.context.state !== 'running' ||
+        engine.collisionVoices.size >= MAX_COLLISION_VOICES ||
+        visualNow - lastGatherAt < GATHER_RATE_LIMIT_MS) return false;
+    const response = music.gatheringPearlTone(plan.frequencies, plan.depth, plan.energy, tuningFamily);
+    if (!response) return false;
+    const now = engine.context.currentTime;
+    const oscillator = engine.context.createOscillator();
+    const filter = engine.context.createBiquadFilter();
+    const gain = engine.context.createGain();
+    const panner = typeof engine.context.createStereoPanner === 'function' ? engine.context.createStereoPanner() : null;
+    const reflectionSend = engine.reflection ? engine.context.createGain() : null;
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(response.startFrequency, now);
+    oscillator.frequency.exponentialRampToValueAtTime(response.frequency, now + response.durationSeconds * .46);
+    oscillator.frequency.exponentialRampToValueAtTime(response.frequency * .994, now + response.durationSeconds);
+    filter.type = 'lowpass'; filter.frequency.value = response.cutoffHz; filter.Q.value = 2.05;
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.exponentialRampToValueAtTime(response.peakGain, now + .014);
+    gain.gain.exponentialRampToValueAtTime(.0001, now + response.durationSeconds);
+    oscillator.connect(filter).connect(gain);
+    let output = gain;
+    if (panner) {
+      panner.pan.value = music.spatialPan(plan.x / Math.max(1, width));
+      gain.connect(panner);
+      output = panner;
+    }
+    output.connect(engine.master);
+    if (reflectionSend) {
+      reflectionSend.gain.value = music.depthReflection(plan.depth).sendGain * .5;
+      output.connect(reflectionSend).connect(engine.reflection.input);
+    }
+    const voice = { oscillator, nodes: [oscillator, filter, gain, panner, reflectionSend] };
+    engine.collisionVoices.add(voice);
+    canvas.dataset.pearlVoices = String(engine.collisionVoices.size);
+    canvas.dataset.gatheringPearlVoices = '1';
+    canvas.dataset.peakGatheringPearlVoices = String(Math.max(
+      Number(canvas.dataset.peakGatheringPearlVoices) || 0,
+      1
+    ));
+    canvas.dataset.gatheringPearlEvents = String(++gatheringSerial);
+    gatheringPearls.push({ ...plan });
+    if (gatheringPearls.length > 4) gatheringPearls.shift();
+    lastGatherAt = visualNow;
+    oscillator.addEventListener('ended', () => {
+      disconnectCollisionVoice(engine, voice);
+      canvas.dataset.gatheringPearlVoices = '0';
+    }, { once: true });
+    oscillator.start();
+    oscillator.stop(now + response.durationSeconds + .025);
+    if (!gatheringAnnounced) {
+      status.textContent = 'Два течения сошлись; вода собрала между пальцами светлую жемчужину';
+      gatheringAnnounced = true;
+    }
+    return true;
+  }
+
+  function updateGatheringPearl(now, contacts) {
+    const membership = gesture.gatheringKey(contacts);
+    if (!membership) {
+      activeGatherMembership = null;
+      activeGathered = false;
+      return;
+    }
+    if (membership !== activeGatherMembership) {
+      activeGatherMembership = membership;
+      activeGathered = false;
+    }
+    if (activeGathered) return;
+    const plan = gesture.gatheringPearl(contacts, now, { width, height });
+    if (plan && playGatheringPearl(plan)) activeGathered = true;
   }
 
   function disconnectCollisionVoice(engine, pearl) {
@@ -3262,6 +3351,50 @@ function disconnectSkipVoice(engine, skip) {
     return true;
   }
 
+  function drawGatheringPearl(pearl, now) {
+    const visual = gesture.gatheringVisual(pearl, now, reduced.matches);
+    if (!visual.alive || visual.alpha <= 0) return visual.alive;
+    const x = pearl.x, y = pearl.y;
+    const hue = 164 + 24 * (1 - pearl.depth);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (let index = 0; index < pearl.arms.length; index += 1) {
+      const startX = pearl.arms[index].x * width, startY = pearl.arms[index].y * height;
+      const dx = x - startX, dy = y - startY;
+      const distance = Math.max(1, Math.hypot(dx, dy));
+      const nx = -dy / distance, ny = dx / distance;
+      const bend = (index ? -1 : 1) * Math.min(26, distance * .12);
+      const endX = startX + dx * visual.fold, endY = startY + dy * visual.fold;
+      const gradient = ctx.createLinearGradient(startX, startY, x, y);
+      gradient.addColorStop(0, 'transparent');
+      gradient.addColorStop(.62, `hsla(${hue + index * 8} 68% 78% / ${visual.alpha * .16})`);
+      gradient.addColorStop(1, `hsla(${hue + 20} 78% 91% / ${visual.alpha * .72})`);
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.quadraticCurveTo(
+        startX + dx * .58 + nx * bend,
+        startY + dy * .58 + ny * bend,
+        endX, endY
+      );
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = 1 + pearl.energy * .7;
+      ctx.stroke();
+    }
+    const halo = ctx.createRadialGradient(x, y, 0, x, y, visual.halo);
+    halo.addColorStop(0, `hsla(${hue + 28} 82% 94% / ${visual.alpha * .72})`);
+    halo.addColorStop(.3, `hsla(${hue + 12} 70% 80% / ${visual.alpha * .24})`);
+    halo.addColorStop(1, 'transparent');
+    ctx.fillStyle = halo;
+    ctx.beginPath(); ctx.arc(x, y, visual.halo, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = `hsla(${hue + 26} 74% 94% / ${visual.alpha * .92})`;
+    ctx.beginPath(); ctx.arc(x, y, visual.radius, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = `hsla(${hue + 2} 68% 78% / ${visual.alpha * .74})`;
+    ctx.lineWidth = .85;
+    ctx.beginPath(); ctx.ellipse(x, y, visual.radius * 2.25, visual.radius * .72, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+    return true;
+  }
+
   function frame(now) {
     const started = performance.now();
     const dt = Math.min((now - last) / 1000, .05); last = now;
@@ -3295,10 +3428,15 @@ function disconnectSkipVoice(engine, skip) {
     }
 
     const soundingPointers = [];
+    const gatheringContacts = [];
     const chordContacts = [];
     for (const [id, pointer] of pointers) {
       if (!pointer.sounding) continue;
       soundingPointers.push(pointer);
+      gatheringContacts.push({
+        id, x: pointer.x, y: pointer.y, originX: pointer.originX, originY: pointer.originY,
+        frequency: pointer.mapping?.frequency ?? pitchAt(pointer.x), born: pointer.born, sounding: true
+      });
       chordContacts.push({
         id, x: pointer.x, y: pointer.y, pressure: pointer.pressure,
         frequency: pointer.mapping?.frequency ?? pitchAt(pointer.x),
@@ -3313,6 +3451,7 @@ function disconnectSkipVoice(engine, skip) {
         born: keyboardVisual.born, lastMotion: keyboardVisual.lastMotion, sounding: true
       });
     }
+    updateGatheringPearl(now, gatheringContacts);
     updateChordBloom(now, chordContacts);
     for (const pointer of soundingPointers) drawPitchCurrents(pointer, now);
     for (let i = 0; i < soundingPointers.length; i++) {
@@ -3324,6 +3463,10 @@ function disconnectSkipVoice(engine, skip) {
       if (!drawChordBloom(chordBlooms[i], now)) chordBlooms.splice(i, 1);
     }
     canvas.dataset.chordBlooms = String(chordBlooms.length);
+    for (let i = gatheringPearls.length - 1; i >= 0; i--) {
+      if (!drawGatheringPearl(gatheringPearls[i], now)) gatheringPearls.splice(i, 1);
+    }
+    canvas.dataset.gatheringPearls = String(gatheringPearls.length);
     for (let i = collisionGlints.length - 1; i >= 0; i--) {
       if (!drawCollisionGlint(collisionGlints[i], now)) collisionGlints.splice(i, 1);
     }
