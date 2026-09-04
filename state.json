@@ -1,12 +1,12 @@
 {
   "project": "pond-piano",
   "phase": "done",
-  "iteration": 55,
-  "status": "glide-wake-done",
-  "current_goal": "Iteration 0055 done: after the initial drop lands, continuous glissando speed now parts one audible and visible wake through the water. A pure bounded expression opens paired trail strands and slightly brightens the existing filter/overtone nodes; stopping closes both while the held voice lives on. Pitch, depth, pan, reflection, six-voice budget and audio-node count stay unchanged, and keyboard motion follows the same model.",
-  "previous_goal": "Iteration 0054 done: the water whisper now teaches the two newest gestures. A real held 3-6 voice chord that blooms once earns its shared-flower lesson, and a real two-finger gathering that forms a pearl earns its pearl lesson - each once per session, after the honest calm pause, never while a hand is down and never two whispers at once. Earned flags retire only when a whisper is truly accepted, so releasing multi-touch fingers one after another lets the last finger of the group speak; long lessons wrap onto two calm lines instead of clipping on a phone.",
-  "last_verified": "2026-09-04 (0055): 79 Node tests pass; syntax 53 JS files, JSON, git diff --check and npm pack dry-run (26 files) clean. Production loopback Chromium mobile smoke passed 7/7: calm wake 0; fast held glide wake 1 with existing cutoff 2667.1->3147.2 Hz and overtone 0.1399->0.1739, exact positional pitch 601.058 Hz, four visible wake segments, return to baseline after 1.25s rest without ending the voice, clean release, no page/console errors. Desktop shell 6/6 and gathering pearl 6/6 regressions pass. Screenshot glide-wake-55.png inspected: organic paired wake, eyebrow 55, title/shore controls intact, no clipping or rectangular UI. KAIZEN also restores the previously omitted 0054 journal entry.",
-  "next_step": "device-pass: on Android Chrome/PWA and iPhone Safari, compare slow and fast glides at one depth; the paired wake should feel attached to the hand and its brightness audible without resembling a new attack. Tune numeric ceilings only from real-device evidence.",
+  "iteration": 56,
+  "status": "depth-dive-done",
+  "current_goal": "Iteration 0056 done: after a calm hold, one deliberate near-vertical plunge folds the live current into a bounded low depth response and a visible sinking seam with three rising bubbles. It triggers once per contact for pointer or keyboard, preserves the sustain pitch/voice, rejects ordinary vertical glissando, diagonal/upward/stale motion, shares the existing transient pool, respects reduced motion, and creates no child ripple or score entry.",
+  "previous_goal": "Iteration 0055 done: after the initial drop lands, continuous glissando speed now parts one audible and visible wake through the water. A pure bounded expression opens paired trail strands and slightly brightens the existing filter/overtone nodes; stopping closes both while the held voice lives on. Pitch, depth, pan, reflection, six-voice budget and audio-node count stay unchanged, and keyboard motion follows the same model.",
+  "last_verified": "2026-09-04 (0056): 79 Node tests pass; syntax 54 JS files, JSON, git diff --check and npm pack dry-run (26 files) clean. Production loopback Chromium mobile smoke passed 9/9: one pointer depth fold and one keyboard Space+ArrowDown fold, sustain stayed live, one-event latch held, no child ripples or score memory, transient and sustain pools released, no page/console errors. Desktop shell 6/6, gathering pearl 6/6 and glide wake 7/7 regressions pass. Screenshot depth-dive-56.png inspected: organic vertical seam, three bubbles and lower fold visible; eyebrow 56 and shore controls intact, no clipping/dashboard artifact.",
+  "next_step": "device-pass: on Android Chrome/PWA and iPhone Safari, hold a note then plunge down quickly with one finger; the low response should feel like depth beneath the same voice, not a second hit. Check accidental triggering during ordinary vertical glissando and system-edge gestures; tune thresholds only from real-device evidence.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -340,7 +340,7 @@
     ],
     "next_step": "done; real-device pass should compare the warm near lap and cool far skim on phone speakers and bright screens"
   },
-  "current_iteration": 55,
+  "current_iteration": 56,
   "iteration_51": {
     "started": "2026-09-02T22:17:00+03:00",
     "phase": "done",
@@ -442,5 +442,27 @@
     ],
     "next_step": "device-pass: on Android Chrome/PWA and iPhone Safari, compare slow and fast glides at one depth; the paired wake should feel attached to the hand and its brightness audible without resembling a new attack. Tune numeric ceilings only from real-device evidence.",
     "finished": "2026-09-04T14:52:00+03:00"
+  },
+  "iteration_56": {
+    "started": "2026-09-04T23:20:00+03:00",
+    "phase": "done",
+    "plan": [
+      "add pure beginDepthDive/updateDepthDive/depthDiveVisual gesture geometry with refusal and reduced-motion tests",
+      "add one family-related bounded low depthDiveTone derived from the live pitch",
+      "wire one latched dive per held contact into the existing transient pool without changing sustain pitch, score or ripple count",
+      "draw the real stroke as a sinking seam with bounded bubbles; include resize/lifecycle cleanup and instrumentation",
+      "run unit/syntax/package checks plus production-loopback Chromium gesture smoke and screenshot inspection",
+      "update shell cache, product docs and kaizen state; commit exactly iteration 0056 and push main"
+    ],
+    "verified": [
+      "79 Node tests pass; pure dive tests cover acceptance, verticality/travel/energy bounds, diagonal/upward/slow/stale refusal, malformed input and reduced-motion stillness; music tests bound family-guided low tone pitch, envelope, cutoff and gain",
+      "54 JavaScript files pass syntax; state/package/manifest JSON, git diff --check and npm pack dry-run (26 files) are clean",
+      "production Electron loopback Chromium 390x844 passes 9/9: pointer and keyboard each create one audible+visible fold, original sustain remains live, no child ripple or score entry, same contact stays latched, transient and sustain pools release, no errors",
+      "keyboard smoke exposed first-sample velocity dilution by the preceding hold; an 80ms sampling grace preserves the candidate while genuinely slow completed motion still dissolves; rerun passes",
+      "desktop shell 6/6, gathering pearl 6/6 and glide wake 7/7 regressions pass",
+      "screenshot output/pond-piano/depth-dive-56.png inspected: organic near-vertical seam, three subtle bubbles and lower fold visible; eyebrow 56 and shore controls intact, no clipping or rectangular UI"
+    ],
+    "next_step": "device-pass: on Android Chrome/PWA and iPhone Safari, hold a note then plunge down quickly with one finger; the low response should feel like depth beneath the same voice, not a second hit. Check accidental triggering during ordinary vertical glissando and system-edge gestures; tune thresholds only from real-device evidence.",
+    "finished": "2026-09-04T23:27:00+03:00"
   }
 }

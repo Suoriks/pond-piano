@@ -56,6 +56,7 @@
   const SHORE_RATE_LIMIT_MS = 260;
   const SKIM_RATE_LIMIT_MS = 320;
   const GATHER_RATE_LIMIT_MS = 420;
+  const DIVE_RATE_LIMIT_MS = 520;
   const MAX_PENDING_COLLISIONS = 8;
   const MAX_COLLISION_VOICES = 3;
   const MAX_CHORD_BLOOM_VOICES = 1;
@@ -67,7 +68,7 @@
   const MAX_PENDING_POURS = 6;
   // `pointers` is `let`: a resize re-seats live contacts into a fresh Map
   // via the repose layer, so every closure keeps reading the current one.
-  const ripples = [], trails = [], splashes = [], scoreEchoes = [], collisionPearls = [], collisionGlints = [], shoreLapGlints = [], skimGlints = [], inkReadGlints = [], chordBlooms = [], gatheringPearls = [], stoneFlights = [];
+  const ripples = [], trails = [], splashes = [], scoreEchoes = [], collisionPearls = [], collisionGlints = [], shoreLapGlints = [], skimGlints = [], inkReadGlints = [], chordBlooms = [], gatheringPearls = [], depthDives = [], stoneFlights = [];
   // The visible departure: resting lights of ended notes sinking away.
   const releaseGlints = [];
   const RELEASE_GLINT_MAX = 12;
@@ -96,7 +97,7 @@
   let diaryOpen = false;
   let lastInkCount = -1;
   let lastPourAt = -Infinity;
-  const keyboard = { x: .5, y: .52, pitchX: .5, pressure: .48, sounding: false, born: 0, lastMotion: 0, motionSpeed: 0, mapping: null, materialBias: null, precisionActive: false, precisionAmount: 0, precisionOriginX: null, scoreSamples: [], distanceTraveled: 0, resonanceX: 0, resonanceY: 0, resonatedMemories: new Set() };
+  const keyboard = { x: .5, y: .52, pitchX: .5, pressure: .48, sounding: false, born: 0, lastMotion: 0, motionSpeed: 0, mapping: null, materialBias: null, precisionActive: false, precisionAmount: 0, precisionOriginX: null, scoreSamples: [], distanceTraveled: 0, resonanceX: 0, resonanceY: 0, resonatedMemories: new Set(), dive: null, dived: false };
   let audio = null;
   let audioLifecycle = null;
   let masterState = loadMasterState();
@@ -110,6 +111,7 @@
   let skipSerial = 0;
   let lastCollisionAt = -Infinity;
   let lastGatherAt = -Infinity;
+  let lastDiveAt = -Infinity;
   let lastShoreAt = -Infinity;
   let lastSkimAt = -Infinity;
   let lastInkReadAt = -Infinity;
@@ -120,12 +122,13 @@
   let activeGatherMembership = null;
   let activeGathered = false;
   let gatheringSerial = 0;
+  let depthDiveSerial = 0;
   let width = 0, height = 0, dpr = 1, last = performance.now(), announced = false, scoreAnnounced = false, dynamicsAnnounced = false, textureAnnounced = false, precisionAnnounced = false, freedomAnnounced = false, eddyAnnounced = false;
   let pondHasPlayed = false;
   try { pondHasPlayed = localStorage.getItem(INVITATION_STORAGE_KEY) === 'played'; } catch {}
   const invitationLine = document.querySelector('#water-invitation');
   if (invitationLine && pondHasPlayed) invitationLine.classList.add('is-gone');
-  let collisionAnnounced = false, chordBloomAnnounced = false, gatheringAnnounced = false, skipAnnounced = false, scoreEchoAnnounced = false, pourAnnounced = false;
+  let collisionAnnounced = false, chordBloomAnnounced = false, gatheringAnnounced = false, depthDiveAnnounced = false, skipAnnounced = false, scoreEchoAnnounced = false, pourAnnounced = false;
   let phraseNoteIndex = 0;
   // A soft double-tap on open water wakes the newest readable phrase as a
   // quiet repeated echo. Pure touch history keeps recent taps (any kind), so
@@ -363,9 +366,11 @@
     stopPourLoop();
     hideDiaryLeaf();
     stoneFlights.length = 0;
+    depthDives.length = 0;
     canvas.dataset.pearlVoices = '0';
     canvas.dataset.chordBloomVoices = '0';
     canvas.dataset.gatheringPearlVoices = '0';
+    canvas.dataset.depthDiveVoices = '0';
     canvas.dataset.skipVoices = '0';
     canvas.dataset.pendingSkips = '0';
     canvas.dataset.echoVoices = '0';
@@ -382,6 +387,8 @@
     activeChordBloomed = false;
     activeGatherMembership = null;
     activeGathered = false;
+    keyboard.dive = null;
+    keyboard.dived = false;
     canvas.dataset.eddyVoices = '0';
     reflectDropVoices(engine);
     keyboard.sounding = false;
@@ -1846,6 +1853,67 @@
     if (plan && playGatheringPearl(plan)) activeGathered = true;
   }
 
+  // After a true rest, one quick downward stroke folds the live current into
+  // a low transient while the sustain voice keeps its own pitch and path.
+  // It shares the collision pool and creates no ripple or score memory.
+  function playDepthDive(plan) {
+    const engine = audio;
+    const visualNow = plan.born;
+    if (!engine || engine.context.state !== 'running' ||
+        engine.collisionVoices.size >= MAX_COLLISION_VOICES ||
+        visualNow - lastDiveAt < DIVE_RATE_LIMIT_MS) return false;
+    const response = music.depthDiveTone(plan.frequency, plan.depth, plan.energy, tuningFamily);
+    if (!response) return false;
+    const now = engine.context.currentTime;
+    const oscillator = engine.context.createOscillator();
+    const filter = engine.context.createBiquadFilter();
+    const gain = engine.context.createGain();
+    const panner = typeof engine.context.createStereoPanner === 'function' ? engine.context.createStereoPanner() : null;
+    const reflectionSend = engine.reflection ? engine.context.createGain() : null;
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(response.startFrequency, now);
+    oscillator.frequency.exponentialRampToValueAtTime(response.frequency, now + response.durationSeconds * .3);
+    oscillator.frequency.exponentialRampToValueAtTime(response.endFrequency, now + response.durationSeconds);
+    filter.type = 'lowpass'; filter.frequency.value = response.cutoffHz; filter.Q.value = .9;
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.exponentialRampToValueAtTime(response.peakGain, now + .04);
+    gain.gain.exponentialRampToValueAtTime(.0001, now + response.durationSeconds);
+    oscillator.connect(filter).connect(gain);
+    let output = gain;
+    if (panner) {
+      panner.pan.value = music.spatialPan(plan.x / Math.max(1, width));
+      gain.connect(panner); output = panner;
+    }
+    output.connect(engine.master);
+    if (reflectionSend) {
+      reflectionSend.gain.value = music.depthReflection(plan.depth).sendGain * .7;
+      output.connect(reflectionSend).connect(engine.reflection.input);
+    }
+    const voice = { oscillator, nodes: [oscillator, filter, gain, panner, reflectionSend] };
+    engine.collisionVoices.add(voice);
+    canvas.dataset.pearlVoices = String(engine.collisionVoices.size);
+    canvas.dataset.depthDiveVoices = '1';
+    canvas.dataset.depthDiveEvents = String(++depthDiveSerial);
+    depthDives.push({
+      ...plan,
+      x: plan.x / Math.max(1, width), y: plan.y / Math.max(1, height),
+      originX: plan.originX / Math.max(1, width), originY: plan.originY / Math.max(1, height)
+    });
+    if (depthDives.length > 4) depthDives.shift();
+    lastDiveAt = visualNow;
+    oscillator.addEventListener('ended', () => {
+      disconnectCollisionVoice(engine, voice);
+      canvas.dataset.depthDiveVoices = '0';
+    }, { once: true });
+    oscillator.start();
+    oscillator.stop(now + response.durationSeconds + .025);
+    if (!depthDiveAnnounced) {
+      status.textContent = 'Выдержка и быстрый нырок вниз сложили течение в глубокий ответ';
+      depthDiveAnnounced = true;
+    }
+    return true;
+  }
+
   function disconnectCollisionVoice(engine, pearl) {
     if (!engine.collisionVoices?.delete(pearl)) return;
     for (const node of pearl.nodes) {
@@ -2405,6 +2473,7 @@ function disconnectSkipVoice(engine, skip) {
       pitchX: p.x / Math.max(1, width), mapping: null, precisionActive: false, precisionAmount: 0, precisionOriginX: null,
       currentAnnounced: false, sampledX: p.x, sampledY: p.y, sampledAt: now,
       eddy: null, eddyVisual: null, eddyPitchX: null, eddyDepthY: null,
+      dive: null, dived: false,
       distanceTraveled: 0, movedDuringHold: 0, resonanceX: p.x, resonanceY: p.y, resonatedMemories: new Set(),
       scoreSamples: sounding ? [{ x: p.x / Math.max(1, width), y: p.y / Math.max(1, height), pitch: p.x / Math.max(1, width), at: now, pressure: attack }] : [],
       glideWake: music.glideWake(0, 0)
@@ -2485,6 +2554,24 @@ function disconnectSkipVoice(engine, skip) {
             eddyAnnounced = true;
             textureAnnounced = true;
           }
+        }
+        if (!active.dive && !active.dived && !eddy?.active && heldBeforeMovement >= gesture.DIVE_ARM_HOLD_MS) {
+          active.dive = gesture.beginDepthDive(active.x, active.y, now);
+        }
+        const dive = active.dive && !eddy?.active ? gesture.updateDepthDive(active.dive, {
+          x: p.x, y: p.y, now,
+          span: Math.max(1, Math.min(width, height)),
+          speedPerSecond: active.motionSpeed
+        }) : null;
+        if (dive) active.dive = dive.state;
+        if (dive?.activated) {
+          active.dived = true;
+          playDepthDive({
+            ...dive,
+            depth: Math.max(0, Math.min(1, p.y / Math.max(1, height))),
+            frequency: active.mapping?.frequency ?? pitchAt(active.x),
+            born: now
+          });
         }
         if (eddy?.active) setVoiceEddy(event.pointerId, gesture.eddyExpression(eddy.intensity, eddy.direction));
         canvas.dataset.eddyVoices = String([...pointers.values()].filter(pointer => pointer.eddy?.active).length);
@@ -2630,6 +2717,24 @@ function disconnectSkipVoice(engine, skip) {
           movement[0] * width, movement[1] * height, keyboard.motionSpeed
         );
       }
+      if (keyboard.sounding && !keyboard.dive && !keyboard.dived && heldBeforeMovement >= gesture.DIVE_ARM_HOLD_MS) {
+        keyboard.dive = gesture.beginDepthDive(previousX * width, previousY * height, now);
+      }
+      const keyboardDive = keyboard.sounding && keyboard.dive ? gesture.updateDepthDive(keyboard.dive, {
+        x: p.x, y: p.y, now,
+        span: Math.max(1, Math.min(width, height)),
+        speedPerSecond: keyboard.motionSpeed
+      }) : null;
+      if (keyboardDive) keyboard.dive = keyboardDive.state;
+      if (keyboardDive?.activated) {
+        keyboard.dived = true;
+        playDepthDive({
+          ...keyboardDive,
+          depth: keyboard.y,
+          frequency: keyboard.mapping?.frequency ?? pitchAt(previousX * width),
+          born: now
+        });
+      }
       if (!keyboard.sounding) {
         keyboard.pitchX = keyboard.x;
         keyboard.precisionActive = false;
@@ -2672,6 +2777,7 @@ function disconnectSkipVoice(engine, skip) {
       const now = performance.now();
       keyboard.sounding = true; keyboard.born = now; keyboard.lastMotion = now; keyboard.motionSpeed = 0; keyboard.currentAnnounced = false;
       keyboard.pitchX = keyboard.x; keyboard.mapping = null; keyboard.materialBias = null; keyboard.precisionActive = false; keyboard.precisionAmount = 0; keyboard.precisionOriginX = null;
+      keyboard.dive = null; keyboard.dived = false;
       const p = keyboardPoint();
       keyboard.distanceTraveled = 0; keyboard.resonanceX = p.x; keyboard.resonanceY = p.y; keyboard.resonatedMemories = new Set();
       keyboard.scoreSamples = [{ x: keyboard.x, y: keyboard.y, pitch: keyboard.pitchX, at: now, pressure: .48 }];
@@ -2691,6 +2797,7 @@ function disconnectSkipVoice(engine, skip) {
       rememberContact(keyboard, p.x, p.y, now, .48);
       const heldMs = Math.max(0, now - keyboard.born), moved = keyboard.distanceTraveled;
       keyboard.sounding = false; endVoice('keyboard');
+      keyboard.dive = null; keyboard.dived = false;
       addRipple(p.x, p.y, .48, .55, keyboard.mapping?.frequency ?? pitchAt(p.x));
       // The keyboard voice earns the settle lesson by the same measure as
       // a held touch: a long quiet stay before its first movement.
@@ -2702,6 +2809,7 @@ function disconnectSkipVoice(engine, skip) {
       const p = keyboardPoint();
       rememberContact(keyboard, p.x, p.y, performance.now(), .48);
       keyboard.sounding = false; endVoice('keyboard');
+      keyboard.dive = null; keyboard.dived = false;
     }
   });
 
@@ -3482,6 +3590,53 @@ function disconnectSkipVoice(engine, skip) {
     return true;
   }
 
+  function drawDepthDive(dive, now) {
+    const visual = gesture.depthDiveVisual(dive, now, reduced.matches);
+    if (!visual.alive || visual.alpha <= 0) return visual.alive;
+    const ox = dive.originX * width, oy = dive.originY * height;
+    const targetX = dive.x * width, targetY = dive.y * height;
+    const endX = ox + (targetX - ox) * visual.fold;
+    const endY = oy + (targetY - oy) * visual.fold + visual.sink;
+    const dx = endX - ox, dy = endY - oy;
+    const distance = Math.max(1, Math.hypot(dx, dy));
+    const nx = -dy / distance, ny = dx / distance;
+    const hue = 150 + 18 * (1 - dive.depth);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const seam = ctx.createLinearGradient(ox, oy, endX, endY);
+    seam.addColorStop(0, 'transparent');
+    seam.addColorStop(.32, `hsla(${hue + 12} 62% 77% / ${visual.alpha * .18})`);
+    seam.addColorStop(1, `hsla(${hue - 6} 58% 70% / ${visual.alpha * .68})`);
+    ctx.beginPath();
+    ctx.moveTo(ox, oy);
+    ctx.bezierCurveTo(
+      ox + dx * .34 + nx * 5,
+      oy + dy * .34 + ny * 5,
+      ox + dx * .72 - nx * 4,
+      oy + dy * .72 - ny * 4,
+      endX, endY
+    );
+    ctx.strokeStyle = seam;
+    ctx.lineWidth = 1.1 + dive.energy * 1.3;
+    ctx.stroke();
+    for (const bubble of visual.bubbles) {
+      const bx = ox + dx * bubble.place + nx * bubble.side * (3 + dive.energy * 4);
+      const by = oy + dy * bubble.place - bubble.rise * (12 + bubble.place * 16);
+      const radius = Math.max(1.2, bubble.radius);
+      ctx.strokeStyle = `hsla(${hue + 24} 66% 86% / ${visual.alpha * (.42 + bubble.place * .28)})`;
+      ctx.lineWidth = .7;
+      ctx.beginPath(); ctx.arc(bx, by, radius, 0, Math.PI * 2); ctx.stroke();
+    }
+    const fold = ctx.createRadialGradient(endX, endY, 0, endX, endY, 18 + dive.energy * 16);
+    fold.addColorStop(0, `hsla(${hue - 4} 62% 79% / ${visual.alpha * .34})`);
+    fold.addColorStop(.34, `hsla(${hue + 8} 55% 66% / ${visual.alpha * .13})`);
+    fold.addColorStop(1, 'transparent');
+    ctx.fillStyle = fold;
+    ctx.beginPath(); ctx.ellipse(endX, endY, 11 + dive.energy * 10, 5 + dive.energy * 5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    return true;
+  }
+
   function frame(now) {
     const started = performance.now();
     const dt = Math.min((now - last) / 1000, .05); last = now;
@@ -3555,6 +3710,10 @@ function disconnectSkipVoice(engine, skip) {
       if (!drawGatheringPearl(gatheringPearls[i], now)) gatheringPearls.splice(i, 1);
     }
     canvas.dataset.gatheringPearls = String(gatheringPearls.length);
+    for (let i = depthDives.length - 1; i >= 0; i--) {
+      if (!drawDepthDive(depthDives[i], now)) depthDives.splice(i, 1);
+    }
+    canvas.dataset.depthDives = String(depthDives.length);
     for (let i = collisionGlints.length - 1; i >= 0; i--) {
       if (!drawCollisionGlint(collisionGlints[i], now)) collisionGlints.splice(i, 1);
     }

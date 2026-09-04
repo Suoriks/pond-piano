@@ -370,6 +370,19 @@ assert.equal(music.gatheringPearlTone([220, NaN], .5, .5), null);
 assert.ok(tinted.levelCompensation >= .9 && tinted.levelCompensation <= 1.1,
   'a tinted shade must never leave the safe level range (stronger tint stays inside the budget)');
 
+const diveDawn = music.depthDiveTone(440, .72, .76, 'dawn');
+const diveDusk = music.depthDiveTone(440, .72, .76, 'dusk');
+assert.ok(diveDawn && diveDusk, 'a live pitch must have one family-related low depth answer');
+assert.ok(diveDawn.frequency < 440 && diveDawn.frequency >= 42);
+assert.ok(diveDawn.startFrequency > diveDawn.frequency && diveDawn.endFrequency < diveDawn.frequency,
+  'the transient must fold downward rather than mimic another attack');
+assert.ok(diveDawn.durationSeconds >= .31 && diveDawn.durationSeconds <= .55);
+assert.ok(diveDawn.peakGain > .003 && diveDawn.peakGain < .012,
+  'the depth answer stays well below a sustained voice');
+assert.ok(diveDawn.cutoffHz >= 920 && diveDawn.cutoffHz <= 2170);
+assert.notEqual(diveDawn.frequency, diveDusk.frequency, 'the selected current still guides the low answer');
+assert.equal(music.depthDiveTone(NaN, .5, .5), null);
+
 // A finished note leaves the water the way it lived: the release tail
 // follows the note's own life instead of one flat constant.
 const tapRelease = music.waterRelease(120, .5, .5);

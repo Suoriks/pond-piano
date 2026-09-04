@@ -140,4 +140,48 @@ assert.ok(gatherReduced.alpha > 0);
 assert.equal(gesture.gatheringVisual(gathered, gathered.born - 1, false).alpha, 0);
 assert.equal(gesture.gatheringVisual(gathered, gathered.born + gesture.GATHER_LIFE_MS, false).alive, false);
 
-console.log('pond-gesture: eddy, skipping release and deliberate two-current gathering verified');
+const diveStart = gesture.beginDepthDive(180, 310, 1000);
+assert.ok(diveStart, 'a calm resting point can arm a depth dive');
+const diveWarmup = gesture.updateDepthDive(diveStart, {
+  x: 182, y: 325, now: 1060, span: 390, speedPerSecond: .38
+});
+assert.equal(diveWarmup.activated, false, 'a small downward motion stays armed without firing early');
+const dive = gesture.updateDepthDive(diveWarmup.state, {
+  x: 184, y: 344, now: 1110, span: 390, speedPerSecond: .72
+});
+assert.equal(dive.activated, true, 'a quick near-vertical plunge after rest must fold the depth current');
+assert.ok(dive.travel >= gesture.DIVE_MIN_TRAVEL && dive.verticality >= gesture.DIVE_MIN_VERTICALITY);
+assert.ok(dive.energy >= .4 && dive.energy <= .88);
+assert.equal(dive.state, null, 'one accepted plunge consumes its candidate');
+
+const sidewaysDive = gesture.updateDepthDive(diveStart, {
+  x: 218, y: 325, now: 1080, span: 390, speedPerSecond: .8
+});
+assert.equal(sidewaysDive.activated, false);
+assert.equal(sidewaysDive.reason, 'off-axis', 'ordinary diagonal glissando must dissolve the dive candidate');
+const upwardDive = gesture.updateDepthDive(diveStart, {
+  x: 180, y: 290, now: 1080, span: 390, speedPerSecond: .8
+});
+assert.equal(upwardDive.reason, 'off-axis', 'an upward stroke is not a depth plunge');
+const slowDive = gesture.updateDepthDive(diveStart, {
+  x: 180, y: 342, now: 1200, span: 390, speedPerSecond: .18
+});
+assert.equal(slowDive.activated, false, 'slow Y movement remains ordinary continuous timbre control');
+assert.equal(slowDive.reason, 'slow');
+assert.equal(slowDive.state, null, 'a slow completed descent dissolves instead of waiting to misfire later');
+assert.equal(gesture.updateDepthDive(diveStart, {
+  x: 180, y: 340, now: 1000 + gesture.DIVE_TIMEOUT_MS + 1, span: 390, speedPerSecond: .8
+}).reason, 'timeout');
+assert.equal(gesture.beginDepthDive(NaN, 1, 0), null);
+
+const diveEarly = gesture.depthDiveVisual(dive, dive.born + 120, false);
+const diveOpen = gesture.depthDiveVisual(dive, dive.born + 620, false);
+const diveStill = gesture.depthDiveVisual(dive, dive.born + 620, true);
+assert.ok(diveEarly.alive && diveEarly.alpha > 0 && diveEarly.bubbles.length === 3);
+assert.ok(diveOpen.fold > diveEarly.fold && diveOpen.sink > diveEarly.sink);
+assert.equal(diveStill.sink, 0, 'reduced motion keeps the depth seam resting instead of sinking');
+assert.ok(diveStill.bubbles.every(bubble => bubble.rise === 0));
+assert.equal(gesture.depthDiveVisual(dive, dive.born - 1, false).alpha, 0);
+assert.equal(gesture.depthDiveVisual(dive, dive.born + gesture.DIVE_LIFE_MS, false).alive, false);
+
+console.log('pond-gesture: eddy, skipping release, two-current gathering and held depth dive verified');

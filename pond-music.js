@@ -374,6 +374,27 @@
     });
   }
 
+  // A plunge answers below the still-live note: one short low fold related
+  // to the selected current, never a replacement sustain voice. The pitch
+  // falls slightly as the seam sinks, while the depth keeps it warm and the
+  // shared transient ceiling keeps chords from becoming a rumble.
+  function depthDiveTone(parentFrequency, normalizedDepth, energy = .5, familyId = DEFAULT_SCALE_FAMILY) {
+    if (!Number.isFinite(parentFrequency) || parentFrequency < 20 || parentFrequency > 20000) return null;
+    const depth = clamp(normalizedDepth);
+    const force = clamp(energy);
+    const current = mapPitch(normalizedAtFrequency(parentFrequency), 980, 0, familyId);
+    const frequency = Math.max(42, current.frequency * .5);
+    return Object.freeze({
+      frequency,
+      startFrequency: frequency * (1.14 - depth * .05),
+      endFrequency: frequency * (.91 - depth * .035),
+      durationSeconds: .31 + depth * .16 + force * .08,
+      peakGain: .0034 + force * .0076,
+      cutoffHz: 920 + (1 - depth) * 1250,
+      scaleFamily: current.scaleFamily
+    });
+  }
+
   function stoneSkip(frequency, normalizedDepth, energy = .45, index = 0) {
     const pitch = Math.max(20, Number.isFinite(frequency) ? frequency : BASE_FREQUENCY);
     const depth = clamp(normalizedDepth);
@@ -555,6 +576,7 @@
     attackIntensity,
     chordBloomTone,
     gatheringPearlTone,
+    depthDiveTone,
     collisionPearl,
     shoreLap,
     farSkim,

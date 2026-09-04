@@ -23,6 +23,14 @@
   const GATHER_MAX_MIDPOINT_DRIFT = .09;
   const GATHER_LIFE_MS = 1120;
   const GATHER_REDUCED_LIFE_MS = 1480;
+  const DIVE_ARM_HOLD_MS = 460;
+  const DIVE_TIMEOUT_MS = 620;
+  const DIVE_MIN_TRAVEL = .072;
+  const DIVE_MAX_TRAVEL = .3;
+  const DIVE_MIN_SPEED = .34;
+  const DIVE_MIN_VERTICALITY = .9;
+  const DIVE_LIFE_MS = 1180;
+  const DIVE_REDUCED_LIFE_MS = 1540;
   const TAU = Math.PI * 2;
 
   const clamp = (value, minimum = 0, maximum = 1) => Math.max(minimum, Math.min(maximum, value));
@@ -277,6 +285,82 @@
     });
   }
 
+  // A calm contact can arm one downward plunge. The detector starts from
+  // the last truly resting point supplied by the browser layer, then accepts
+  // only a quick, near-vertical descent. Ordinary Y glissando never arms it;
+  // a sideways/upward escape or a stale candidate dissolves immediately.
+  function beginDepthDive(x, y, now = 0) {
+    if (![x, y, now].every(Number.isFinite)) return null;
+    return Object.freeze({ originX: x, originY: y, born: now, lastX: x, lastY: y });
+  }
+
+  function updateDepthDive(state, { x, y, now = 0, span = 1, speedPerSecond = 0 } = {}) {
+    if (!state || ![state.originX, state.originY, state.born, x, y, now, span, speedPerSecond].every(Number.isFinite) || span <= 0) {
+      return Object.freeze({ state: null, activated: false, reason: 'invalid' });
+    }
+    const age = now - state.born;
+    if (age < 0 || age > DIVE_TIMEOUT_MS) {
+      return Object.freeze({ state: null, activated: false, reason: 'timeout' });
+    }
+    const dx = x - state.originX;
+    const dy = y - state.originY;
+    const distance = Math.hypot(dx, dy);
+    const travel = distance / span;
+    const downward = dy / span;
+    const verticality = distance > 0 ? dy / distance : 0;
+    if (downward < -.012 || (travel >= .025 && verticality < DIVE_MIN_VERTICALITY) || travel > DIVE_MAX_TRAVEL) {
+      return Object.freeze({ state: null, activated: false, reason: 'off-axis' });
+    }
+    // The first sample after a long hold inherits the whole resting interval
+    // in browser velocity. Give it one short sampling beat before calling the
+    // motion slow; a genuinely slow descent still dissolves after 80 ms.
+    if (downward >= DIVE_MIN_TRAVEL && speedPerSecond < DIVE_MIN_SPEED && age >= 80) {
+      return Object.freeze({ state: null, activated: false, reason: 'slow' });
+    }
+    const next = Object.freeze({ ...state, lastX: x, lastY: y });
+    const activated = downward >= DIVE_MIN_TRAVEL &&
+      speedPerSecond >= DIVE_MIN_SPEED && verticality >= DIVE_MIN_VERTICALITY;
+    if (!activated) return Object.freeze({ state: next, activated: false, travel: Math.max(0, downward), verticality });
+    const energy = clamp(.34 + (downward - DIVE_MIN_TRAVEL) * 2.8 + (speedPerSecond - DIVE_MIN_SPEED) * .2, .4, .88);
+    return Object.freeze({
+      state: null,
+      activated: true,
+      x,
+      y,
+      originX: state.originX,
+      originY: state.originY,
+      depth: clamp(y / Math.max(span, y, 1)),
+      travel: downward,
+      verticality,
+      energy,
+      born: now
+    });
+  }
+
+  function depthDiveVisual(dive, now, reducedMotion = false) {
+    const born = Number.isFinite(dive?.born) ? dive.born : 0;
+    const life = reducedMotion ? DIVE_REDUCED_LIFE_MS : DIVE_LIFE_MS;
+    const beforeBirth = !Number.isFinite(now) || now < born;
+    const progress = beforeBirth ? 0 : clamp((now - born) / life);
+    const energy = clamp(Number.isFinite(dive?.energy) ? dive.energy : .5);
+    const envelope = beforeBirth || progress >= 1 ? 0 : Math.sin(progress * Math.PI);
+    const bubbles = Object.freeze([.2, .48, .76].map((place, index) => Object.freeze({
+      place,
+      side: index % 2 ? 1 : -1,
+      rise: reducedMotion ? 0 : smoothstep(clamp((progress - index * .08) / .72)),
+      radius: 1.8 + energy * 2.2 - index * .22
+    })));
+    return Object.freeze({
+      life,
+      progress,
+      alpha: envelope * (.28 + energy * .42),
+      fold: reducedMotion ? .86 : smoothstep(Math.min(1, progress * 3.1)),
+      sink: reducedMotion ? 0 : smoothstep(progress) * (8 + energy * 12),
+      bubbles,
+      alive: !beforeBirth && progress < 1
+    });
+  }
+
   return Object.freeze({
     EDDY_ARM_HOLD_MS,
     EDDY_CANDIDATE_TIMEOUT_MS,
@@ -298,12 +382,23 @@
     GATHER_MAX_MIDPOINT_DRIFT,
     GATHER_LIFE_MS,
     GATHER_REDUCED_LIFE_MS,
+    DIVE_ARM_HOLD_MS,
+    DIVE_TIMEOUT_MS,
+    DIVE_MIN_TRAVEL,
+    DIVE_MAX_TRAVEL,
+    DIVE_MIN_SPEED,
+    DIVE_MIN_VERTICALITY,
+    DIVE_LIFE_MS,
+    DIVE_REDUCED_LIFE_MS,
     beginEddy,
     updateEddy,
     eddyExpression,
     skippingStone,
     gatheringKey,
     gatheringPearl,
-    gatheringVisual
+    gatheringVisual,
+    beginDepthDive,
+    updateDepthDive,
+    depthDiveVisual
   });
 });
