@@ -557,7 +557,7 @@
       materialBias: 0, materialDepth: material.effectiveDepth, materialLevel: material.levelCompensation,
       overtoneRatio: material.overtoneRatio, attackSeconds: material.attackSeconds, releaseSeconds: material.releaseSeconds,
       targetPan: pan, attack, accentUntil: now + .32, releasing: false,
-      shade
+      glideWakeAmount: 0, shade
     };
     engine.voices.set(id, voice);
     canvas.dataset.waterMaterial = material.dominant;
@@ -592,11 +592,12 @@
     return true;
   }
 
-  function moveVoice(id, x, y, pressure = .42, mappedFrequency = null, materialBias = 0) {
+  function moveVoice(id, x, y, pressure = .42, mappedFrequency = null, materialBias = 0, wakeExpression = null) {
     const voice = audio?.voices.get(id);
     if (!voice) return;
     const now = audio.context.currentTime, frequency = mappedFrequency ?? pitchAt(x), depth = depthAt(y);
     const material = music.waterMaterial(depth.normalizedDepth, materialBias, voice.shade);
+    const wake = wakeExpression?.amount >= 0 ? wakeExpression : music.glideWake(0, 0);
     const pitchChanged = Math.abs(frequency - voice.targetFrequency) > .08;
     if (pitchChanged) {
       voice.oscillator.frequency.setTargetAtTime(frequency, now, .026);
@@ -612,9 +613,21 @@
       voice.panner.pan.setTargetAtTime(pan, now, .045);
       voice.targetPan = pan;
     }
-    voice.filter.frequency.setTargetAtTime(material.cutoffHz, now, .055);
+    // Continuous glissando parts the same water the trail draws. Reuse the
+    // existing filter/overtone nodes: speed may brighten their material a
+    // little, but never changes the positional pitch/depth grammar or the
+    // six-voice node budget. The per-frame decaying speed closes this wake
+    // after the hand comes to rest.
+    const wakeCutoff = Math.min(7200, material.cutoffHz * wake.filterScale);
+    const wakeOvertone = Math.min(.235, material.overtoneGain + wake.overtoneLift);
+    voice.filter.frequency.setTargetAtTime(wakeCutoff, now, .055);
     voice.filter.Q.setTargetAtTime(material.filterQ, now, .08);
-    voice.overtoneGain.gain.setTargetAtTime(material.overtoneGain, now, .06);
+    voice.overtoneGain.gain.setTargetAtTime(wakeOvertone, now, .06);
+    voice.glideWakeAmount = wake.amount;
+    canvas.dataset.glideWake = wake.amount.toFixed(3);
+    canvas.dataset.glideWakeFilter = wakeCutoff.toFixed(1);
+    canvas.dataset.glideWakeOvertone = wakeOvertone.toFixed(4);
+    canvas.dataset.glideWakePitch = frequency.toFixed(3);
     if (voice.reflectionSend) {
       voice.reflectionSend.gain.setTargetAtTime(music.depthReflection(depth.normalizedDepth).sendGain, now, .08);
     }
@@ -2393,7 +2406,8 @@ function disconnectSkipVoice(engine, skip) {
       currentAnnounced: false, sampledX: p.x, sampledY: p.y, sampledAt: now,
       eddy: null, eddyVisual: null, eddyPitchX: null, eddyDepthY: null,
       distanceTraveled: 0, movedDuringHold: 0, resonanceX: p.x, resonanceY: p.y, resonatedMemories: new Set(),
-      scoreSamples: sounding ? [{ x: p.x / Math.max(1, width), y: p.y / Math.max(1, height), pitch: p.x / Math.max(1, width), at: now, pressure: attack }] : []
+      scoreSamples: sounding ? [{ x: p.x / Math.max(1, width), y: p.y / Math.max(1, height), pitch: p.x / Math.max(1, width), at: now, pressure: attack }] : [],
+      glideWake: music.glideWake(0, 0)
     });
     addRipple(p.x, p.y, attack);
     spawnDropCorona(p.x, p.y, attack);
@@ -2417,9 +2431,15 @@ function disconnectSkipVoice(engine, skip) {
       const distance = Math.hypot(dx, dy);
       const threshold = reduced.matches ? 28 : 9;
       if (distance >= threshold || now - active.sampledAt > 55) {
-        const speed = distance / Math.max(8, now - active.sampledAt);
+        const elapsed = Math.max(8, now - active.sampledAt);
+        const speed = distance / elapsed;
+        const wake = music.glideWake(
+          music.movementSpeed(distance, elapsed, Math.max(1, Math.min(width, height))),
+          now - active.born
+        );
         trails.push({ x: p.x, y: p.y, fromX: active.sampledX, fromY: active.sampledY, born: now,
-          pressure: pressureOf(sample), speed: Math.min(speed, 1.5), hue: 152 + 30 * (1 - p.y / height) });
+          pressure: pressureOf(sample), speed: Math.min(speed, 1.5), wake,
+          hue: 152 + 30 * (1 - p.y / height) });
         if (trails.length > (reduced.matches ? 24 : 110)) trails.shift();
         active.sampledX = p.x; active.sampledY = p.y; active.sampledAt = now;
       }
@@ -2530,7 +2550,9 @@ function disconnectSkipVoice(engine, skip) {
       tryScoreResonance(active, p, now);
       const audioX = active.eddy?.active ? active.eddy.centerX : p.x;
       const audioY = active.eddy?.active ? active.eddyDepthY : p.y;
-      moveVoice(event.pointerId, audioX, audioY, active.pressure, active.mapping.frequency, active.materialBias ?? 0);
+      active.glideWake = music.glideWake(active.motionSpeed, now - active.born);
+      moveVoice(event.pointerId, audioX, audioY, active.pressure, active.mapping.frequency,
+        active.materialBias ?? 0, active.glideWake);
     }
   }
 
@@ -2635,10 +2657,14 @@ function disconnectSkipVoice(engine, skip) {
       if (keyboard.sounding) {
         keyboard.distanceTraveled += Math.hypot(movement[0] * width, movement[1] * height);
         keyboard.mapping = { ...music.mapPitch(keyboard.pitchX, 0, keyboard.motionSpeed, tuningFamily), precision: keyboard.precisionAmount };
-        moveVoice('keyboard', p.x, p.y, .48, keyboard.mapping.frequency, keyboard.materialBias ?? 0);
+        keyboard.glideWake = music.glideWake(keyboard.motionSpeed, now - keyboard.born);
+        moveVoice('keyboard', p.x, p.y, .48, keyboard.mapping.frequency,
+          keyboard.materialBias ?? 0, keyboard.glideWake);
         captureScoreSample(keyboard, p.x, p.y, now, .48);
         tryScoreResonance(keyboard, p, now);
-        trails.push({ x: p.x, y: p.y, fromX: p.x - movement[0] * width, fromY: p.y - movement[1] * height, born: now, pressure: .48, speed: .55, hue: 152 + 30 * (1 - p.y / height) });
+        trails.push({ x: p.x, y: p.y, fromX: p.x - movement[0] * width, fromY: p.y - movement[1] * height,
+          born: now, pressure: .48, speed: .55, wake: keyboard.glideWake,
+          hue: 152 + 30 * (1 - p.y / height) });
       }
     }
     if ((event.code === 'Space' || event.key === 'Enter') && !event.repeat && !keyboard.sounding) {
@@ -2775,18 +2801,38 @@ function disconnectSkipVoice(engine, skip) {
     const age = Math.max(0, (now - mark.born) / 1000), life = reduced.matches ? .34 : 1.15;
     if (age > life) return false;
     const fade = Math.pow(1 - age / life, 1.8);
-    const width = 1.2 + mark.pressure * 4 + mark.speed * 1.8;
+    // Sound and trail originate from the same pure expression captured when
+    // this segment was sampled.
+    const amount = Math.max(0, Math.min(1, Number.isFinite(mark.wake?.amount) ? mark.wake.amount : 0));
+    const visualSpread = Number.isFinite(mark.wake?.visualSpread) ? mark.wake.visualSpread : 1;
+    const visualAlpha = Number.isFinite(mark.wake?.visualAlpha) ? mark.wake.visualAlpha : 0;
+    const trailWidth = (1.2 + mark.pressure * 4 + mark.speed * 1.8) * visualSpread;
     const dx = mark.x - mark.fromX, dy = mark.y - mark.fromY;
     const length = Math.max(1, Math.hypot(dx, dy)), nx = -dy / length, ny = dx / length;
+    ctx.save();
     ctx.lineCap = 'round';
-    for (const side of [-1, 1]) {
+    // Reduced motion keeps one local crease instead of opening an animated
+    // V. The audible wake remains intact because this is renderer-only.
+    for (const side of (reduced.matches ? [0] : [-1, 1])) {
       ctx.beginPath();
-      ctx.moveTo(mark.fromX + nx * width * side, mark.fromY + ny * width * side * .35);
-      ctx.quadraticCurveTo((mark.fromX + mark.x) / 2 + nx * width * side * 1.5,
-        (mark.fromY + mark.y) / 2 + ny * width * side * 1.5, mark.x + nx * width * side, mark.y + ny * width * side);
-      ctx.strokeStyle = `hsla(${mark.hue + side * 8} 70% 78% / ${fade * .33})`;
-      ctx.lineWidth = Math.max(.6, width * .27); ctx.stroke();
+      ctx.moveTo(mark.fromX + nx * trailWidth * side, mark.fromY + ny * trailWidth * side * .35);
+      ctx.quadraticCurveTo((mark.fromX + mark.x) / 2 + nx * trailWidth * side * 1.5,
+        (mark.fromY + mark.y) / 2 + ny * trailWidth * side * 1.5,
+        mark.x + nx * trailWidth * side, mark.y + ny * trailWidth * side);
+      ctx.strokeStyle = `hsla(${mark.hue + side * 8} 70% 78% / ${fade * (.33 + visualAlpha)})`;
+      ctx.lineWidth = Math.max(.6, trailWidth * (reduced.matches ? .18 : .27));
+      ctx.stroke();
     }
+    if (!reduced.matches && amount > .015) {
+      ctx.beginPath();
+      ctx.moveTo(mark.fromX, mark.fromY);
+      ctx.quadraticCurveTo((mark.fromX + mark.x) / 2 - nx * trailWidth * .16,
+        (mark.fromY + mark.y) / 2 - ny * trailWidth * .16, mark.x, mark.y);
+      ctx.strokeStyle = `hsla(${mark.hue + 18} 76% 88% / ${fade * visualAlpha * .58})`;
+      ctx.lineWidth = Math.max(.55, .5 + amount * .65);
+      ctx.stroke();
+    }
+    ctx.restore();
     return true;
   }
 
@@ -3196,7 +3242,9 @@ function disconnectSkipVoice(engine, skip) {
     };
     const audioX = contact.eddy?.active ? contact.eddy.centerX : x;
     const audioY = contact.eddy?.active && Number.isFinite(contact.eddyDepthY) ? contact.eddyDepthY : y;
-    if (contact.sounding) moveVoice(id, audioX, audioY, contact.pressure, contact.mapping.frequency, contact.materialBias ?? 0);
+    contact.glideWake = music.glideWake(contact.eddy?.active ? 0 : decayedSpeed, now - contact.born);
+    if (contact.sounding) moveVoice(id, audioX, audioY, contact.pressure, contact.mapping.frequency,
+      contact.materialBias ?? 0, contact.glideWake);
     if (contact.mapping.attraction > .52 && !contact.currentAnnounced) {
       contact.currentAnnounced = true;
       status.textContent = 'Течение мягко удерживает высоту; движение снова освободит звук';
@@ -3452,6 +3500,7 @@ function disconnectSkipVoice(engine, skip) {
     for (const memory of memories) drawScoreMemory(memory, now);
     for (const line of pourEchoes) if (!drawPourEcho(line, now)) pourEchoes.splice(pourEchoes.indexOf(line), 1);
     for (let i = scoreEchoes.length - 1; i >= 0; i--) if (!drawScoreEcho(scoreEchoes[i], now)) scoreEchoes.splice(i, 1);
+    canvas.dataset.glideWakeTrails = String(trails.filter(mark => (mark.wake?.amount ?? 0) > .08).length);
     for (let i = trails.length - 1; i >= 0; i--) if (!drawTrail(trails[i], now)) trails.splice(i, 1);
     for (let i = splashes.length - 1; i >= 0; i--) if (!drawSplash(splashes[i], now)) splashes.splice(i, 1);
     for (let i = coronas.length - 1; i >= 0; i--) if (!drawCorona(coronas[i], now)) coronas.splice(i, 1);

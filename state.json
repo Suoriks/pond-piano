@@ -1,12 +1,12 @@
 {
   "project": "pond-piano",
   "phase": "done",
-  "iteration": 54,
-  "status": "whisper-new-gestures-done",
-  "current_goal": "Iteration 0054 done: the water whisper now teaches the two newest gestures. A real held 3-6 voice chord that blooms once earns its shared-flower lesson, and a real two-finger gathering that forms a pearl earns its pearl lesson - each once per session, after the honest calm pause, never while a hand is down and never two whispers at once. Earned flags retire only when a whisper is truly accepted, so releasing multi-touch fingers one after another lets the last finger of the group speak; long lessons wrap onto two calm lines instead of clipping on a phone.",
-  "previous_goal": "Iteration 0053 done: two live currents begun safely apart and deliberately drawn inward now gather once into a bright pearl at their stable real midpoint. Two curved water folds and one family-guided high transient answer the pair; parallel/fresh/drifting/three-contact gestures stay ordinary polyphony, and the pearl creates no sustain voice, child ripple or score entry.",
-  "last_verified": "2026-09-03 (0054): 79 Node tests pass (was 76) with new whisper keys/tests; syntax 52 JS files clean; JSON, git diff --check clean. Production loopback Chromium mobile smoke passed 6/6: real 3-voice chord bloom earned the flower whisper (alpha .305), real two-finger gathering earned the pearl whisper (alpha .304) after the calm pause, a second gathering stayed silent, page/console errors empty. Screenshot whisper-chord-gather-54.png inspected: two-line lesson plate fully inside the phone screen, title and shore stones intact, no rectangular dashboard artifact.",
-  "next_step": "device-pass: read the two new lessons on Android Chrome/PWA and iPhone Safari - the flower and the pearl hints must stay readable and calm on real screens, and the two-line wrap must not collide with the shore controls or feel cramped.",
+  "iteration": 55,
+  "status": "glide-wake-done",
+  "current_goal": "Iteration 0055 done: after the initial drop lands, continuous glissando speed now parts one audible and visible wake through the water. A pure bounded expression opens paired trail strands and slightly brightens the existing filter/overtone nodes; stopping closes both while the held voice lives on. Pitch, depth, pan, reflection, six-voice budget and audio-node count stay unchanged, and keyboard motion follows the same model.",
+  "previous_goal": "Iteration 0054 done: the water whisper now teaches the two newest gestures. A real held 3-6 voice chord that blooms once earns its shared-flower lesson, and a real two-finger gathering that forms a pearl earns its pearl lesson - each once per session, after the honest calm pause, never while a hand is down and never two whispers at once. Earned flags retire only when a whisper is truly accepted, so releasing multi-touch fingers one after another lets the last finger of the group speak; long lessons wrap onto two calm lines instead of clipping on a phone.",
+  "last_verified": "2026-09-04 (0055): 79 Node tests pass; syntax 53 JS files, JSON, git diff --check and npm pack dry-run (26 files) clean. Production loopback Chromium mobile smoke passed 7/7: calm wake 0; fast held glide wake 1 with existing cutoff 2667.1->3147.2 Hz and overtone 0.1399->0.1739, exact positional pitch 601.058 Hz, four visible wake segments, return to baseline after 1.25s rest without ending the voice, clean release, no page/console errors. Desktop shell 6/6 and gathering pearl 6/6 regressions pass. Screenshot glide-wake-55.png inspected: organic paired wake, eyebrow 55, title/shore controls intact, no clipping or rectangular UI. KAIZEN also restores the previously omitted 0054 journal entry.",
+  "next_step": "device-pass: on Android Chrome/PWA and iPhone Safari, compare slow and fast glides at one depth; the paired wake should feel attached to the hand and its brightness audible without resembling a new attack. Tune numeric ceilings only from real-device evidence.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -340,7 +340,7 @@
     ],
     "next_step": "done; real-device pass should compare the warm near lap and cool far skim on phone speakers and bright screens"
   },
-  "current_iteration": 53,
+  "current_iteration": 55,
   "iteration_51": {
     "started": "2026-09-02T22:17:00+03:00",
     "phase": "done",
@@ -420,5 +420,27 @@
       "screenshot whisper-chord-gather-54.png inspected: two-line lesson plate fully inside the phone screen with side margins, title and shore stones intact, no rectangular dashboard artifact; earlier single-line clipping fixed by the wrap"
     ],
     "next_step": "device-pass: read the flower and pearl lessons on Android Chrome/PWA and iPhone Safari"
+  },
+  "iteration_55": {
+    "started": "2026-09-04T14:17:00+03:00",
+    "phase": "done",
+    "plan": [
+      "add pure glideWake(speed, age) expression to pond-music.js with bounded sound/visual outputs and tests",
+      "retarget the existing voice filter/overtone from the decaying measured movement speed; add no audio nodes and do not alter pitch/depth mapping",
+      "carry the same wake amount into pointer and keyboard trails, with reduced-motion retaining one calm local strand",
+      "add production-loopback Chromium smoke proving wake rise, decay, fixed positional pitch, clean release and a visual screenshot",
+      "update docs/cache/eyebrow/kaizen state, commit exactly iteration 0055 and push main"
+    ],
+    "verified": [
+      "79 Node tests pass; glideWake asserts cover attack/rest silence, monotonic speed, sound/visual ceilings, immutable output and damaged-input fallback",
+      "53 JavaScript files pass syntax; state/package/manifest JSON and git diff --check are clean; npm pack dry-run contains 26 files and the changed runtime shell",
+      "production Electron loopback Chromium 390x844 passes 7/7: one held voice wake 0->1->0, existing cutoff 2667.1->3147.2->2667.1 Hz and overtone 0.1399->0.1739->0.1399, exact moving X pitch 601.058 Hz, four live visual wake segments, clean release, no errors",
+      "first smoke assertion wrongly expected the resting held pitch to remain continuous; corrected because the existing held-note current attraction is intentional and independent of wake closure; product unchanged",
+      "desktop-shell smoke 6/6 and gathering-pearl smoke 6/6 remain green",
+      "screenshot output/pond-piano/glide-wake-55.png inspected: paired organic wake visible, eyebrow 55 and controls intact, no clipping/dashboard artifact",
+      "KAIZEN restored the omitted 0054 journal entry while recording 0055"
+    ],
+    "next_step": "device-pass: on Android Chrome/PWA and iPhone Safari, compare slow and fast glides at one depth; the paired wake should feel attached to the hand and its brightness audible without resembling a new attack. Tune numeric ceilings only from real-device evidence.",
+    "finished": "2026-09-04T14:52:00+03:00"
   }
 }

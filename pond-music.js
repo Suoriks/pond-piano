@@ -7,6 +7,9 @@
   const OCTAVES = 3;
   const SHADE_CYCLE = 3;
   const ATTACK_WINDOW_MS = 240;
+  const GLIDE_WAKE_FULL_MS = 520;
+  const GLIDE_WAKE_MIN_SPEED = .1;
+  const GLIDE_WAKE_FULL_SPEED = 1.2;
   const TEXTURE_BLOOM_START_MS = 620;
   const TEXTURE_BLOOM_END_MS = 3600;
   const MAX_STEREO_PAN = .68;
@@ -121,6 +124,27 @@
       overtonePulse: bloom * (.008 + clarity * .012),
       visualReach: bloom * (11 + depth * 9)
     };
+  }
+
+  // A moving note should part the water instead of sounding like a static
+  // oscillator whose pitch merely changes. Once the initial drop has landed,
+  // measured gesture speed opens one bounded wake in the existing filter and
+  // overtone. The same amount shapes the visible trail; no random preset or
+  // extra audio node is required, and stopping lets the browser-side decaying
+  // speed close the wake again.
+  function glideWake(speedPerSecond = 0, holdMilliseconds = 0) {
+    const speed = Math.max(0, Math.min(4, Number.isFinite(speedPerSecond) ? speedPerSecond : 0));
+    const age = Math.max(0, Number.isFinite(holdMilliseconds) ? holdMilliseconds : 0);
+    const landed = smoothstep(ATTACK_WINDOW_MS, GLIDE_WAKE_FULL_MS, age);
+    const motion = smoothstep(GLIDE_WAKE_MIN_SPEED, GLIDE_WAKE_FULL_SPEED, speed);
+    const amount = clamp(landed * motion);
+    return Object.freeze({
+      amount,
+      filterScale: 1 + amount * .18,
+      overtoneLift: amount * .034,
+      visualSpread: 1 + amount * 1.45,
+      visualAlpha: amount * .28
+    });
   }
 
   function depthReflection(normalizedDepth) {
@@ -512,6 +536,9 @@
     DEFAULT_SCALE_FAMILY,
     SCALE_FAMILIES,
     ATTACK_WINDOW_MS,
+    GLIDE_WAKE_FULL_MS,
+    GLIDE_WAKE_MIN_SPEED,
+    GLIDE_WAKE_FULL_SPEED,
     TEXTURE_BLOOM_START_MS,
     TEXTURE_BLOOM_END_MS,
     MAX_STEREO_PAN,
@@ -535,6 +562,7 @@
     depthReflection,
     hasExpressivePressure,
     heldTexture,
+    glideWake,
     initialBrushBias,
     mapPitch,
     movementSpeed,

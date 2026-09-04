@@ -1,5 +1,5 @@
-const CACHE = 'pond-piano-shell-v51';
-// Iteration 0053: the shared shell carries the two-current gathering gesture.
+const CACHE = 'pond-piano-shell-v52';
+// Iteration 0055: the shared shell carries the continuous glide wake.
 const SHELL = [
   './',
   './index.html',

@@ -125,6 +125,23 @@ assert.equal(music.movementSpeed(0, 16, 390), 0);
 assert.ok(Math.abs(music.movementSpeed(39, 100, 390) - 1) < 1e-9);
 assert.equal(music.movementSpeed(1000, 1, 390), 4, 'movement speed must be capped');
 
+const stillWake = music.glideWake(0, 1200);
+const attackWake = music.glideWake(4, music.ATTACK_WINDOW_MS - 1);
+const movingWake = music.glideWake(.62, 900);
+const fastWake = music.glideWake(4, 900);
+assert.equal(stillWake.amount, 0, 'resting water must close the glide wake');
+assert.equal(attackWake.amount, 0, 'the glide wake must not recolour the initial drop');
+assert.ok(movingWake.amount > 0 && movingWake.amount < fastWake.amount,
+  'post-attack movement speed must open the wake continuously');
+assert.equal(fastWake.amount, 1, 'extreme speed must remain at the bounded wake ceiling');
+assert.ok(fastWake.filterScale <= 1.18 && fastWake.overtoneLift <= .034,
+  'the wake must stay a quiet material change inside the existing voice');
+assert.ok(fastWake.visualSpread > movingWake.visualSpread && fastWake.visualSpread <= 2.45,
+  'the same expression must open a bounded visible wake');
+assert.ok(Object.isFrozen(fastWake), 'the shared audio/visual wake decision must be immutable');
+assert.deepEqual(music.glideWake(NaN, Infinity), stillWake,
+  'damaged motion samples must fall back to calm water');
+
 const freshTexture = music.heldTexture(.7, 300);
 const bloomingTexture = music.heldTexture(.7, 1900);
 const deepTexture = music.heldTexture(1, 5000);
