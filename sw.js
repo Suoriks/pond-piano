@@ -1,5 +1,5 @@
-const CACHE = 'pond-piano-shell-v53';
-// Iteration 0056: the shared shell carries the held depth-dive gesture.
+const CACHE = 'pond-piano-shell-v54';
+// Iteration 0057: finite singing-bowl voices and consonant attacks.
 const SHELL = [
   './',
   './index.html',

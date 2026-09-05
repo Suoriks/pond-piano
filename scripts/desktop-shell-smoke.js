@@ -56,7 +56,7 @@ const OUT = path.join(ROOT, 'output', 'pond-piano', 'desktop-shell-51.png');
     await page.mouse.up();
     await page.waitForFunction(() => Number(document.querySelector('#pond').dataset.scoreMemories || 0) >= 1);
     await page.waitForFunction(() => Number(document.querySelector('#pond').dataset.audioVoices || 0) === 0,
-      null, { timeout: 3000 });
+      null, { timeout: 6000 });
     const ended = await page.evaluate(() => ({
       voices: Number(document.querySelector('#pond').dataset.audioVoices || 0),
       memories: Number(document.querySelector('#pond').dataset.scoreMemories || 0)

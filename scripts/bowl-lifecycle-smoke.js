@@ -1,0 +1,56 @@
+'use strict';
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const {chromium} = require('/usr/lib/node_modules/openclaw/node_modules/playwright-core');
+const {createStaticServer,listenOnLoopback,closeServer} = require('../electron/static-server');
+(async()=>{
+ const root=path.resolve(__dirname,'..'),server=createStaticServer(root),origin=await listenOnLoopback(server);
+ const browser=await chromium.launch({executablePath:'/home/mfoadmin/.cache/ms-playwright/chromium-1234/chrome-linux64/chrome',headless:true,args:['--no-sandbox','--disable-gpu']});
+ try{
+ const page=await browser.newPage({viewport:{width:800,height:800},hasTouch:true,reducedMotion:'reduce'}),errors=[],checks=[];
+ page.on('pageerror',e=>errors.push(String(e)));
+ await page.addInitScript(()=>{
+  window.probe={contexts:[],live:0,max:0,frequencies:[],nodes:[]}; const Native=AudioContext;
+  window.AudioContext=class extends Native{constructor(o){super(o);probe.contexts.push(this);const old=this.createOscillator.bind(this);this.createOscillator=()=>{const node=old(),start=node.start.bind(node);node.start=(...a)=>{probe.live++;probe.max=Math.max(probe.max,probe.live);probe.frequencies.push(node.frequency.value);probe.nodes.push(node);return start(...a);};node.addEventListener('ended',()=>probe.live--,{once:true});return node;};}};
+ });
+ await page.goto(origin,{waitUntil:'networkidle'});
+ assert.equal(await page.evaluate(()=>probe.contexts.length),0);checks.push('autoplay: no context before trusted touch');
+ const cdp=await page.context().newCDPSession(page);
+ const points=Array.from({length:6},(_,i)=>({id:i+1,x:100+i*115,y:300+i*40,radiusX:8,radiusY:8,force:.5}));
+ await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:points});
+ await page.waitForFunction(()=>document.querySelector('#pond').dataset.audioVoices==='6');
+ assert.equal(await page.evaluate(()=>probe.contexts.length),1);checks.push('six independent trusted CDP touches start six bowls');
+ const original=await page.evaluate(()=>probe.nodes.slice(0,24).map(n=>n.frequency.value));
+ await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:points.map(p=>({...p,x:p.x+15,y:p.y+5}))});
+ await page.waitForTimeout(100);
+ assert.deepEqual(await page.evaluate(()=>probe.nodes.slice(0,24).map(n=>n.frequency.value)),original);checks.push('motion keeps all 24 actual oscillator frequencies fixed');
+ await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+ await page.waitForTimeout(100);
+ assert.equal(await page.locator('#pond').getAttribute('data-audio-voices'),'6');checks.push('release leaves bounded audible tails in six-voice budget');
+ await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:points});
+ await page.waitForTimeout(150);
+ assert.equal(await page.locator('#pond').getAttribute('data-audio-voices'),'6');checks.push('fresh contacts recycle released tails, never reject all six taps');
+ await cdp.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});
+ await page.waitForFunction(()=>document.querySelector('#pond').dataset.audioVoices==='0',null,{timeout:6000});
+ checks.push('pointercancel ends contact; all scheduled bowls expire');
+ await page.locator('#pond').focus();await page.keyboard.down('Space');await page.waitForFunction(()=>document.querySelector('#pond').dataset.audioVoices==='1');
+ await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowDown');
+ await page.waitForTimeout(5200);assert.equal(await page.locator('#pond').getAttribute('data-audio-voices'),'0');
+ await page.keyboard.up('Space');checks.push('keyboard hold and motion decay to zero without key release');
+ await page.mouse.click(350,400);await page.waitForFunction(()=>document.querySelector('#pond').dataset.audioVoices==='1');
+ await page.evaluate(()=>dispatchEvent(new PageTransitionEvent('pagehide')));
+ await page.waitForFunction(()=>probe.contexts[0].state==='suspended');
+ assert.equal(await page.locator('#pond').getAttribute('data-audio-voices'),'0');
+ await page.evaluate(()=>dispatchEvent(new PageTransitionEvent('pageshow')));await page.waitForTimeout(100);
+ assert.equal(await page.evaluate(()=>probe.contexts[0].state),'suspended');
+ await page.mouse.click(430,400);await page.waitForFunction(()=>probe.contexts[0].state==='running');
+ assert.equal(await page.evaluate(()=>probe.contexts.length),1);checks.push('pagehide retires modes, foreground stays silent, next trusted click resumes same context');
+ await page.waitForTimeout(6000);assert.equal(await page.evaluate(()=>probe.live),0);checks.push('all oscillator nodes end, including transient/lifecycle paths');
+ assert.equal(await page.evaluate(()=>matchMedia('(prefers-reduced-motion: reduce)').matches),true);assert.deepEqual(errors,[]);
+ checks.push('reduced motion renderer and keyboard path have no page errors');
+ await page.screenshot({path:path.join(root,'output/bowls-57/lifecycle.png')});
+ const report={checks,errors,maxOscillators:await page.evaluate(()=>probe.max)};
+ fs.writeFileSync(path.join(root,'output/bowls-57/lifecycle.json'),JSON.stringify(report,null,2));console.log(report);
+ }finally{await browser.close();await closeServer(server);}
+})().catch(e=>{console.error(e);process.exitCode=1;});

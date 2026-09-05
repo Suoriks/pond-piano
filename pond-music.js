@@ -482,6 +482,30 @@
     return nearest;
   }
 
+  // A small just-intoned pentatonic register: consonant at the strike,
+  // including arbitrary simultaneous contacts. Modes colour the same bowl set.
+  function bowlFrequency(x, family = DEFAULT_SCALE_FAMILY) {
+    const ratios = family === 'dusk' ? [1, 6/5, 4/3, 3/2, 9/5]
+      : family === 'mist' ? [1, 9/8, 4/3, 3/2, 9/5] : [1, 9/8, 5/4, 3/2, 5/3];
+    const position = Math.round(clamp(Number.isFinite(x) ? x : .5) * 10);
+    return BASE_FREQUENCY * 1.5 * ratios[position % 5] * 2 ** Math.floor(position / 5);
+  }
+
+  function bowlPlan(x, depth = .5, attack = .42, family = DEFAULT_SCALE_FAMILY) {
+    depth = clamp(Number.isFinite(depth) ? depth : .5);
+    attack = clamp(Number.isFinite(attack) ? attack : .42);
+    const frequency = bowlFrequency(x, family);
+    const duration = 3.4 + depth * 1.4;
+    // Upper modes die first; the nearly paired fundamental leaves a gentle
+    // beating resonance, without pitch sweeps, noise or an LFO sustaining it.
+    const modes = [[1, .052, duration], [1.002, .018, duration * .87],
+      [2, .019 + (1-depth)*.008, duration*.57], [3, .007, duration*.32]];
+    return Object.freeze({frequency, duration, attackSeconds: .014 + depth*.012,
+      modes: Object.freeze(modes.map(([ratio, level, life]) => Object.freeze({
+        frequency: frequency*ratio, peak: level*(.78+attack*.32), duration:life
+      })))});
+  }
+
   function mapPitch(normalizedX, holdMilliseconds = 0, speedPerSecond = 0, familyId = DEFAULT_SCALE_FAMILY) {
     const scaleFamily = normalizeScaleFamily(familyId);
     const scale = scaleSemitones(scaleFamily);
@@ -552,6 +576,8 @@
   }
 
   return Object.freeze({
+    bowlFrequency,
+    bowlPlan,
     BASE_FREQUENCY,
     OCTAVES,
     DEFAULT_SCALE_FAMILY,

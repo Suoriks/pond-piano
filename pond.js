@@ -133,14 +133,13 @@
   // A soft double-tap on open water wakes the newest readable phrase as a
   // quiet repeated echo. Pure touch history keeps recent taps (any kind), so
   // the decision itself stays in the score layer.
-  let tapHistory = [];
 
   // The water whisper: earned gesture hints, one quiet line at a time.
   let whisper = score.whisperState();
   let whisperHint = null;
 
   function pitchAt(x) {
-    return music.frequencyAt(x / Math.max(1, width));
+    return music.bowlFrequency(x / Math.max(1, width), tuningFamily);
   }
 
   function depthAt(y) {
@@ -199,63 +198,16 @@
   }
 
   function balanceVoices(engine) {
-    const sounding = [...engine.voices.values()].filter(voice => !voice.releasing).length;
+    const sounding = engine.voices.size; // Released bowls still ring: include their headroom.
     const level = masterModel.gainFor(masterState, sounding);
     engine.master.gain.setTargetAtTime(level, engine.context.currentTime, .045);
   }
 
-  function scheduleTextureBloom(parameter, target, now) {
-    parameter.setValueAtTime(0, now);
-    parameter.setValueAtTime(0, now + music.TEXTURE_BLOOM_START_MS / 1000);
-    parameter.linearRampToValueAtTime(target, now + music.TEXTURE_BLOOM_END_MS / 1000);
-  }
-
-  function retargetTexture(voice, normalizedDepth, now) {
-    if (Math.abs(normalizedDepth - voice.textureDepth) < .015) return;
-    voice.textureDepth = normalizedDepth;
-    const elapsedMs = Math.max(0, (now - voice.born) * 1000);
-    const current = music.heldTexture(normalizedDepth, elapsedMs);
-    const mature = music.heldTexture(normalizedDepth, music.TEXTURE_BLOOM_END_MS);
-    voice.undertow.frequency.setTargetAtTime(mature.rateHz, now, .35);
-    for (const [parameter, currentValue, targetValue] of [
-      [voice.filterDrift.gain, current.filterSweepHz, mature.filterSweepHz],
-      [voice.overtoneDrift.gain, current.overtonePulse, mature.overtonePulse]
-    ]) {
-      if (typeof parameter.cancelAndHoldAtTime === 'function') parameter.cancelAndHoldAtTime(now);
-      else {
-        const held = parameter.value;
-        parameter.cancelScheduledValues(now);
-        parameter.setValueAtTime(held, now);
-      }
-      parameter.setTargetAtTime(currentValue, now, .08);
-      const bloomEndsAt = voice.born + music.TEXTURE_BLOOM_END_MS / 1000;
-      if (bloomEndsAt > now + .16) parameter.linearRampToValueAtTime(targetValue, bloomEndsAt);
-      else parameter.setTargetAtTime(targetValue, now, .22);
-    }
-  }
-
   function voiceNodes(voice) {
-    return [voice.oscillator, voice.overtone, voice.overtoneGain, voice.filter, voice.gain, voice.undertow,
+    return [...(voice.modes || []).flatMap(mode => [mode.oscillator, mode.envelope]), voice.oscillator, voice.overtone, voice.overtoneGain, voice.filter, voice.gain, voice.undertow,
       voice.filterDrift, voice.overtoneDrift, voice.eddyOscillator, voice.eddyDepth,
       voice.dropOscillator, voice.dropGain, voice.splashSource, voice.splashLowpass,
       voice.splashBandpass, voice.splashGain, voice.panner, voice.reflectionSend];
-  }
-
-  // One short pre-rendered noise buffer per context; the splash reads as
-  // water receiving the note, not as a sustained hiss.
-  function splashNoise(context) {
-    if (context.__pondSplashNoise) return context.__pondSplashNoise;
-    const length = Math.floor(context.sampleRate * 2);
-    const buffer = context.createBuffer(1, length, context.sampleRate);
-    const channel = buffer.getChannelData(0);
-    let previous = 0;
-    for (let index = 0; index < length; index += 1) {
-      const white = Math.random() * 2 - 1;
-      previous = previous * .82 + white * .18; // slightly softened white noise
-      channel[index] = previous * 3.2;
-    }
-    context.__pondSplashNoise = buffer;
-    return buffer;
   }
 
   function reflectDropVoices(engine = audio) {
@@ -266,7 +218,7 @@
 
   function setVoiceEddy(id, expression) {
     const voice = audio?.voices.get(id);
-    if (!voice || voice.releasing || !expression?.amount) return false;
+    if (!voice || voice.bowl || voice.releasing || !expression?.amount) return false;
     const now = audio.context.currentTime;
     if (!voice.eddyOscillator) {
       const oscillator = audio.context.createOscillator();
@@ -315,7 +267,7 @@
         voice.gain.gain.cancelScheduledValues(now);
         voice.gain.gain.setValueAtTime(.0001, now);
       } catch {}
-      for (const oscillator of [voice.oscillator, voice.overtone, voice.undertow, voice.eddyOscillator, voice.dropOscillator]) {
+      for (const oscillator of [...(voice.modes || []).map(mode => mode.oscillator), voice.oscillator, voice.overtone, voice.undertow, voice.eddyOscillator, voice.dropOscillator]) {
         try { oscillator?.stop(now); } catch {}
       }
       try { voice.splashSource?.stop(now); } catch {}
@@ -419,9 +371,7 @@
 
   function soundingVoiceCount(engine) {
     if (!engine?.voices) return 0;
-    let count = 0;
-    for (const voice of engine.voices.values()) if (!voice.releasing) count += 1;
-    return count;
+    return engine.voices.size; // A released bowl remains audible until its scheduled end.
   }
 
   async function syncWakeLock() {
@@ -457,263 +407,72 @@
   }
 
   function startVoice(id, x, y, pressure = .42, frequency = pitchAt(x), attack = pressure, engine = audio, shadeIndex = 0) {
-    if (!engine || engine.context.state === 'closed' || engine.voices.has(id) || engine.voices.size >= MAX_VOICES) return false;
+    if (!engine || engine.context.state === 'closed') return false;
     const now = engine.context.currentTime;
-    const oscillator = engine.context.createOscillator();
-    const overtone = engine.context.createOscillator();
-    const overtoneGain = engine.context.createGain();
-    const filter = engine.context.createBiquadFilter();
-    const gain = engine.context.createGain();
-    const undertow = engine.context.createOscillator();
-    const filterDrift = engine.context.createGain();
-    const overtoneDrift = engine.context.createGain();
+    // Preserve six live contacts; recycle only an already released tail.
+    const previous = engine.voices.get(id);
+    const victim = previous?.releasing ? [id, previous] : engine.voices.size >= MAX_VOICES
+      ? [...engine.voices].find(([, voice]) => voice.releasing) : null;
+    if (victim) {
+      const [key, voice] = victim;
+      voice.gain.gain.setTargetAtTime(0, now, .006);
+      voice.modes.forEach(mode => mode.oscillator.stop(now + .035));
+      engine.voices.delete(key);
+    }
+    if (engine.voices.has(id) || engine.voices.size >= MAX_VOICES) return false;
+    const depth = depthAt(y).normalizedDepth;
+    const plan = music.bowlPlan(x / Math.max(1, width), depth, attack, tuningFamily);
+    const gain = engine.context.createGain(); gain.gain.value = 1;
     const panner = typeof engine.context.createStereoPanner === 'function' ? engine.context.createStereoPanner() : null;
-    const reflectionSend = engine.reflection ? engine.context.createGain() : null;
-    const depth = depthAt(y);
-    const shade = music.noteShade(shadeIndex, depth.normalizedDepth);
-    const material = music.waterMaterial(depth.normalizedDepth, 0, shade);
-    const pan = music.spatialPan(x / Math.max(1, width));
-    const texture = music.heldTexture(depth.normalizedDepth, music.TEXTURE_BLOOM_END_MS);
-    const reflection = music.depthReflection(depth.normalizedDepth);
-    const drop = music.waterDrop(frequency, depth.normalizedDepth, attack, material);
-    const splash = music.waterSplash(depth.normalizedDepth, attack, material);
-    const dropOscillator = engine.context.createOscillator();
-    const dropGain = engine.context.createGain();
-    let splashSource = null, splashLowpass = null, splashBandpass = null, splashGain = null;
-    if (engine.context.createBufferSource && engine.context.createBiquadFilter) {
-      try {
-        splashSource = engine.context.createBufferSource();
-        splashSource.buffer = splashNoise(engine.context);
-        splashLowpass = engine.context.createBiquadFilter();
-        splashLowpass.type = 'lowpass';
-        splashLowpass.Q.value = .0001;
-        splashBandpass = engine.context.createBiquadFilter();
-        splashBandpass.type = 'bandpass';
-        splashBandpass.Q.value = .68;
-        splashGain = engine.context.createGain();
-      } catch { splashSource = null; }
-    }
-    oscillator.type = 'sine'; overtone.type = 'sine'; undertow.type = 'sine'; filter.type = 'lowpass'; filter.Q.value = material.filterQ;
-    oscillator.frequency.value = frequency; overtone.frequency.value = frequency * material.overtoneRatio;
-    undertow.frequency.value = texture.rateHz;
-    dropOscillator.type = 'sine';
-    dropOscillator.frequency.setValueAtTime(drop.startFrequency, now);
-    dropOscillator.frequency.exponentialRampToValueAtTime(drop.dipFrequency, now + drop.dipAtSeconds);
-    dropOscillator.frequency.exponentialRampToValueAtTime(drop.settleFrequency, now + drop.durationSeconds);
-    dropGain.gain.setValueAtTime(.0001, now);
-    dropGain.gain.exponentialRampToValueAtTime(drop.peakGain, now + .008);
-    dropGain.gain.exponentialRampToValueAtTime(.0001, now + drop.durationSeconds);
-    if (splashSource && splashLowpass && splashBandpass && splashGain) {
-      const splashEnd = now + splash.durationSeconds;
-      splashSource.playbackRate.value = .92 + depth.normalizedDepth * .16;
-      splashLowpass.frequency.setValueAtTime(splash.highHz, now);
-      splashLowpass.frequency.exponentialRampToValueAtTime(Math.max(120, splash.lowHz), splashEnd);
-      splashBandpass.frequency.value = Math.max(80, splash.lowHz + (splash.highHz - splash.lowHz) * .55);
-      splashGain.gain.setValueAtTime(.0001, now);
-      splashGain.gain.linearRampToValueAtTime(splash.peakGain, now + splash.attackSeconds);
-      splashGain.gain.exponentialRampToValueAtTime(.0001, splashEnd);
-    }
-    overtoneGain.gain.value = material.overtoneGain;
-    filter.frequency.value = material.cutoffHz;
-    gain.gain.setValueAtTime(.0001, now);
-    gain.gain.exponentialRampToValueAtTime((.055 + attack * .085) * material.levelCompensation, now + material.attackSeconds);
-    gain.gain.exponentialRampToValueAtTime((.04 + pressure * .055) * material.levelCompensation, now + .32);
-    oscillator.connect(filter); overtone.connect(overtoneGain).connect(filter);
-    undertow.connect(filterDrift).connect(filter.frequency);
-    undertow.connect(overtoneDrift).connect(overtoneGain.gain);
-    filter.connect(gain);
-    let output = gain;
-    if (panner) {
-      panner.pan.value = pan;
-      gain.connect(panner);
-      dropGain.connect(panner);
-      if (splashGain) splashGain.connect(panner);
-      output = panner;
-    } else {
-      dropGain.connect(engine.master);
-      if (splashGain) splashGain.connect(engine.master);
-    }
+    const output = panner || gain;
+    if (panner) { panner.pan.value = music.spatialPan(x / width); gain.connect(panner); }
     output.connect(engine.master);
-    if (reflectionSend) {
-      reflectionSend.gain.value = reflection.sendGain;
-      output.connect(reflectionSend).connect(engine.reflection.input);
-      if (!panner) dropGain.connect(reflectionSend);
-      if (!panner && splashGain) splashGain.connect(reflectionSend);
-    }
-    scheduleTextureBloom(filterDrift.gain, texture.filterSweepHz, now);
-    scheduleTextureBloom(overtoneDrift.gain, texture.overtonePulse, now);
-    oscillator.start(); overtone.start(); undertow.start(); dropOscillator.connect(dropGain); dropOscillator.start();
-    dropOscillator.stop(now + drop.durationSeconds + .025);
-    if (splashSource && splashLowpass && splashBandpass && splashGain) {
-      try {
-        splashSource.connect(splashLowpass).connect(splashBandpass).connect(splashGain);
-        splashSource.start(now, Math.random() * 1.1);
-        splashSource.stop(now + splash.durationSeconds + .02);
-      } catch {
-        for (const node of [splashSource, splashLowpass, splashBandpass, splashGain]) {
-          try { node?.disconnect(); } catch {}
-        }
-        splashSource = null;
-      }
-    }
-    const voice = {
-      oscillator, overtone, overtoneGain, filter, gain, undertow, filterDrift, overtoneDrift, panner, reflectionSend,
-      dropOscillator, dropGain, splashSource, splashLowpass, splashBandpass, splashGain,
-      dropEndsAt: now + drop.durationSeconds, dropIntensity: attack,
-      born: now, textureDepth: depth.normalizedDepth, targetFrequency: frequency,
-      materialBias: 0, materialDepth: material.effectiveDepth, materialLevel: material.levelCompensation,
-      overtoneRatio: material.overtoneRatio, attackSeconds: material.attackSeconds, releaseSeconds: material.releaseSeconds,
-      targetPan: pan, attack, accentUntil: now + .32, releasing: false,
-      glideWakeAmount: 0, shade
-    };
+    const modes = plan.modes.map(mode => {
+      const oscillator = engine.context.createOscillator(), envelope = engine.context.createGain();
+      oscillator.type = 'sine'; oscillator.frequency.value = mode.frequency;
+      envelope.gain.setValueAtTime(0, now);
+      envelope.gain.linearRampToValueAtTime(mode.peak, now + plan.attackSeconds);
+      envelope.gain.exponentialRampToValueAtTime(.00001, now + mode.duration);
+      envelope.gain.linearRampToValueAtTime(0, now + mode.duration + .03);
+      oscillator.connect(envelope).connect(gain); oscillator.start(now); oscillator.stop(now + mode.duration + .04);
+      return {oscillator, envelope};
+    });
+    const voice = {bowl:true, modes, oscillator:modes[0].oscillator, gain, panner,
+      born:now, endsAt:now+plan.duration+.04, targetFrequency:plan.frequency,
+      materialDepth:depth, releaseSeconds:plan.duration, releasing:false,
+      lastX:x, lastY:y, lastDepth:depth, targetPan:music.spatialPan(x/width)};
     engine.voices.set(id, voice);
-    canvas.dataset.waterMaterial = material.dominant;
-    canvas.dataset.materialBias = '0.000';
-    reflectDropVoices(engine);
+    canvas.dataset.bowlPitch = plan.frequency.toFixed(3);
     canvas.dataset.audioVoices = String(engine.voices.size);
-    scheduleWakeSync();
-    dropOscillator.addEventListener('ended', () => {
-      if (voice.dropOscillator !== dropOscillator) return;
-      try { dropOscillator.disconnect(); dropGain.disconnect(); } catch {}
-      voice.dropOscillator = null; voice.dropGain = null;
-      reflectDropVoices(engine);
-    }, { once: true });
-    if (splashSource) {
-      splashSource.addEventListener('ended', () => {
-        if (voice.splashSource !== splashSource) return;
-        for (const node of [splashSource, splashLowpass, splashBandpass, splashGain]) {
-          try { node?.disconnect(); } catch {}
-        }
-        voice.splashSource = null; voice.splashLowpass = null;
-        voice.splashBandpass = null; voice.splashGain = null;
-      }, { once: true });
-    }
-    oscillator.addEventListener('ended', () => {
-      if (engine.voices.get(id) !== voice) return;
-      engine.voices.delete(id);
+    modes[0].oscillator.addEventListener('ended', () => {
       disconnectVoice(voice);
+      if (engine.voices.get(id) === voice) engine.voices.delete(id);
       canvas.dataset.audioVoices = String(engine.voices.size);
-      balanceVoices(engine);
-    }, { once: true });
-    balanceVoices(engine);
+      balanceVoices(engine); scheduleWakeSync();
+    }, {once:true});
+    balanceVoices(engine); scheduleWakeSync();
     return true;
   }
 
   function moveVoice(id, x, y, pressure = .42, mappedFrequency = null, materialBias = 0, wakeExpression = null) {
     const voice = audio?.voices.get(id);
     if (!voice) return;
-    const now = audio.context.currentTime, frequency = mappedFrequency ?? pitchAt(x), depth = depthAt(y);
-    const material = music.waterMaterial(depth.normalizedDepth, materialBias, voice.shade);
-    const wake = wakeExpression?.amount >= 0 ? wakeExpression : music.glideWake(0, 0);
-    const pitchChanged = Math.abs(frequency - voice.targetFrequency) > .08;
-    if (pitchChanged) {
-      voice.oscillator.frequency.setTargetAtTime(frequency, now, .026);
-      voice.targetFrequency = frequency;
-    }
-    const overtoneFrequency = frequency * material.overtoneRatio;
-    if (pitchChanged || Math.abs(material.overtoneRatio - voice.overtoneRatio) > .0005) {
-      voice.overtone.frequency.setTargetAtTime(overtoneFrequency, now, .045);
-      voice.overtoneRatio = material.overtoneRatio;
-    }
-    const pan = music.spatialPan(x / Math.max(1, width));
-    if (voice.panner && Math.abs(pan - voice.targetPan) > .002) {
-      voice.panner.pan.setTargetAtTime(pan, now, .045);
-      voice.targetPan = pan;
-    }
-    // Continuous glissando parts the same water the trail draws. Reuse the
-    // existing filter/overtone nodes: speed may brighten their material a
-    // little, but never changes the positional pitch/depth grammar or the
-    // six-voice node budget. The per-frame decaying speed closes this wake
-    // after the hand comes to rest.
-    const wakeCutoff = Math.min(7200, material.cutoffHz * wake.filterScale);
-    const wakeOvertone = Math.min(.235, material.overtoneGain + wake.overtoneLift);
-    voice.filter.frequency.setTargetAtTime(wakeCutoff, now, .055);
-    voice.filter.Q.setTargetAtTime(material.filterQ, now, .08);
-    voice.overtoneGain.gain.setTargetAtTime(wakeOvertone, now, .06);
-    voice.glideWakeAmount = wake.amount;
-    canvas.dataset.glideWake = wake.amount.toFixed(3);
-    canvas.dataset.glideWakeFilter = wakeCutoff.toFixed(1);
-    canvas.dataset.glideWakeOvertone = wakeOvertone.toFixed(4);
-    canvas.dataset.glideWakePitch = frequency.toFixed(3);
-    if (voice.reflectionSend) {
-      voice.reflectionSend.gain.setTargetAtTime(music.depthReflection(depth.normalizedDepth).sendGain, now, .08);
-    }
-    // The departure needs the water's real place: remember where the note
-    // last rested so its light can sink away from exactly there.
-    voice.lastX = x; voice.lastY = y; voice.lastDepth = depth.normalizedDepth;
-    voice.materialBias = material.brushBias;
-    voice.materialDepth = material.effectiveDepth;
-    voice.materialLevel = material.levelCompensation;
-    voice.attackSeconds = material.attackSeconds;
-    voice.releaseSeconds = material.releaseSeconds;
-    canvas.dataset.waterMaterial = material.dominant;
-    canvas.dataset.materialBias = material.brushBias.toFixed(3);
-    retargetTexture(voice, depth.normalizedDepth, now);
-    if (now >= voice.accentUntil) {
-      voice.gain.gain.setTargetAtTime((.04 + pressure * .065) * material.levelCompensation, now, .05);
-    }
+    // A struck bowl keeps its pitch and decay even if fingers wander or hold.
+    // Moving the contact only moves its spatial place; it cannot revive a tail.
+    voice.lastX=x; voice.lastY=y; voice.lastDepth=depthAt(y).normalizedDepth;
+    voice.panner?.pan.setTargetAtTime(music.spatialPan(x / width), audio.context.currentTime, .045);
+    canvas.dataset.glideWakePitch = voice.targetFrequency.toFixed(3);
   }
 
-  function accentVoice(id, intensity) {
-    const voice = audio?.voices.get(id);
-    if (!voice || voice.releasing || intensity <= voice.attack + .025) return false;
-    const now = audio.context.currentTime;
-    const current = Math.max(.0001, voice.gain.gain.value);
-    voice.gain.gain.cancelScheduledValues(now);
-    voice.gain.gain.setValueAtTime(current, now);
-    voice.gain.gain.exponentialRampToValueAtTime((.055 + intensity * .085) * voice.materialLevel, now + Math.min(.04, voice.attackSeconds));
-    voice.gain.gain.exponentialRampToValueAtTime(.063 * voice.materialLevel, now + .23);
-    if (voice.dropGain && now < voice.dropEndsAt - .018 && intensity > voice.dropIntensity) {
-      const drop = music.waterDrop(voice.targetFrequency, voice.materialDepth, intensity, {
-        brightness: (voice.materialDepth - .5) * 2
-      });
-      const remaining = Math.max(.018, voice.dropEndsAt - now);
-      if (typeof voice.dropGain.gain.cancelAndHoldAtTime === 'function') voice.dropGain.gain.cancelAndHoldAtTime(now);
-      else {
-        const held = Math.max(.0001, voice.dropGain.gain.value);
-        voice.dropGain.gain.cancelScheduledValues(now);
-        voice.dropGain.gain.setValueAtTime(held, now);
-      }
-      voice.dropGain.gain.exponentialRampToValueAtTime(drop.peakGain, now + Math.min(.012, remaining * .25));
-      voice.dropGain.gain.exponentialRampToValueAtTime(.0001, voice.dropEndsAt);
-      voice.dropIntensity = intensity;
-    }
-    voice.attack = intensity;
-    voice.accentUntil = now + .23;
-    return true;
-  }
+  function accentVoice() { return false; } // The attack is complete at touch-down.
 
   function endVoice(id) {
     const voice = audio?.voices.get(id);
     if (!voice || voice.releasing) return;
     const now = audio.context.currentTime;
     voice.releasing = true;
-    // The note leaves the water the way it lived: a quick tap departs with
-    // the material's brisk exit, a long-settled deep note sinks away on a
-    // longer warm tail. The fade time-constant follows the same stretch so
-    // the tail stays smooth instead of hissing under a longer stop.
-    const holdMs = Math.max(0, (now - voice.born) * 1000);
-    const releaseSeconds = music.waterRelease(holdMs, voice.materialDepth, voice.releaseSeconds);
-    const fadeTau = releaseSeconds / 3.2;
-    canvas.dataset.lastRelease = releaseSeconds.toFixed(3);
-    // The visible departure: the resting light of the note sinks away along
-    // the same stretched tail the sound uses, from the water's real place.
-    if (Number.isFinite(voice.lastX) && Number.isFinite(voice.lastY)) {
-      releaseGlints.push({
-        x: voice.lastX,
-        y: voice.lastY,
-        born: performance.now(),
-        depth: Number.isFinite(voice.lastDepth) ? voice.lastDepth : voice.materialDepth,
-        releaseSeconds
-      });
-      if (releaseGlints.length > RELEASE_GLINT_MAX) releaseGlints.shift();
-    }
-    voice.gain.gain.cancelScheduledValues(now);
-    voice.gain.gain.setTargetAtTime(.0001, now, fadeTau);
-    voice.oscillator.stop(now + releaseSeconds); voice.overtone.stop(now + releaseSeconds); voice.undertow.stop(now + releaseSeconds);
-    try { voice.dropOscillator?.stop(Math.min(now + .03, voice.dropEndsAt + .025)); } catch {}
-    try { voice.splashSource?.stop(now + .02); } catch {}
-    try { voice.eddyOscillator?.stop(now + releaseSeconds); } catch {}
+    // Lifting does not choke the bowl. Its already scheduled finite decay wins.
+    canvas.dataset.lastRelease = Math.max(0, voice.endsAt-now).toFixed(3);
     balanceVoices(audio);
     scheduleWakeSync();
   }
@@ -2632,6 +2391,7 @@ function disconnectSkipVoice(engine, skip) {
         ...music.mapPitch(active.pitchX, 0, active.motionSpeed, tuningFamily),
         precision: active.precisionAmount
       };
+      active.mapping.frequency = active.struckFrequency ?? audio?.voices.get(event.pointerId)?.targetFrequency ?? pitchAt(active.originX);
       const scorePressure = active.pressureAvailable ? active.pressure : active.attack;
       captureScoreSample(active, p.x, p.y, now, scorePressure);
       tryScoreResonance(active, p, now);
@@ -2659,20 +2419,8 @@ function disconnectSkipVoice(engine, skip) {
     pointers.delete(event.pointerId);
     canvas.dataset.eddyVoices = String([...pointers.values()].filter(pointer => pointer.eddy?.active).length);
     if (skipPlan) scheduleStoneSkips(skipPlan, now);
-    // A quick, calm press-release counts as a tap on the surface. Keep a
-    // short rhythm history so a soft double-tap can wake a phrase to circle.
-    const heldMsForTap = Math.max(0, now - active.born);
-    const movedForTap = active.movedDuringHold ?? 0;
-    if (!skipPlan && heldMsForTap <= score.REHEARSAL_TAP_HOLD_MS && movedForTap <= score.REHEARSAL_TAP_MOVE ) {
-      tapHistory.push({ at: now, x: active.x / Math.max(1, width), y: active.y / Math.max(1, height), moved: movedForTap });
-      const rehearsal = score.rehearsalDecision(tapHistory, phraseInk, now, reduced.matches);
-      if (rehearsal && rehearsal.line && loopingLine !== rehearsal.line) {
-        tapHistory = tapHistory.filter(tap => now - tap.at <= score.REHEARSAL_WINDOW_MS);
-        startPourLoop(rehearsal.line);
-        canvas.dataset.rehearsalSummon = '1';
-      }
-      tapHistory = tapHistory.slice(-score.REHEARSAL_MAX_TAPS);
-    }
+    // Random taps are notes, never an implicit request to start a loop.
+    // Rehearsal remains available explicitly from the diary button.
 
     // A finished gesture may carry its earned lesson: the eddy it raised,
     // a fast straight release that became a skipping stone, a chord that
@@ -2762,6 +2510,7 @@ function disconnectSkipVoice(engine, skip) {
       if (keyboard.sounding) {
         keyboard.distanceTraveled += Math.hypot(movement[0] * width, movement[1] * height);
         keyboard.mapping = { ...music.mapPitch(keyboard.pitchX, 0, keyboard.motionSpeed, tuningFamily), precision: keyboard.precisionAmount };
+        keyboard.mapping.frequency = keyboard.struckFrequency ?? audio?.voices.get('keyboard')?.targetFrequency ?? pitchAt(p.x);
         keyboard.glideWake = music.glideWake(keyboard.motionSpeed, now - keyboard.born);
         moveVoice('keyboard', p.x, p.y, .48, keyboard.mapping.frequency,
           keyboard.materialBias ?? 0, keyboard.glideWake);
@@ -2776,7 +2525,7 @@ function disconnectSkipVoice(engine, skip) {
       event.preventDefault();
       const now = performance.now();
       keyboard.sounding = true; keyboard.born = now; keyboard.lastMotion = now; keyboard.motionSpeed = 0; keyboard.currentAnnounced = false;
-      keyboard.pitchX = keyboard.x; keyboard.mapping = null; keyboard.materialBias = null; keyboard.precisionActive = false; keyboard.precisionAmount = 0; keyboard.precisionOriginX = null;
+      keyboard.struckFrequency = null; keyboard.pitchX = keyboard.x; keyboard.mapping = null; keyboard.materialBias = null; keyboard.precisionActive = false; keyboard.precisionAmount = 0; keyboard.precisionOriginX = null;
       keyboard.dive = null; keyboard.dived = false;
       const p = keyboardPoint();
       keyboard.distanceTraveled = 0; keyboard.resonanceX = p.x; keyboard.resonanceY = p.y; keyboard.resonatedMemories = new Set();
@@ -3348,6 +3097,9 @@ function disconnectSkipVoice(engine, skip) {
       ...music.mapPitch(mappedX, eddyHoldsPitch ? 0 : idle, eddyHoldsPitch ? 0 : decayedSpeed, tuningFamily),
       precision: contact.precisionAmount || 0
     };
+    contact.struckFrequency ??= audio?.voices.get(id)?.targetFrequency ?? pitchAt(x);
+    contact.mapping.frequency = contact.struckFrequency;
+    contact.mapping.attraction = 0;
     const audioX = contact.eddy?.active ? contact.eddy.centerX : x;
     const audioY = contact.eddy?.active && Number.isFinite(contact.eddyDepthY) ? contact.eddyDepthY : y;
     contact.glideWake = music.glideWake(contact.eddy?.active ? 0 : decayedSpeed, now - contact.born);
@@ -3360,7 +3112,7 @@ function disconnectSkipVoice(engine, skip) {
     const texture = music.heldTexture(y / Math.max(1, height), now - contact.born);
     if (texture.bloom > .52 && !textureAnnounced && !contact.eddy?.active) {
       textureAnnounced = true;
-      status.textContent = 'Удерживаемая нота дышит вместе с глубинным течением';
+      status.textContent = 'Чаша мягко затихает; новое касание рождает новую ноту';
     }
   }
 

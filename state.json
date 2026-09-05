@@ -1,12 +1,12 @@
 {
   "project": "pond-piano",
-  "phase": "done",
-  "iteration": 56,
-  "status": "depth-dive-done",
-  "current_goal": "Iteration 0056 done: after a calm hold, one deliberate near-vertical plunge folds the live current into a bounded low depth response and a visible sinking seam with three rising bubbles. It triggers once per contact for pointer or keyboard, preserves the sustain pitch/voice, rejects ordinary vertical glissando, diagonal/upward/stale motion, shares the existing transient pool, respects reduced motion, and creates no child ripple or score entry.",
-  "previous_goal": "Iteration 0055 done: after the initial drop lands, continuous glissando speed now parts one audible and visible wake through the water. A pure bounded expression opens paired trail strands and slightly brightens the existing filter/overtone nodes; stopping closes both while the held voice lives on. Pitch, depth, pan, reflection, six-voice budget and audio-node count stay unchanged, and keyboard motion follows the same model.",
-  "last_verified": "2026-09-04 (0056): 79 Node tests pass; syntax 54 JS files, JSON, git diff --check and npm pack dry-run (26 files) clean. Production loopback Chromium mobile smoke passed 9/9: one pointer depth fold and one keyboard Space+ArrowDown fold, sustain stayed live, one-event latch held, no child ripples or score memory, transient and sustain pools released, no page/console errors. Desktop shell 6/6, gathering pearl 6/6 and glide wake 7/7 regressions pass. Screenshot depth-dive-56.png inspected: organic vertical seam, three bubbles and lower fold visible; eyebrow 56 and shore controls intact, no clipping/dashboard artifact.",
-  "next_step": "device-pass: on Android Chrome/PWA and iPhone Safari, hold a note then plunge down quickly with one finger; the low response should feel like depth beneath the same voice, not a second hit. Check accidental triggering during ordinary vertical glissando and system-edge gestures; tune thresholds only from real-device evidence.",
+  "phase": "human-listening",
+  "iteration": 57,
+  "status": "sound-rework-implemented-listening-pending",
+  "current_goal": "Iteration 0057: finite softly struck bowl voices and consonant-from-attack mapping implemented; subjective acceptance requires human before/after listening. No new decorative features.",
+  "previous_goal": "2026-09-05 user feedback: prioritize singing-bowl-like sound and effortless musicality. Random childlike taps must sound pleasant without learning. Current sound rejected as unmelodic, dull, repetitive howling. Stop adding gestures/visual ornaments; redesign default tuning, strike/transients, resonant decay, and dense-input behavior.",
+  "last_verified": "2026-09-05: 82 Node tests; 57 JS syntax; desktop shell 6/6; trusted CDP multi-touch/lifecycle 10/10; package closure 26 files. Real Web Audio before/after same seeded input, zero clipping; after peak -16.39 dBFS, maximum-volume peak -12.87; held voice decays to zero; mute digital silence. Exact-commit Windows gate is checked after push and recorded in output/bowls-57/windows-ci.json.",
+  "next_step": "Listen to output/bowls-57/before.wav and after.wav, then real Android/iPhone speaker and touch pass; judge legacy secondary response timbres alongside the new bowls. Verify exact HEAD Windows CI receipt before calling this shipped.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -340,7 +340,7 @@
     ],
     "next_step": "done; real-device pass should compare the warm near lap and cool far skim on phone speakers and bright screens"
   },
-  "current_iteration": 56,
+  "current_iteration": 57,
   "iteration_51": {
     "started": "2026-09-02T22:17:00+03:00",
     "phase": "done",
@@ -464,5 +464,29 @@
     ],
     "next_step": "device-pass: on Android Chrome/PWA and iPhone Safari, hold a note then plunge down quickly with one finger; the low response should feel like depth beneath the same voice, not a second hit. Check accidental triggering during ordinary vertical glissando and system-edge gestures; tune thresholds only from real-device evidence.",
     "finished": "2026-09-04T23:27:00+03:00"
+  },
+  "sound_feedback_20260905": {
+    "reference": "singing bowls: simple, meditative",
+    "acceptance": "A child taps randomly and it sounds good; no training required.",
+    "rejected": "unmelodic, dull, repetitive howling",
+    "priority": "sound quality before extra gestures or visuals"
+  },
+  "iteration_57": {
+    "phase": "local-verified",
+    "implemented_at": "2026-09-05T13:11:04.851839+03:00",
+    "audio_evidence": "output/bowls-57/summary.json",
+    "before_audio": "output/bowls-57/before.wav",
+    "after_audio": "output/bowls-57/after.wav",
+    "windows_gate": {
+      "requires_exact_commit": true,
+      "receipt": "output/bowls-57/windows-ci.json",
+      "note": "Commit-time snapshot: CI result is written to the local receipt after push, not asserted before the build."
+    },
+    "limitations": [
+      "Human sound acceptance pending",
+      "Real Android/iPhone and Windows launch pending",
+      "Secondary short gesture/collision timbres not redesigned"
+    ],
+    "next_step": "Human listening; no public release in this iteration."
   }
 }
