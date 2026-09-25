@@ -1,5 +1,5 @@
-const CACHE = 'pond-piano-shell-v54';
-// Iteration 0057: finite singing-bowl voices and consonant attacks.
+const CACHE = 'pond-piano-shell-v55';
+// Iteration 0058: every bowl carries its own alloy, so taps differ in timbre.
 const SHELL = [
   './',
   './index.html',

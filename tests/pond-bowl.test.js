@@ -27,6 +27,26 @@ test('bowl modes have bounded peaks, fixed consonant partials and a finite softe
   assert.equal(p.modes[3].frequency,p.frequency*3);
  }
 });
+test('every bowl carries its own alloy while one pitch stays one pitch',()=>{
+ const shineAt=x=>music.bowlShine(x,.5,.42);
+ assert.equal(shineAt(.34),shineAt(.34));
+ const shine=[...Array(11)].map((_,i)=>shineAt(i/10));
+ const spreadCharacter=Math.max(...shine)-Math.min(...shine);
+ assert.ok(spreadCharacter>.25,'the eleven bowls should differ in character');
+ // Three strikes inside one bowl cell share a pitch but not a timbre.
+ const left=music.bowlPlan(.27,.5,.42),centre=music.bowlPlan(.30,.5,.42),right=music.bowlPlan(.33,.5,.42);
+ assert.equal(left.frequency,centre.frequency);assert.equal(right.frequency,centre.frequency);
+ const bits=new Set([left,centre,right].map(p=>p.shine.toFixed(4)));
+ assert.equal(bits.size,3);
+ assert.notDeepEqual(left.modes.map(m=>m.peak),centre.modes.map(m=>m.peak));
+});
+test('bowl shine is bounded, gesture-derived and safe for damaged input',()=>{
+ assert.ok(music.bowlShine(.5,0,1)>music.bowlShine(.5,1,0));
+ assert.ok(music.bowlShine(.5,.5,1)>music.bowlShine(.5,.5,0));
+ for(const x of [NaN,Infinity,-100,100,undefined])for(const d of [NaN,-1,2])for(const a of [NaN,-1,2]){
+  const s=music.bowlShine(x,d,a);assert.ok(Number.isFinite(s)&&s>=0&&s<=1);
+ }
+});
 test('damaged bowl inputs remain finite and bounded',()=>{
  for(const x of [NaN,Infinity,-100,100,undefined]){
   const p=music.bowlPlan(x,NaN,Infinity,'unknown');

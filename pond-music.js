@@ -491,18 +491,42 @@
     return BASE_FREQUENCY * 1.5 * ratios[position % 5] * 2 ** Math.floor(position / 5);
   }
 
+  // The pond's eleven bowls are not copies of one another: each register step
+  // has its own alloy, so the same pitch never sounds twice the same way. The
+  // values are fixed and hand-tuned, never random.
+  const BOWL_ALLOY = Object.freeze([.18, -.14, .30, -.06, .24, -.20, .10, .34, -.10, .28, -.16]);
+
+  // One coherent axis of bowl character. Shine is how much the upper partials
+  // speak: a harder finger, a strike nearer a bowl's rim and a naturally bright
+  // alloy raise it; a soft touch, dead centre and a warm alloy keep the tone
+  // round, and deep water absorbs the shine. Deterministic and bounded [0,1].
+  function bowlShine(x, depth = .5, attack = .42) {
+    const cell = clamp(Number.isFinite(x) ? x : .5) * 10;
+    const rounded = Math.round(cell);
+    const position = ((rounded % 11) + 11) % 11;
+    const offset = clamp((cell - rounded) * 2, -1, 1);
+    const hardness = clamp(Number.isFinite(attack) ? attack : .42);
+    const wet = clamp(Number.isFinite(depth) ? depth : .5);
+    return clamp(.5 + BOWL_ALLOY[position] * .7 + offset * .22 + (hardness - .42) * .5 - (wet - .5) * .18);
+  }
+
   function bowlPlan(x, depth = .5, attack = .42, family = DEFAULT_SCALE_FAMILY) {
     depth = clamp(Number.isFinite(depth) ? depth : .5);
     attack = clamp(Number.isFinite(attack) ? attack : .42);
     const frequency = bowlFrequency(x, family);
     const duration = 3.4 + depth * 1.4;
+    const shine = bowlShine(x, depth, attack);
+    const spread = shine - .5;
     // Upper modes die first; the nearly paired fundamental leaves a gentle
     // beating resonance, without pitch sweeps, noise or an LFO sustaining it.
-    const modes = [[1, .052, duration], [1.002, .018, duration * .87],
-      [2, .019 + (1-depth)*.008, duration*.57], [3, .007, duration*.32]];
-    return Object.freeze({frequency, duration, attackSeconds: .014 + depth*.012,
+    // Shine only shifts how loud and how long those fixed partials live.
+    const modes = [[1, .052 * (1 + spread * .20), duration],
+      [1.002, .018 * (1 + spread * .35), duration * .87],
+      [2, (.019 + (1-depth)*.008) * (1 + spread * .52), duration * (.57 * (1 + spread * .55))],
+      [3, .007 * (1 + spread * .90), duration * (.32 * (1 + spread * .70))]];
+    return Object.freeze({frequency, duration, shine, attackSeconds: .014 + depth*.012,
       modes: Object.freeze(modes.map(([ratio, level, life]) => Object.freeze({
-        frequency: frequency*ratio, peak: level*(.78+attack*.32), duration:life
+        frequency: frequency*ratio, peak: level, duration:life
       })))});
   }
 
@@ -577,7 +601,9 @@
 
   return Object.freeze({
     bowlFrequency,
+    bowlShine,
     bowlPlan,
+    BOWL_ALLOY,
     BASE_FREQUENCY,
     OCTAVES,
     DEFAULT_SCALE_FAMILY,

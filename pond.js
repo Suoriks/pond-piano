@@ -443,6 +443,7 @@
       lastX:x, lastY:y, lastDepth:depth, targetPan:music.spatialPan(x/width)};
     engine.voices.set(id, voice);
     canvas.dataset.bowlPitch = plan.frequency.toFixed(3);
+    canvas.dataset.bowlShine = Number.isFinite(plan.shine) ? plan.shine.toFixed(3) : '';
     canvas.dataset.audioVoices = String(engine.voices.size);
     modes[0].oscillator.addEventListener('ended', () => {
       disconnectVoice(voice);

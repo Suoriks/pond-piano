@@ -1,12 +1,12 @@
 {
   "project": "pond-piano",
   "phase": "human-listening",
-  "iteration": 57,
-  "status": "sound-rework-implemented-listening-pending",
-  "current_goal": "Iteration 0057: finite softly struck bowl voices and consonant-from-attack mapping implemented; subjective acceptance requires human before/after listening. No new decorative features.",
-  "previous_goal": "2026-09-05 user feedback: prioritize singing-bowl-like sound and effortless musicality. Random childlike taps must sound pleasant without learning. Current sound rejected as unmelodic, dull, repetitive howling. Stop adding gestures/visual ornaments; redesign default tuning, strike/transients, resonant decay, and dense-input behavior.",
-  "last_verified": "2026-09-05: 82 Node tests; 57 JS syntax; desktop shell 6/6; trusted CDP multi-touch/lifecycle 10/10; package closure 26 files. Real Web Audio before/after same seeded input, zero clipping; after peak -16.39 dBFS, maximum-volume peak -12.87; held voice decays to zero; mute digital silence. Exact-commit Windows gate is checked after push and recorded in output/bowls-57/windows-ci.json.",
-  "next_step": "Listen to output/bowls-57/before.wav and after.wav, then real Android/iPhone speaker and touch pass; judge legacy secondary response timbres alongside the new bowls. Verify exact HEAD Windows CI receipt before calling this shipped.",
+  "iteration": 58,
+  "status": "bowl-timbre-variety-local-verified",
+  "current_goal": "Iteration 0058: each of the eleven struck bowls now carries its own alloy; shine is deterministic per register step and gesture-derived (rim offset, finger hardness, depth), folded into existing mode peaks and upper-mode lives. Random taps differ in timbre, not only pitch. No new gestures or visual ornaments.",
+  "previous_goal": "Iteration 0057: finite softly struck bowl voices and consonant-from-attack mapping implemented; subjective acceptance requires human before/after listening. No new decorative features.",
+  "last_verified": "2026-09-26: 84 Node tests; 57 JS syntax; state/package JSON + git diff --check clean. Pure before/after on the same 12 seeded tap positions: 12 distinct timbres vs 11; max mode-peak sum 0.12252 < 0.125 ceiling. Real production Web Audio (output/bowls-58/after.wav, same seeded scenario as 0057): 0 clipping, peak -14.33 dBFS, no context before a gesture, 12 distinct tap shines, one bowl cell holds one pitch 294.329 Hz with three timbres 0.254/0.386/0.518, all voices and tails return to 0, no console errors.",
+  "next_step": "Human listening of output/bowls-58/after.wav beside accepted output/bowls-57/after.wav: is the variety audible and does no bowl sound harsh? Then Android/iPhone on real speakers. Numbers describe variety and level, not timbral beauty.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -469,10 +469,11 @@
     "reference": "singing bowls: simple, meditative",
     "acceptance": "A child taps randomly and it sounds good; no training required.",
     "rejected": "unmelodic, dull, repetitive howling",
-    "priority": "sound quality before extra gestures or visuals"
+    "priority": "sound quality before extra gestures or visuals",
+    "listening_verdict_1316": "Евгений прослушал before/after итерации57: «Да, новая звучит лучше». Направление принято, не означает готовность1.0 или проверку реальных устройств."
   },
   "iteration_57": {
-    "phase": "local-verified",
+    "phase": "accepted-baseline",
     "implemented_at": "2026-09-05T13:11:04.851839+03:00",
     "audio_evidence": "output/bowls-57/summary.json",
     "before_audio": "output/bowls-57/before.wav",
@@ -488,5 +489,18 @@
       "Secondary short gesture/collision timbres not redesigned"
     ],
     "next_step": "Human listening; no public release in this iteration."
+  },
+  "iteration_58": {
+    "started": "2026-09-25T23:22:37.171Z",
+    "finished": "2026-09-25T23:28:13.577Z",
+    "phase": "done",
+    "verified": [
+      "84 Node tests pass (was 79); new asserts cover bounded/deterministic shine, damaged-input safety, eleven bowls differ (character spread > 0.25) and three same-pitch strikes inside one cell differing",
+      "57 JS files pass syntax; state/package JSON and git diff --check clean",
+      "pure before/after on the same 12 seeded tap positions: 12 distinct timbres vs 11; max mode-peak sum 0.12252 < 0.125",
+      "real production Web Audio output/bowls-58/after.wav: no clipping, peak -14.33 dBFS, 12 distinct tap shines, one cell one pitch with three timbres 0.254/0.386/0.518, autoplayContexts 0, final voices 0",
+      "screenshot output/bowls-58/after.png captured"
+    ],
+    "next_step": "Human listening of output/bowls-58/after.wav beside accepted output/bowls-57/after.wav: is the variety audible and does no bowl sound harsh? Then Android/iPhone on real speakers. Numbers describe variety and level, not timbral beauty."
   }
 }
