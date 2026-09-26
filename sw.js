@@ -1,5 +1,5 @@
-const CACHE = 'pond-piano-shell-v55';
-// Iteration 0058: every bowl carries its own alloy, so taps differ in timbre.
+const CACHE = 'pond-piano-shell-v56';
+// Iteration 0059: keyboard bowl selection is visible to assistive technology.
 const SHELL = [
   './',
   './index.html',

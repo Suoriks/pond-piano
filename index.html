@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#071515">
-  <meta name="description" content="Жестовый музыкальный пруд: касание рождает звук, движение меняет его высоту и глубину.">
+  <meta name="description" content="Жестовый музыкальный пруд: касание мягко ударяет чашу, движение ведёт её звук в пространстве.">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -17,12 +17,13 @@
 </head>
 <body>
   <main>
-    <div class="gesture-surface" aria-hidden="true">
-      <canvas id="pond" tabindex="0" role="application" aria-label="Музыкальный пруд. Коснитесь воды, чтобы мягко ударить чашу. Слева ниже, справа выше; глубина задаёт яркость и затухание. Ноты сразу попадают в пентатонический строй. Удержание и движение не меняют высоту чаши: она сама затихает, новое касание играет новую ноту. Можно играть шестью пальцами. С клавиатуры выбирайте место стрелками, ударяйте пробелом или Enter. У берега доступны строй, громкость, выключение звука и дневник фраз."></canvas>
+    <div class="gesture-surface">
+      <canvas id="pond" tabindex="0" role="application" aria-label="Музыкальный пруд" aria-describedby="pond-instructions"></canvas>
     </div>
+    <p id="pond-instructions" class="sr-only">Стрелками выбирайте одну из 11 чаш и глубину воды; пробел или Enter ударяет выбранную чашу. Удержание и движение не меняют уже звучащую высоту. Новое касание играет новую ноту. Вода поддерживает до шести голосов; береговые камни меняют строй и громкость, дневник хранит фразы.</p>
     <div class="shore" aria-hidden="true"></div>
     <header class="title-block">
-      <p class="eyebrow">Этюд воды · 58</p>
+      <p class="eyebrow">Этюд воды · 59</p>
       <h1>Пруд-пианино</h1>
       <p class="hint">Выдержка + нырок вниз — глубинный ответ</p>
       <p id="water-invitation" class="water-invitation" aria-hidden="true">Коснитесь воды</p>

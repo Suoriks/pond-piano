@@ -38,7 +38,18 @@
     return count > 0 ? 0 : null;
   }
 
+  // Describe the eleven actual struck-bowl cells, not an imaginary
+  // continuous pitch: this is the same round-to-nearest mapping as bowlFrequency.
+  // Depth is a coarse spoken landmark rather than a second hidden keyboard.
+  function bowlLocation(x, y) {
+    const horizontal = clamp(x), depth = clamp(y);
+    const index = Math.round(horizontal * 10) + 1;
+    const depthName = depth < 1 / 3 ? 'мелкая' : depth < 2 / 3 ? 'средняя' : 'глубокая';
+    return Object.freeze({ index, depthName,
+      text: `чаша ${index} из 11, вода: ${depthName}` });
+  }
+
   return Object.freeze({
-    expandedState, countIndex: trapIndex, openIndex
+    expandedState, countIndex: trapIndex, openIndex, bowlLocation
   });
 });

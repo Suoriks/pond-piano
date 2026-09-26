@@ -2245,7 +2245,7 @@ function disconnectSkipVoice(engine, skip) {
     const chordSize = [...pointers.values()].filter(pointer => pointer.sounding).length;
     if (!sounding) status.textContent = `Пруд удерживает до ${MAX_VOICES} голосов; отпустите касание для следующей ноты`;
     else if (chordSize > 1) status.textContent = `Аккорд: ${chordSize} независимых ${voiceWord(chordSize)}`;
-    else if (!announced) { status.textContent = 'Вода зазвучала; ведите касание, чтобы менять высоту и глубину'; announced = true; }
+    else if (!announced) { status.textContent = 'Вода зазвучала; движение ведёт чашу по пруду, новое касание выбирает новую высоту'; announced = true; }
     try { canvas.setPointerCapture?.(event.pointerId); } catch {}
   }
 
@@ -2450,6 +2450,19 @@ function disconnectSkipVoice(engine, skip) {
 
   function keyboardPoint() { return { x: keyboard.x * width, y: keyboard.y * height }; }
 
+  function announceKeyboardLocation(force = false) {
+    const location = a11y.bowlLocation(keyboard.x, keyboard.y);
+    const key = `${location.index}:${location.depthName}:${keyboard.sounding ? keyboard.struckX : ''}`;
+    if (!force && keyboard.announcedLocation === key) return;
+    keyboard.announcedLocation = key;
+    const next = `Следующий удар: ${location.text}`;
+    status.textContent = keyboard.sounding
+      ? `Звучит чаша ${a11y.bowlLocation(keyboard.struckX, keyboard.y).index} из 11; её высота не меняется. ${next}`
+      : next;
+  }
+
+  canvas.addEventListener('focus', () => announceKeyboardLocation(true));
+
   canvas.addEventListener('keydown', event => {
     const movement = { ArrowLeft: [-.025, 0], ArrowRight: [.025, 0], ArrowUp: [0, -.035], ArrowDown: [0, .035] }[event.key];
     if (movement) {
@@ -2508,6 +2521,7 @@ function disconnectSkipVoice(engine, skip) {
         keyboard.precisionOriginX = steering.originRawX;
       }
       keyboard.lastMotion = now; keyboard.currentAnnounced = false;
+      announceKeyboardLocation();
       if (keyboard.sounding) {
         keyboard.distanceTraveled += Math.hypot(movement[0] * width, movement[1] * height);
         keyboard.mapping = { ...music.mapPitch(keyboard.pitchX, 0, keyboard.motionSpeed, tuningFamily), precision: keyboard.precisionAmount };
@@ -2533,11 +2547,13 @@ function disconnectSkipVoice(engine, skip) {
       keyboard.scoreSamples = [{ x: keyboard.x, y: keyboard.y, pitch: keyboard.pitchX, at: now, pressure: .48 }];
       const engine = audioLifecycle.activateFromGesture();
       keyboard.sounding = startVoice('keyboard', p.x, p.y, .48, pitchAt(p.x), .48, engine, phraseNoteIndex);
-      if (keyboard.sounding) phraseNoteIndex += 1;
+      if (keyboard.sounding) { keyboard.struckX = keyboard.x; phraseNoteIndex += 1; }
       if (!keyboard.sounding) keyboard.scoreSamples = [];
       addRipple(p.x, p.y, .48);
       spawnDropCorona(p.x, p.y, .48);
-      document.body.classList.add('has-played'); markPondPlayed(); status.textContent = 'Звук воды звучит; стрелками меняйте высоту и глубину';
+      document.body.classList.add('has-played'); markPondPlayed();
+      if (keyboard.sounding) announceKeyboardLocation(true);
+      else status.textContent = 'Пруд удерживает до шести голосов; отпустите касание для следующей чаши';
     }
   });
   canvas.addEventListener('keyup', event => {
@@ -2547,7 +2563,9 @@ function disconnectSkipVoice(engine, skip) {
       rememberContact(keyboard, p.x, p.y, now, .48);
       const heldMs = Math.max(0, now - keyboard.born), moved = keyboard.distanceTraveled;
       keyboard.sounding = false; endVoice('keyboard');
+      keyboard.struckX = null;
       keyboard.dive = null; keyboard.dived = false;
+      announceKeyboardLocation(true);
       addRipple(p.x, p.y, .48, .55, keyboard.mapping?.frequency ?? pitchAt(p.x));
       // The keyboard voice earns the settle lesson by the same measure as
       // a held touch: a long quiet stay before its first movement.
@@ -2559,6 +2577,7 @@ function disconnectSkipVoice(engine, skip) {
       const p = keyboardPoint();
       rememberContact(keyboard, p.x, p.y, performance.now(), .48);
       keyboard.sounding = false; endVoice('keyboard');
+      keyboard.struckX = null;
       keyboard.dive = null; keyboard.dived = false;
     }
   });

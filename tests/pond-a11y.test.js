@@ -40,3 +40,13 @@ test('opening a panel targets its first control when one exists', () => {
   assert.equal(a11y.openIndex(-2), null);
   assert.equal(a11y.openIndex(undefined), null);
 });
+
+test('spoken position matches the eleven actual bowl cells and coarse depth', () => {
+  assert.equal(a11y.bowlLocation(.5, .52).text, 'чаша 6 из 11, вода: средняя');
+  assert.equal(a11y.bowlLocation(.449, .2).index, 5);
+  assert.equal(a11y.bowlLocation(.451, .2).index, 6);
+  assert.equal(a11y.bowlLocation(.999, .8).text, 'чаша 11 из 11, вода: глубокая');
+  assert.equal(a11y.bowlLocation(-2, 0).text, 'чаша 1 из 11, вода: мелкая');
+  assert.deepEqual(a11y.bowlLocation(NaN, Infinity), a11y.bowlLocation(1, 1));
+  assert.ok(Object.isFrozen(a11y.bowlLocation(.5, .5)));
+});
