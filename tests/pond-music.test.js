@@ -183,10 +183,19 @@ const shallowPearl = music.collisionPearl(Math.sqrt(220 * 440), .1, .28, 'dawn')
 const deepPearl = music.collisionPearl(Math.sqrt(220 * 440), .9, .8, 'dusk');
 assert.ok(shallowPearl.peakGain >= .0045 && deepPearl.peakGain <= .0165,
   'a collision pearl must remain much quieter than a sustained voice');
-assert.ok(shallowPearl.durationSeconds < deepPearl.durationSeconds && deepPearl.durationSeconds < .26,
+assert.ok(shallowPearl.durationSeconds < deepPearl.durationSeconds && deepPearl.durationSeconds < .33,
   'deep collisions may settle longer but must remain short');
-assert.ok(shallowPearl.startFrequency > shallowPearl.frequency,
-  'the pearl must fall into its derived parent pitch');
+assert.deepEqual(shallowPearl.modes.map(mode => mode.frequency), [shallowPearl.frequency, shallowPearl.frequency * 2],
+  'a wave meeting sings a fixed consonant bowl bead, not a sliding chirp');
+assert.ok(shallowPearl.modes[1].duration < shallowPearl.modes[0].duration &&
+  shallowPearl.modes.reduce((peak, mode) => peak + mode.peak, 0) < shallowPearl.peakGain,
+  'the upper resonance leaves first and their combined level stays under the original pearl');
+assert.ok(Object.isFrozen(shallowPearl) && Object.isFrozen(shallowPearl.modes),
+  'the pearl plan cannot change while Web Audio is being scheduled');
+const damagedPearl = music.collisionPearl(NaN, NaN, NaN, 'missing');
+assert.ok(Number.isFinite(damagedPearl.durationSeconds) && damagedPearl.modes.every(mode =>
+  Number.isFinite(mode.frequency) && Number.isFinite(mode.peak) && mode.peak > 0),
+  'damaged collision geometry never schedules non-finite audio');
 assert.equal(deepPearl.scaleFamily, 'dusk', 'the current shoreline family must guide the pearl pitch');
 
 const chordBloom = music.chordBloomTone([220, 330, 440], .7, .65, 'mist');

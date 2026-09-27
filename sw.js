@@ -1,5 +1,5 @@
-const CACHE = 'pond-piano-shell-v58';
-// Iteration 0061: remembered water replies with a quiet finite bowl.
+const CACHE = 'pond-piano-shell-v59';
+// Iteration 0062: wave meetings reply with a finite two-mode bowl pearl.
 const SHELL = [
   './',
   './index.html',

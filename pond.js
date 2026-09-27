@@ -274,7 +274,9 @@
       disconnectVoice(voice);
     }
     for (const pearl of engine.collisionVoices ?? []) {
-      try { pearl.oscillator.stop(now); } catch {}
+      for (const oscillator of pearl.oscillators ?? [pearl.oscillator]) {
+        try { oscillator?.stop(now); } catch {}
+      }
       for (const node of pearl.nodes) {
         try { node?.disconnect(); } catch {}
       }
@@ -1698,20 +1700,10 @@
     const depth = Math.max(0, Math.min(1, collision.y / Math.max(1, height)));
     const response = music.collisionPearl(collision.parentFrequency, depth, collision.energy, tuningFamily);
     const now = engine.context.currentTime;
-    const oscillator = engine.context.createOscillator();
-    const filter = engine.context.createBiquadFilter();
     const gain = engine.context.createGain();
     const panner = typeof engine.context.createStereoPanner === 'function' ? engine.context.createStereoPanner() : null;
     const reflectionSend = engine.reflection ? engine.context.createGain() : null;
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(response.startFrequency, now);
-    oscillator.frequency.exponentialRampToValueAtTime(response.frequency, now + response.durationSeconds * .42);
-    oscillator.frequency.exponentialRampToValueAtTime(response.frequency * .985, now + response.durationSeconds);
-    filter.type = 'lowpass'; filter.frequency.value = response.cutoffHz; filter.Q.value = 1.8;
-    gain.gain.setValueAtTime(.0001, now);
-    gain.gain.exponentialRampToValueAtTime(response.peakGain, now + .012);
-    gain.gain.exponentialRampToValueAtTime(.0001, now + response.durationSeconds);
-    oscillator.connect(filter).connect(gain);
+    gain.gain.value = 1;
     let output = gain;
     if (panner) {
       panner.pan.value = music.spatialPan(collision.x / Math.max(1, width));
@@ -1723,7 +1715,19 @@
       reflectionSend.gain.value = music.depthReflection(depth).sendGain * .52;
       output.connect(reflectionSend).connect(engine.reflection.input);
     }
-    const pearl = { oscillator, nodes: [oscillator, filter, gain, panner, reflectionSend] };
+    const modes = response.modes.map(mode => {
+      const oscillator = engine.context.createOscillator(), envelope = engine.context.createGain();
+      oscillator.type = 'sine'; oscillator.frequency.setValueAtTime(mode.frequency, now);
+      envelope.gain.setValueAtTime(0, now);
+      envelope.gain.linearRampToValueAtTime(mode.peak, now + response.attackSeconds);
+      envelope.gain.exponentialRampToValueAtTime(.000001, now + mode.duration);
+      envelope.gain.linearRampToValueAtTime(0, now + mode.duration + .02);
+      oscillator.connect(envelope).connect(gain);
+      oscillator.start(now); oscillator.stop(now + mode.duration + .03);
+      return { oscillator, envelope };
+    });
+    const pearl = { oscillators: modes.map(mode => mode.oscillator),
+      nodes: [...modes.flatMap(mode => [mode.oscillator, mode.envelope]), gain, panner, reflectionSend] };
     engine.collisionVoices.add(pearl);
     canvas.dataset.pearlVoices = String(engine.collisionVoices.size);
     canvas.dataset.peakPearlVoices = String(Math.max(
@@ -1737,9 +1741,7 @@
     collisionGlints.push({ x: collision.x, y: collision.y, born: visualNow, energy: collision.energy, depth });
     if (collisionGlints.length > 6) collisionGlints.shift();
     lastCollisionAt = visualNow;
-    oscillator.addEventListener('ended', () => disconnectCollisionVoice(engine, pearl), { once: true });
-    oscillator.start();
-    oscillator.stop(now + response.durationSeconds + .025);
+    modes[0].oscillator.addEventListener('ended', () => disconnectCollisionVoice(engine, pearl), { once: true });
     if (!collisionAnnounced) {
       status.textContent = 'Два фронта встретились; вода ответила короткой жемчужной нотой';
       collisionAnnounced = true;

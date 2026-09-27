@@ -312,18 +312,23 @@
 
   function collisionPearl(parentFrequency, normalizedDepth, energy = .35, familyId = DEFAULT_SCALE_FAMILY) {
     const source = Math.max(BASE_FREQUENCY, Number.isFinite(parentFrequency) ? parentFrequency : BASE_FREQUENCY);
-    const depth = clamp(normalizedDepth);
-    const force = clamp(energy);
+    const depth = clamp(Number.isFinite(normalizedDepth) ? normalizedDepth : .5);
+    const force = clamp(Number.isFinite(energy) ? energy : .35);
     const current = mapPitch(normalizedAtFrequency(source), 980, 0, familyId);
     const frequency = current.frequency;
-    return {
-      frequency,
-      startFrequency: frequency * (1.38 - depth * .12),
-      durationSeconds: .14 + depth * .075 + force * .035,
-      peakGain: .0045 + force * .012,
-      cutoffHz: 1900 + (1 - depth) * 1800,
-      scaleFamily: current.scaleFamily
-    };
+    const durationSeconds = .22 + depth * .07 + force * .035;
+    const peakGain = .0045 + force * .012;
+    // A meeting of two rings is a small resonant bead, not a falling siren.
+    // The octave finishes first; both peaks together remain below the old
+    // single-oscillator ceiling and share its existing transient voice slot.
+    return Object.freeze({
+      frequency, durationSeconds, peakGain, scaleFamily: current.scaleFamily,
+      attackSeconds: .012 + depth * .006,
+      modes: Object.freeze([
+        Object.freeze({ frequency, peak: peakGain * .72, duration: durationSeconds }),
+        Object.freeze({ frequency: frequency * 2, peak: peakGain * (.16 + (1 - depth) * .06), duration: durationSeconds * .57 })
+      ])
+    });
   }
 
   // A settled chord gets one shared breath, not another sustained voice.

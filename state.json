@@ -1,12 +1,12 @@
 {
   "project": "pond-piano",
   "phase": "device-validation",
-  "iteration": 61,
-  "status": "echo-bowl-verified",
-  "current_goal": "Iteration 0061: give diary, ink-reading and crossed-score replies one quiet, finite bowl-family resonance at the actual recorded pitch instead of the old triangle pitch-sweep.",
-  "previous_goal": "Iteration 0060: keep the visible score and diary spatial gestures, but make their replay remember the actually struck, fixed bowl note instead of inventing a moving pitch from the path.",
-  "last_verified": "2026-09-27: 85 Node tests, 59 JS syntax, JSON/diff clean. Production Chromium 390x844 verified sine bowl fundamental+octave on diary replay, physical score crossing and ink-read wave; echo pool 0 after release; pointer/keyboard score unchanged; screenshot inspected. Desktop shell 6/6, lifecycle 10/10, max 48 oscillators, final 0; no page/console errors.",
-  "next_step": "Listen to the short bowl-related echo against accepted struck bowls on phone speakers, then Android/iPhone real-device pass. Other short transient effects remain old timbres.",
+  "iteration": 62,
+  "status": "collision-bowl-verified",
+  "current_goal": "Iteration 0062: wave collisions answer with a brief consonant two-mode bowl-family pearl, rather than a sliding single-tone chirp; retain existing rate/voice/visual budgets.",
+  "previous_goal": "Iteration 0061: give diary, ink-reading and crossed-score replies one quiet, finite bowl-family resonance at the actual recorded pitch instead of the old triangle pitch-sweep.",
+  "last_verified": "2026-09-27: 85 Node tests, 60 JS syntax, JSON/diff and pack closure (26 files) clean. Production loopback Chromium: one real collision gives sine fundamental/octave at 390.047/780.094 Hz in one transient slot; active pagehide clears pool, next gesture resumes same context, all oscillators end, no browser errors. Screenshot inspected. Desktop shell 6/6 and lifecycle 10/10, maximum 50 oscillators, final zero.",
+  "next_step": "Listen to collision pearl beside struck bowls on Android/iPhone speakers; octave balance and beauty require human judgment. Other short gesture/bank transients still use older timbres.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -340,7 +340,7 @@
     ],
     "next_step": "done; real-device pass should compare the warm near lap and cool far skim on phone speakers and bright screens"
   },
-  "current_iteration": 61,
+  "current_iteration": 62,
   "iteration_51": {
     "started": "2026-09-02T22:17:00+03:00",
     "phase": "done",
@@ -556,6 +556,26 @@
       "production Chromium: diary replay of 245.274 Hz score produced sine fundamental/octave; physically crossing same visible line produced the same echo; ripple crossing another ink line produced 441.493/882.986 Hz and echo pool returned to zero",
       "score keyboard path retained one pitch over 20 points; browser no errors; screenshot output/pond-piano/bowl-echo-61.png inspected at 390x844",
       "desktop-shell 6/6 and lifecycle 10/10; max transient oscillators 48, final live 0"
+    ]
+  },
+  "iteration_62": {
+    "started": "2026-09-27T12:17:56+03:00",
+    "phase": "done",
+    "plan": [
+      "two-mode bounded collision pearl derived from the selected current",
+      "use existing collision voice budget and life-cycle cleanup for both oscillators",
+      "unit and actual wave-intersection Web Audio smoke with visual inspection",
+      "journal/state, one commit and push main"
+    ],
+    "last_verified": "2026-09-27: 85 Node tests, 60 JS syntax, JSON/diff and pack closure (26 files) clean. Production loopback Chromium: one real collision gives sine fundamental/octave at 390.047/780.094 Hz in one transient slot; active pagehide clears pool, next gesture resumes same context, all oscillators end, no browser errors. Screenshot inspected. Desktop shell 6/6 and lifecycle 10/10, maximum 50 oscillators, final zero.",
+    "next_step": "Listen to collision pearl beside struck bowls on Android/iPhone speakers; octave balance and beauty require human judgment. Other short gesture/bank transients still use older timbres.",
+    "finished": "2026-09-27T12:22:14+03:00",
+    "verified": [
+      "85 Node tests; 60 JS syntax checks; JSON, diff and pack closure clean",
+      "production Chromium 390x844: real wave crossing starts sine 390.047 Hz and octave 780.094 Hz; one bounded collision voice, no runtime errors",
+      "active collision interrupted by pagehide releases both modes and transient pool; foreground gesture resumes same AudioContext; all oscillators terminate",
+      "screenshot output/pond-piano/collision-bowl-62.png inspected: small luminous meeting between two rings, title/shore intact",
+      "desktop shell 6/6; lifecycle 10/10, max 50 oscillators, final 0"
     ]
   }
 }
