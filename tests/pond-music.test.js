@@ -220,8 +220,13 @@ assert.ok(shallowLap.peakGain < shallowPearl.peakGain && deepLap.peakGain < deep
   'a shore lap must be a quieter fold than a collision pearl');
 assert.ok(shallowLap.durationSeconds < deepLap.durationSeconds && deepLap.durationSeconds < .2,
   'deep laps may settle a touch longer but must stay a short transient');
-assert.ok(shallowLap.startFrequency > shallowLap.frequency,
-  'the lap settles down into its derived pitch like a returning ring');
+assert.ok(shallowLap.modes.length === 2 && shallowLap.modes[0].frequency === shallowLap.frequency,
+  'a shore lap answers with a seated fundamental rather than a rising sweep');
+assert.ok(Math.abs(shallowLap.modes[1].frequency / shallowLap.frequency - 2) < .001 &&
+  shallowLap.modes[1].duration < shallowLap.modes[0].duration,
+  'the lap octave sits an octave above and finishes before the fundamental');
+assert.ok(!('startFrequency' in shallowLap) && !('endFrequency' in shallowLap),
+  'no artificial pitch sweep survives on the returning ring');
 assert.ok(shallowLap.cutoffHz > deepLap.cutoffHz,
   'shallow lapping stays brighter; a deep return folds warmer');
 assert.equal(deepLap.scaleFamily, 'dusk', 'the family must guide the folding lap pitch');
@@ -232,8 +237,11 @@ assert.ok(farSkim.peakGain < nearSkimReference.peakGain,
   'the far-bank skim must stay quieter than the same ring at the near bank');
 assert.ok(farSkim.durationSeconds < nearSkimReference.durationSeconds,
   'the far-bank skim should leave faster than the warmer lap');
-assert.ok(farSkim.frequency > nearSkimReference.frequency && farSkim.startFrequency > farSkim.frequency,
-  'the skim is a higher thin fall derived from the same ring');
+assert.ok(farSkim.modes.length === 2 && Math.abs(farSkim.modes[1].frequency / farSkim.frequency - 2) < .001 &&
+  farSkim.modes[1].duration < farSkim.modes[0].duration && !('startFrequency' in farSkim),
+  'the far skim is a higher seated two-mode bowl, not a thin falling sweep');
+assert.ok(farSkim.peakGain < nearSkimReference.peakGain && farSkim.frequency > nearSkimReference.frequency,
+  'the far bank stays quieter and higher than the warm near fold');
 assert.ok(farSkim.cutoffHz > nearSkimReference.cutoffHz,
   'the far return stays more glassy than the near-bank fold');
 assert.equal(farSkim.scaleFamily, 'mist', 'the selected current guides the skim pitch');

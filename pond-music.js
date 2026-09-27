@@ -278,36 +278,54 @@
   function farSkim(parentFrequency, normalizedDepth, energy = .3, familyId = DEFAULT_SCALE_FAMILY) {
     // The far edge is the delicate mirror: a skim is higher, thinner and
     // quieter than the warm bottom lap. It folds fast and stays glassy, so it
-    // reads as a cool upper bank rather than a second warm shore.
+    // reads as a cool upper bank rather than a second warm shore. Its octave
+    // is brighter but still finishes first, so no bank answer slides through
+    // an artificial pitch sweep.
     const source = Math.max(BASE_FREQUENCY, Number.isFinite(parentFrequency) ? parentFrequency : BASE_FREQUENCY);
     const depth = clamp(normalizedDepth);
     const force = clamp(energy);
     const current = mapPitch(normalizedAtFrequency(source), 980, 0, familyId);
     const frequency = current.frequency * 1.06; // the top sits a touch higher
-    return {
+    const durationSeconds = .075 + depth * .04 + force * .018;
+    const peakGain = .0026 + force * .006;       // quieter than the bottom lap
+    return Object.freeze({
       frequency,
-      startFrequency: frequency * (1.22 - depth * .06),
-      durationSeconds: .075 + depth * .04 + force * .018,
-      peakGain: .0026 + force * .006,       // quieter than the bottom lap
+      durationSeconds,
+      peakGain,
       cutoffHz: 1700 + (1 - depth) * 1500,  // thinner, brighter glass
-      scaleFamily: current.scaleFamily
-    };
+      scaleFamily: current.scaleFamily,
+      attackSeconds: .009 + depth * .004,
+      modes: Object.freeze([
+        Object.freeze({ frequency, peak: peakGain * .8, duration: durationSeconds }),
+        Object.freeze({ frequency: frequency * 2, peak: peakGain * (.14 + (1 - depth) * .06),
+          duration: durationSeconds * .48 })
+      ])
+    });
   }
 
   function shoreLap(parentFrequency, normalizedDepth, energy = .3, familyId = DEFAULT_SCALE_FAMILY) {
+    // The returning ring folds into a warm seated lap-bowl: fundamental plus a
+    // gentle octave that finishes first, rather than the old rising sweep.
     const source = Math.max(BASE_FREQUENCY, Number.isFinite(parentFrequency) ? parentFrequency : BASE_FREQUENCY);
     const depth = clamp(normalizedDepth);
     const force = clamp(energy);
     const current = mapPitch(normalizedAtFrequency(source), 980, 0, familyId);
     const frequency = current.frequency * .96;
-    return {
+    const durationSeconds = .10 + depth * .05 + force * .02;
+    const peakGain = .0032 + force * .008;
+    return Object.freeze({
       frequency,
-      startFrequency: frequency * (1.16 - depth * .08),
-      durationSeconds: .10 + depth * .05 + force * .02,
-      peakGain: .0032 + force * .008,
+      durationSeconds,
+      peakGain,
       cutoffHz: 1500 + (1 - depth) * 1400,
-      scaleFamily: current.scaleFamily
-    };
+      scaleFamily: current.scaleFamily,
+      attackSeconds: .014 + depth * .008,
+      modes: Object.freeze([
+        Object.freeze({ frequency, peak: peakGain * .85, duration: durationSeconds }),
+        Object.freeze({ frequency: frequency * 2, peak: peakGain * (.11 + (1 - depth) * .05),
+          duration: durationSeconds * .5 })
+      ])
+    });
   }
 
   function collisionPearl(parentFrequency, normalizedDepth, energy = .35, familyId = DEFAULT_SCALE_FAMILY) {

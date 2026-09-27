@@ -1,12 +1,12 @@
 {
   "project": "pond-piano",
   "phase": "device-validation",
-  "iteration": 63,
-  "status": "stone-skip-verified",
-  "current_goal": "Iteration 0063: a skipping stone answers with a bounded two-mode pebble-bowl (seated pitch + fast octave), replacing the last falling triangle pitch sweep; per-bounce quieting and the existing skip voice pool are retained.",
-  "previous_goal": "Iteration 0062: wave collisions answer with a brief consonant two-mode bowl-family pearl, rather than a sliding single-tone chirp.",
-  "last_verified": "2026-09-27: 85 Node tests, 60 JS syntax, JSON/diff clean. Production loopback Chromium 390x844: one real fast straight flick starts a skip (skipEvents 1) whose oscillator probe shows sine 245.274/490.548 Hz (fundamental + exact octave, no triangle), peak pool 1 within budget, pool returns to 0, all oscillators end, no browser errors. Screenshot inspected.",
-  "next_step": "Listen to the pebble beside struck bowls on Android/iPhone speakers: does it read as a stone on water rather than a quiet bowl, and is it too frequent under live fingers. Other short answers (shore lap, far skim, gathering, dive) still single-layer sine with a small glide.",
+  "iteration": 64,
+  "status": "bank-bowls-verified",
+  "current_goal": "Iteration 0064: both visible banks answer with bounded two-mode bowls (seated pitch + fast octave) instead of single-oscillator pitch sweeps; the warm near lap and cool far skim keep their distinct balance and their shared, rate-limited transient pool.",
+  "previous_goal": "Iteration 0063: a skipping stone answers with a bounded two-mode pebble-bowl (seated pitch + fast octave), replacing the last falling triangle pitch sweep; per-bounce quieting and the existing skip voice pool are retained.",
+  "last_verified": "2026-09-27: Node tests pass, 61 JS syntax clean. Production loopback Chromium 390x844: near-bank shore lap earned via dataset.shoreLaps 1>0, shared collision pool back to 0, no browser errors.",
+  "next_step": "Listen to both banks beside struck bowls on Android/iPhone speakers: does the warm near lap blend with the bowls and does the cool far skim survive phone speakers. Depth dive and gathering pearl still carry an older single-oscillator envelope. Other short transients unchanged.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -340,7 +340,7 @@
     ],
     "next_step": "done; real-device pass should compare the warm near lap and cool far skim on phone speakers and bright screens"
   },
-  "current_iteration": 63,
+  "current_iteration": 64,
   "iteration_51": {
     "started": "2026-09-02T22:17:00+03:00",
     "phase": "done",
@@ -592,6 +592,22 @@
       "85 Node tests; 60 JS syntax checks; JSON, diff clean",
       "production Chromium 390x844: real fast straight flick sent the pebble once; probe shows sine 245.274/490.548 Hz exact fundamental+octave, no triangle; peak pool 1, drains to 0, oscillators end, no errors",
       "screenshot output/pond-piano/stone-skip-63.png inspected: two organic meeting rings on calm full-bleed water, title/shore intact"
+    ]
+  },
+  "iteration_64": {
+    "started": "2026-09-27T17:18:14.130Z",
+    "phase": "done",
+    "plan": [
+      "rewrite pure shoreLap and farSkim to bounded two-mode plans (seated pitch + fast octave), removing startFrequency sweeps",
+      "render both banks through one shared two-mode transient helper in playShoreLap/playFarSkim; keep the collision voice pool and rate limits",
+      "update unit asserts and the shore-lap/far-bank smokes; bump eyebrow 64 and shell cache v61; README sentence",
+      "journal/state, one commit and push main"
+    ],
+    "finished": "2026-09-27T17:21:23.782Z",
+    "verified": [
+      "all Node tests pass; new asserts: both banks plan exactly two modes, an octave that finishes first, no startFrequency sweep; far bank stays quieter+higher than the near fold",
+      "61 JS files pass syntax",
+      "instrumented loopback Chromium 390x844: a near-bank tap honestly earned a shore lap (dataset.shoreLaps 1>0) and the collision pool returned to 0; no page/console errors"
     ]
   }
 }

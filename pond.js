@@ -1756,6 +1756,36 @@
   // sustain voice, shares the collision voice pool) plus a warm returning curl
   // of light right on the shoreline. Rate-limited so a crowded surface can't
   // lap endlessly; reduced motion keeps the curl still.
+  // One shared renderer for the bounded two-mode water bowls (echo, collision,
+  // banks, dive, stone): a seated fundamental plus a fast companion mode that
+  // finishes first. No oscillator ever sweeps between two artificial pitches.
+  function renderBoundedModes(engine, response, now) {
+    const filter = engine.context.createBiquadFilter();
+    const gain = engine.context.createGain();
+    filter.type = 'lowpass';
+    filter.frequency.value = response.cutoffHz;
+    filter.Q.value = response.filterQ ?? 1.3;
+    gain.gain.value = 1;
+    const modes = response.modes.map(mode => {
+      const oscillator = engine.context.createOscillator(), envelope = engine.context.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(mode.frequency, now);
+      envelope.gain.setValueAtTime(0, now);
+      envelope.gain.linearRampToValueAtTime(mode.peak, now + (response.attackSeconds || .012));
+      envelope.gain.exponentialRampToValueAtTime(.000001, now + mode.duration);
+      envelope.gain.linearRampToValueAtTime(0, now + mode.duration + .02);
+      oscillator.connect(envelope).connect(filter);
+      oscillator.start(now);
+      oscillator.stop(now + mode.duration + .03);
+      return { oscillator, envelope };
+    });
+    return {
+      modes,
+      oscillators: modes.map(mode => mode.oscillator),
+      nodes: [...modes.flatMap(mode => [mode.oscillator, mode.envelope]), filter, gain]
+    };
+  }
+
   function playShoreLap(lap) {
     const engine = audio;
     const visualNow = performance.now();
@@ -1765,20 +1795,10 @@
     const depth = Math.max(0, Math.min(1, lap.y / Math.max(1, height)));
     const response = music.shoreLap(lap.parentFrequency, depth, lap.energy, tuningFamily);
     const now = engine.context.currentTime;
-    const oscillator = engine.context.createOscillator();
-    const filter = engine.context.createBiquadFilter();
-    const gain = engine.context.createGain();
+    const bowl = renderBoundedModes(engine, response, now);
+    const gain = bowl.nodes.at(-1);
     const panner = typeof engine.context.createStereoPanner === 'function' ? engine.context.createStereoPanner() : null;
     const reflectionSend = engine.reflection ? engine.context.createGain() : null;
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(response.startFrequency, now);
-    oscillator.frequency.exponentialRampToValueAtTime(response.frequency, now + response.durationSeconds * .4);
-    oscillator.frequency.exponentialRampToValueAtTime(response.frequency * .99, now + response.durationSeconds);
-    filter.type = 'lowpass'; filter.frequency.value = response.cutoffHz; filter.Q.value = 1.5;
-    gain.gain.setValueAtTime(.0001, now);
-    gain.gain.exponentialRampToValueAtTime(response.peakGain, now + .014);
-    gain.gain.exponentialRampToValueAtTime(.0001, now + response.durationSeconds);
-    oscillator.connect(filter).connect(gain);
     let output = gain;
     if (panner) {
       panner.pan.value = music.spatialPan(lap.x / Math.max(1, width));
@@ -1790,16 +1810,14 @@
       reflectionSend.gain.value = music.depthReflection(depth).sendGain * .4;
       output.connect(reflectionSend).connect(engine.reflection.input);
     }
-    const pearl = { oscillator, nodes: [oscillator, filter, gain, panner, reflectionSend] };
+    const pearl = { oscillators: bowl.oscillators, nodes: [...bowl.nodes, panner, reflectionSend] };
     engine.collisionVoices.add(pearl);
     canvas.dataset.pearlVoices = String(engine.collisionVoices.size);
     canvas.dataset.shoreLaps = String((Number(canvas.dataset.shoreLaps) || 0) + 1);
     shoreLapGlints.push({ x: lap.x, y: lap.y, born: visualNow, energy: lap.energy, depth });
     if (shoreLapGlints.length > 6) shoreLapGlints.shift();
     lastShoreAt = visualNow;
-    oscillator.addEventListener('ended', () => disconnectCollisionVoice(engine, pearl), { once: true });
-    oscillator.start();
-    oscillator.stop(now + response.durationSeconds + .02);
+    bowl.oscillators[0].addEventListener('ended', () => disconnectCollisionVoice(engine, pearl), { once: true });
     return true;
   }
 
@@ -1828,20 +1846,10 @@
     const depth = Math.max(0, Math.min(1, skim.y / Math.max(1, height)));
     const response = music.farSkim(skim.parentFrequency, depth, skim.energy, tuningFamily);
     const now = engine.context.currentTime;
-    const oscillator = engine.context.createOscillator();
-    const filter = engine.context.createBiquadFilter();
-    const gain = engine.context.createGain();
+    const bowl = renderBoundedModes(engine, response, now);
+    const gain = bowl.nodes.at(-1);
     const panner = typeof engine.context.createStereoPanner === 'function' ? engine.context.createStereoPanner() : null;
     const reflectionSend = engine.reflection ? engine.context.createGain() : null;
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(response.startFrequency, now);
-    oscillator.frequency.exponentialRampToValueAtTime(response.frequency, now + response.durationSeconds * .34);
-    oscillator.frequency.exponentialRampToValueAtTime(response.frequency * 1.006, now + response.durationSeconds);
-    filter.type = 'lowpass'; filter.frequency.value = response.cutoffHz; filter.Q.value = 1.2;
-    gain.gain.setValueAtTime(.0001, now);
-    gain.gain.exponentialRampToValueAtTime(response.peakGain, now + .009);
-    gain.gain.exponentialRampToValueAtTime(.0001, now + response.durationSeconds);
-    oscillator.connect(filter).connect(gain);
     let output = gain;
     if (panner) {
       panner.pan.value = music.spatialPan(skim.x / Math.max(1, width));
@@ -1853,16 +1861,14 @@
       reflectionSend.gain.value = music.depthReflection(depth).sendGain * .24;
       output.connect(reflectionSend).connect(engine.reflection.input);
     }
-    const voice = { oscillator, nodes: [oscillator, filter, gain, panner, reflectionSend] };
+    const voice = { oscillators: bowl.oscillators, nodes: [...bowl.nodes, panner, reflectionSend] };
     engine.collisionVoices.add(voice);
     canvas.dataset.pearlVoices = String(engine.collisionVoices.size);
     canvas.dataset.farSkims = String((Number(canvas.dataset.farSkims) || 0) + 1);
     skimGlints.push({ x: skim.x, y: skim.y, born: visualNow, energy: skim.energy, depth });
     if (skimGlints.length > 6) skimGlints.shift();
     lastSkimAt = visualNow;
-    oscillator.addEventListener('ended', () => disconnectCollisionVoice(engine, voice), { once: true });
-    oscillator.start();
-    oscillator.stop(now + response.durationSeconds + .02);
+    bowl.oscillators[0].addEventListener('ended', () => disconnectCollisionVoice(engine, voice), { once: true });
     return true;
   }
 
