@@ -29,6 +29,8 @@
 
 С итерации 0060 `struckFrequency` хранится на контакте даже после естественного затухания AudioNode. `captureScoreSample` сохраняет `normalizedAtFrequency(struckFrequency)` в каждом сэмпле; X/Y остаются координатами движения руки. Начальный сэмпл pointer и клавиатуры использует ту же высоту. Дневниковая строка содержит один `line.pitch`; pour/loop кладут его в каждый мелодический якорь, а `predictInkRead` при отсутствии pitch у точек берёт `line.pitch` перед старым fallback по X. Старые сериализованные сэмплы не переписываются.
 
+С итерации 0061 `PondMusic.echoNote` возвращает immutable-план двух коротких синусоидальных мод на сохранённой частоте и октаве вместо triangle oscillator с pitch sweep. `soundEchoBowl` — единственный аудиорендерер pour/loop, ink-read и crossed-score: общий echo-пул, панорама и глубинный reflection-send, две конечные огибающие. Главная мода удаляет оба oscillator и их graph-узлы по `ended`; background останавливает обе моды и освобождает пул. До `MAX_ECHO_VOICES` ответов × 2 oscillator, основной лимит шести чаш не меняется.
+
 `pond-a11y.bowlLocation` переводит нормализованные клавиатурные X/Y в имя фактической чаши и грубую глубину; округление чаши совпадает с `PondMusic.bowlFrequency`. Browser-слой произносит выбор через существующий live status лишь при смене чаши/категории глубины и отдельно хранит X уже звучащего удара. Canvas участвует в accessibility tree с коротким именем и описанием вне `aria-hidden` — без дополнительного интерактивного слоя поверх воды. `keyboard-water-smoke.js` проверяет production Electron allowlist, доступный application-node, смену выбранной чаши, постоянство звучащей частоты и чистое освобождение Web Audio голосов.
 
 ## Исторические прототипы до 0057

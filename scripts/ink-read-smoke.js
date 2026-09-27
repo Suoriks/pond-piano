@@ -46,6 +46,30 @@ const server = http.createServer((req, res) => {
   const errors = [];
   page.on('pageerror', e => errors.push('page: ' + e));
   page.on('console', msg => { if (msg.type() === 'error') errors.push('console: ' + msg.text()); });
+  await page.addInitScript(() => {
+    window.startedNotes = [];
+    const Native = AudioContext;
+    window.AudioContext = class extends Native {
+      constructor(options) {
+        super(options);
+        const create = this.createOscillator.bind(this);
+        this.createOscillator = () => {
+          const oscillator = create(), start = oscillator.start.bind(oscillator);
+          const setFrequency = oscillator.frequency.setValueAtTime.bind(oscillator.frequency);
+          oscillator.frequency.setValueAtTime = (value, at) => {
+            oscillator.firstScheduledFrequency ??= value;
+            return setFrequency(value, at);
+          };
+          oscillator.start = (...args) => {
+            window.startedNotes.push({type: oscillator.type,
+              frequency: oscillator.firstScheduledFrequency ?? oscillator.frequency.value});
+            return start(...args);
+          };
+          return oscillator;
+        };
+      }
+    };
+  });
 
   await page.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(700);
@@ -78,12 +102,22 @@ const server = http.createServer((req, res) => {
 
   // 2) A quick tap on the opposite side sends a ripple whose ring crosses it.
   const readsBefore = await num('inkReads');
+  const beforeNotes = await page.evaluate(() => window.startedNotes.length);
+  const echoPitch = await page.evaluate(() => {
+    const line = JSON.parse(localStorage.getItem('pond-piano.diary.v1')).lines[0];
+    return PondMusic.echoNote(line.pitch, .5, .2, 0, 1).frequency;
+  });
   await tap(width * .86, height * .4, 70);
   await page.waitForTimeout(2200);
 
   const readsAfter = await num('inkReads');
   check('a passing ripple re-reads the ink line once', readsAfter >= readsBefore + 1,
     `inkReads ${readsBefore} -> ${readsAfter}`);
+  const played = await page.evaluate(offset => window.startedNotes.slice(offset), beforeNotes);
+  check('ink reading sounds a saved-pitch sine bowl and fading octave', [1, 2].every(ratio =>
+    played.some(note => note.type === 'sine' && Math.abs(note.frequency / (echoPitch * ratio) - 1) < .002)),
+  `ink pitch=${echoPitch}, notes=${JSON.stringify(played)}`);
+  check('the bounded echo pool releases its node graph', await num('echoVoices') === 0);
 
   await page.waitForTimeout(700);
   await page.screenshot({ path: OUT, fullPage: false });

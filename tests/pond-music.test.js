@@ -244,16 +244,21 @@ const firstEcho = music.echoNote(0.2, 0.012, 0.7, 0, 3);
 const lastEcho = music.echoNote(0.7, 0.8, 0.35, 2, 3);
 assert.equal(lastEcho.frequency, music.frequencyAt(0.7),
   'a melodic echo must settle to its recorded pitch, not wander to a hidden key');
-assert.ok(firstEcho.startFrequency > firstEcho.frequency && lastEcho.frequency <= music.frequencyAt(0.7) * 1.5,
-  'the pluck contour must fall toward the anchor, never above its visible pitch');
-assert.ok(firstEcho.peakGain > lastEcho.peakGain && firstEcho.peakGain <= 0.1,
-  'later anchors must answer softer and stay far below any held voice');
-assert.ok(lastEcho.durationSeconds > .11 && lastEcho.durationSeconds < .28, 'every echo must stay a short pluck');
-assert.ok(firstEcho.cutoffHz > lastEcho.cutoffHz && lastEcho.cutoffHz >= 1500,
-  'depth and echo order may darken the pluck without losing it');
+assert.deepEqual(firstEcho.modes.map(mode => mode.frequency), [firstEcho.frequency, firstEcho.frequency * 2],
+  'the reread resonates at the saved note and its octave without a new swept pitch');
+assert.ok(firstEcho.peakGain > lastEcho.peakGain && firstEcho.peakGain <= .012,
+  'later anchors must answer softer and stay far below a freshly struck bowl');
+assert.ok(lastEcho.durationSeconds > .25 && lastEcho.durationSeconds < .5,
+  'every echo must decay and end before becoming a second held note');
+assert.ok(firstEcho.modes[1].duration < firstEcho.modes[0].duration &&
+  lastEcho.modes[1].peak < lastEcho.modes[0].peak,
+  'the brighter overtone fades first, just like the struck bowl');
 assert.ok(lastEcho.delayMs > firstEcho.delayMs, 'anchors must not all fire in the same instant');
-assert.ok(music.echoNote(0.5, 9, 0.5, 0, 3).durationSeconds <= 0.35,
+assert.ok(music.echoNote(0.5, 9, 0.5, 0, 3).durationSeconds <= .5,
   'depth must stay clamped so a durable echo cannot lengthen forever');
+const damagedEcho = music.echoNote(NaN, NaN, NaN, 1000000);
+assert.ok(Number.isFinite(damagedEcho.frequency) && damagedEcho.modes.every(mode => mode.peak > 0),
+  'damaged and excessive echo input cannot schedule a zero-gain or non-finite Web Audio envelope');
 
 const calmShallowDrop = music.waterDrop(440, 0, calmAttack);
 const strongDeepDrop = music.waterDrop(440, 1, fastAttack);

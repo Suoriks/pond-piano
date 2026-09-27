@@ -297,7 +297,9 @@
     }
     engine.skipVoices?.clear();
     for (const echo of engine.echoVoices ?? []) {
-      try { echo.oscillator.stop(now); } catch {}
+      for (const oscillator of echo.oscillators) {
+        try { oscillator.stop(now); } catch {}
+      }
       for (const node of echo.nodes) {
         try { node?.disconnect(); } catch {}
       }
@@ -865,51 +867,55 @@
     canvas.dataset.pouredEchoes = String((Number(canvas.dataset.pouredEchoes) || 0) + 1);
   }
 
+  // All remembered-water replies share the same finite, two-mode bowl and
+  // one echo-voice budget. The leading mode owns cleanup; background stops
+  // both oscillators and disconnects the same graph.
+  function soundEchoBowl(normalizedX, normalizedY, response, reflectionAmount) {
+    const engine = audio;
+    if (!engine || engine.context.state !== 'running' ||
+        engine.echoVoices.size >= MAX_ECHO_VOICES) return false;
+    const now = engine.context.currentTime;
+    const gain = engine.context.createGain(); gain.gain.value = 1;
+    const panner = typeof engine.context.createStereoPanner === 'function' ? engine.context.createStereoPanner() : null;
+    const reflectionSend = engine.reflection ? engine.context.createGain() : null;
+    let output = gain;
+    if (panner) { panner.pan.value = music.spatialPan(normalizedX); gain.connect(panner); output = panner; }
+    output.connect(engine.master);
+    if (reflectionSend) {
+      reflectionSend.gain.value = music.depthReflection(normalizedY).sendGain * reflectionAmount;
+      output.connect(reflectionSend).connect(engine.reflection.input);
+    }
+    const modes = response.modes.map(mode => {
+      const oscillator = engine.context.createOscillator(), envelope = engine.context.createGain();
+      oscillator.type = 'sine'; oscillator.frequency.setValueAtTime(mode.frequency, now);
+      envelope.gain.setValueAtTime(0, now);
+      envelope.gain.linearRampToValueAtTime(mode.peak, now + response.attackSeconds);
+      envelope.gain.exponentialRampToValueAtTime(.000001, now + mode.duration);
+      envelope.gain.linearRampToValueAtTime(0, now + mode.duration + .02);
+      oscillator.connect(envelope).connect(gain);
+      oscillator.start(now); oscillator.stop(now + mode.duration + .03);
+      return {oscillator, envelope};
+    });
+    const echo = {oscillators:modes.map(mode => mode.oscillator),
+      nodes:[...modes.flatMap(mode => [mode.oscillator, mode.envelope]), gain, panner, reflectionSend]};
+    engine.echoVoices.add(echo);
+    canvas.dataset.echoVoices = String(engine.echoVoices.size);
+    canvas.dataset.peakEchoVoices = String(Math.max(Number(canvas.dataset.peakEchoVoices) || 0, engine.echoVoices.size));
+    modes[0].oscillator.addEventListener('ended', () => disconnectEchoVoice(engine, echo), {once:true});
+    return true;
+  }
+
   function playPourNote(line, anchor, index, response) {
     const engine = audio;
     if (!engine || engine.context.state !== 'running' ||
         engine.echoVoices.size >= MAX_ECHO_VOICES) return;
     const x = anchor.x * width, y = anchor.y * height;
-    const depth = Math.max(0, Math.min(1, anchor.y));
-    const now = engine.context.currentTime;
-    const oscillator = engine.context.createOscillator();
-    const filter = engine.context.createBiquadFilter();
-    const gain = engine.context.createGain();
-    const panner = typeof engine.context.createStereoPanner === 'function' ? engine.context.createStereoPanner() : null;
-    const reflectionSend = engine.reflection ? engine.context.createGain() : null;
-    oscillator.type = 'triangle';
-    oscillator.frequency.setValueAtTime(response.startFrequency, now);
-    oscillator.frequency.exponentialRampToValueAtTime(response.frequency, now + response.durationSeconds * .42);
-    oscillator.frequency.exponentialRampToValueAtTime(response.frequency * .992, now + response.durationSeconds);
-    filter.type = 'lowpass'; filter.frequency.value = response.cutoffHz; filter.Q.value = 1.2;
-    gain.gain.setValueAtTime(.0001, now);
-    gain.gain.exponentialRampToValueAtTime(response.peakGain, now + .01);
-    gain.gain.exponentialRampToValueAtTime(.0001, now + response.durationSeconds);
-    oscillator.connect(filter).connect(gain);
-    let output = gain;
-    if (panner) { panner.pan.value = music.spatialPan(anchor.x); gain.connect(panner); output = panner; }
-    output.connect(engine.master);
-    if (reflectionSend) {
-      reflectionSend.gain.value = music.depthReflection(depth).sendGain * .42;
-      output.connect(reflectionSend).connect(engine.reflection.input);
-    }
-    const echo = { oscillator, nodes: [oscillator, filter, gain, panner, reflectionSend] };
-    engine.echoVoices.add(echo);
-    canvas.dataset.echoVoices = String(engine.echoVoices.size);
-    canvas.dataset.peakEchoVoices = String(Math.max(Number(canvas.dataset.peakEchoVoices) || 0, engine.echoVoices.size));
+    if (!soundEchoBowl(anchor.x, anchor.y, response, .42)) return;
     addRipple(x, y, .12 + line.pressure * .16, .3 + response.peakGain * 7, response.frequency, false);
     if (!pourAnnounced) {
       status.textContent = 'Сохранившаяся фраза вылилась обратно на воду мягким мелодическим эхом';
       pourAnnounced = true;
     }
-    oscillator.addEventListener('ended', () => {
-      if (engine.echoVoices?.delete(echo)) {
-        for (const node of echo.nodes) { try { node?.disconnect(); } catch {} }
-        canvas.dataset.echoVoices = String(engine.echoVoices.size);
-      }
-    }, { once: true });
-    oscillator.start();
-    oscillator.stop(now + response.durationSeconds + .025);
   }
 
   // Pour one remembered line back onto the surface as a gentle echo.
@@ -1901,46 +1907,13 @@
         engine.echoVoices.size >= MAX_ECHO_VOICES ||
         visualNow - lastInkReadAt < INK_READ_RATE_LIMIT_MS) return false;
     const response = music.echoNote(read.pitch, read.ny, .14 + line.pressure * .18, 0, 1);
-    const now = engine.context.currentTime;
-    const oscillator = engine.context.createOscillator();
-    const filter = engine.context.createBiquadFilter();
-    const gain = engine.context.createGain();
-    const panner = typeof engine.context.createStereoPanner === 'function' ? engine.context.createStereoPanner() : null;
-    const reflectionSend = engine.reflection ? engine.context.createGain() : null;
-    oscillator.type = 'triangle';
-    oscillator.frequency.setValueAtTime(response.startFrequency, now);
-    oscillator.frequency.exponentialRampToValueAtTime(response.frequency, now + response.durationSeconds * .42);
-    oscillator.frequency.exponentialRampToValueAtTime(response.frequency * .992, now + response.durationSeconds);
-    filter.type = 'lowpass'; filter.frequency.value = response.cutoffHz; filter.Q.value = 1.2;
-    gain.gain.setValueAtTime(.0001, now);
-    gain.gain.exponentialRampToValueAtTime(response.peakGain, now + .01);
-    gain.gain.exponentialRampToValueAtTime(.0001, now + response.durationSeconds);
-    oscillator.connect(filter).connect(gain);
-    let output = gain;
-    if (panner) { panner.pan.value = music.spatialPan(read.nx); gain.connect(panner); output = panner; }
-    output.connect(engine.master);
-    if (reflectionSend) {
-      reflectionSend.gain.value = music.depthReflection(read.ny).sendGain * .4;
-      output.connect(reflectionSend).connect(engine.reflection.input);
-    }
-    const echo = { oscillator, nodes: [oscillator, filter, gain, panner, reflectionSend] };
-    engine.echoVoices.add(echo);
-    canvas.dataset.echoVoices = String(engine.echoVoices.size);
-    canvas.dataset.peakEchoVoices = String(Math.max(Number(canvas.dataset.peakEchoVoices) || 0, engine.echoVoices.size));
+    if (!soundEchoBowl(read.nx, read.ny, response, .4)) return false;
     inkReadGlints.push({
       x: read.x, y: read.y, birth: read.at, born: visualNow, energy: read.energy, depth: read.ny
     });
     if (inkReadGlints.length > 8) inkReadGlints.shift();
     canvas.dataset.inkReads = String((Number(canvas.dataset.inkReads) || 0) + 1);
     lastInkReadAt = visualNow;
-    oscillator.addEventListener('ended', () => {
-      if (engine.echoVoices?.delete(echo)) {
-        for (const node of echo.nodes) { try { node?.disconnect(); } catch {} }
-        canvas.dataset.echoVoices = String(engine.echoVoices.size);
-      }
-    }, { once: true });
-    oscillator.start();
-    oscillator.stop(now + response.durationSeconds + .025);
     return true;
   }
 
@@ -2111,46 +2084,13 @@ function disconnectSkipVoice(engine, skip) {
     if (!engine || engine.context.state !== 'running' ||
         engine.echoVoices.size >= MAX_ECHO_VOICES) return;
     const x = anchor.x * width, y = anchor.y * height;
-    const depth = Math.max(0, Math.min(1, anchor.y));
-    const now = engine.context.currentTime;
-    const oscillator = engine.context.createOscillator();
-    const filter = engine.context.createBiquadFilter();
-    const gain = engine.context.createGain();
-    const panner = typeof engine.context.createStereoPanner === 'function' ? engine.context.createStereoPanner() : null;
-    const reflectionSend = engine.reflection ? engine.context.createGain() : null;
-    oscillator.type = 'triangle';
-    oscillator.frequency.setValueAtTime(response.startFrequency, now);
-    oscillator.frequency.exponentialRampToValueAtTime(response.frequency, now + response.durationSeconds * .42);
-    oscillator.frequency.exponentialRampToValueAtTime(response.frequency * .992, now + response.durationSeconds);
-    filter.type = 'lowpass'; filter.frequency.value = response.cutoffHz; filter.Q.value = 1.3;
-    gain.gain.setValueAtTime(.0001, now);
-    gain.gain.exponentialRampToValueAtTime(response.peakGain, now + .01);
-    gain.gain.exponentialRampToValueAtTime(.0001, now + response.durationSeconds);
-    oscillator.connect(filter).connect(gain);
-    let output = gain;
-    if (panner) {
-      panner.pan.value = music.spatialPan(anchor.x);
-      gain.connect(panner);
-      output = panner;
-    }
-    output.connect(engine.master);
-    if (reflectionSend) {
-      reflectionSend.gain.value = music.depthReflection(depth).sendGain * .46;
-      output.connect(reflectionSend).connect(engine.reflection.input);
-    }
-    const echo = { oscillator, nodes: [oscillator, filter, gain, panner, reflectionSend] };
-    engine.echoVoices.add(echo);
-    canvas.dataset.echoVoices = String(engine.echoVoices.size);
-    canvas.dataset.peakEchoVoices = String(Math.max(Number(canvas.dataset.peakEchoVoices) || 0, engine.echoVoices.size));
+    if (!soundEchoBowl(anchor.x, anchor.y, response, .46)) return;
     // A small non-reactive ripple marks each sounded anchor on the water.
     addRipple(x, y, .16 + memory.pressure * .2, .34 + response.peakGain * 8, response.frequency, false);
     if (!scoreEchoAnnounced) {
       status.textContent = 'Жест пересёк водный след; сохранённая фраза мягко отозвалась мелодией';
       scoreEchoAnnounced = true;
     }
-    oscillator.addEventListener('ended', () => disconnectEchoVoice(engine, echo), { once: true });
-    oscillator.start();
-    oscillator.stop(now + response.durationSeconds + .025);
     if (index === 0) {
       scoreEchoes.push({ memory, crossing, segmentIndex: crossing.segmentIndex, born: performance.now() });
       if (scoreEchoes.length > 8) scoreEchoes.shift();

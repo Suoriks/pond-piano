@@ -1,5 +1,5 @@
-const CACHE = 'pond-piano-shell-v57';
-// Iteration 0060: the spatial score replays the bowl actually struck.
+const CACHE = 'pond-piano-shell-v58';
+// Iteration 0061: remembered water replies with a quiet finite bowl.
 const SHELL = [
   './',
   './index.html',

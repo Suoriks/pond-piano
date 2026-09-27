@@ -410,25 +410,30 @@
     };
   }
 
-  // A crossed phrase wakes as a small plucked figure: each anchor of the
-  // stored gesture sounds once, quieter and softer than the last, so the
-  // echo reads as a fading memory rather than a new performance.
+  // The water rereads an old phrase with a small relative of the struck
+  // bowl: no pitch drop, triangle buzz or artificial note at another X.
+  // Both modes finish quickly so an echo cannot become a second sustained
+  // performance even if several ink lines cross at once.
   function echoNote(pitchX, normalizedDepth, energy = .5, index = 0, total = 3) {
-    const depth = clamp(normalizedDepth);
-    const force = clamp(energy);
+    const depth = clamp(Number.isFinite(normalizedDepth) ? normalizedDepth : .5);
+    const force = clamp(Number.isFinite(energy) ? energy : .5);
     const position = Math.max(0, Math.min(1, Number.isFinite(pitchX) ? pitchX : .5));
-    const step = Math.max(0, Math.trunc(Number.isFinite(index) ? index : 0));
+    const step = Math.max(0, Math.min(4, Math.trunc(Number.isFinite(index) ? index : 0)));
     const count = Math.max(1, Math.trunc(Number.isFinite(total) ? total : 3));
     const fade = Math.pow(.72, step); // later anchors answer more quietly
-    return {
-      frequency: frequencyAt(position),
-      startFrequency: frequencyAt(position) * (1.24 - depth * .08),
-      durationSeconds: .16 + depth * .05 + force * .03 - Math.min(step, 4) * .012,
-      peakGain: (.006 + force * .009) * fade,
-      cutoffHz: 2100 + (1 - depth) * 2400 - Math.min(step, 4) * 160,
+    const frequency = frequencyAt(position);
+    const durationSeconds = .32 + depth * .12 + force * .04 - Math.min(step, 4) * .018;
+    const peakGain = (.005 + force * .007) * fade;
+    return Object.freeze({
+      frequency, durationSeconds, peakGain,
+      attackSeconds: .013 + depth * .009,
+      modes: Object.freeze([
+        Object.freeze({ frequency, peak: peakGain * .79, duration: durationSeconds }),
+        Object.freeze({ frequency: frequency * 2, peak: peakGain * (.15 + (1 - depth) * .06), duration: durationSeconds * .64 })
+      ]),
       delayMs: 150 + step * 130,
       steps: clamp(count, 1)
-    };
+    });
   }
 
   function initialBrushBias(deltaX = 0, deltaY = 0, speedPerSecond = 0) {
