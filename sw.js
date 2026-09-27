@@ -1,5 +1,5 @@
-const CACHE = 'pond-piano-shell-v66';
-// Iteration 0069: the keyboard map may introduce itself once, and playing dismisses it.
+const CACHE = 'pond-piano-shell-v67';
+// Iteration 0070: the keyboard map fits the water it hangs over, and scrolls inside.
 const SHELL = [
   './',
   './index.html',

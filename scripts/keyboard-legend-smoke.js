@@ -80,7 +80,11 @@ const a11y = require('../pond-a11y.js');
     const triggerStyle = await page.locator('#legend-trigger').evaluate(el => getComputedStyle(el).outlineStyle);
     assert.equal(triggerStyle, 'none');
 
-    // A single control keeps focus inside the map on Tab.
+    // Focus never leaves the map on Tab: the close button comes first, then
+    // the map's own scrollable list (a short screen clips it, and a keyboard
+    // player must be able to reach that scroll), and then it wraps back.
+    await page.keyboard.press('Tab');
+    assert.equal(await page.evaluate(() => document.activeElement?.id), 'legend-list');
     await page.keyboard.press('Tab');
     assert.equal(await page.evaluate(() => document.activeElement?.id), 'legend-close');
 

@@ -1252,6 +1252,7 @@
   // trigger, and no key stolen while a text field owns the keyboard.
   const legendControl = document.querySelector('#legend-control');
   const legendTrigger = document.querySelector('#legend-trigger');
+  const legendPanel = document.querySelector('#legend-panel');
   const legendList = document.querySelector('#legend-list');
   const legendClose = document.querySelector('#legend-close');
   if (legendList instanceof HTMLElement) {
@@ -1276,7 +1277,13 @@
   let keyboardVisited = false;
 
   function legendOpen() { return legendControl?.classList.contains('is-open') === true; }
-  function legendPanelControls() { return legendClose instanceof HTMLButtonElement ? [legendClose] : []; }
+  // The close button comes first so opening the map still lands on it; the
+  // list is a second stop because on a short screen the map scrolls inside and
+  // a keyboard player must be able to reach that scroll (Safari does not make
+  // scrollable regions focusable on its own).
+  function legendPanelControls() {
+    return [legendClose, legendList].filter(control => control instanceof HTMLElement);
+  }
   function markLegendSeen() {
     if (legendIntroSeen) return;
     legendIntroSeen = true;
@@ -1287,8 +1294,16 @@
     const introduce = options.introduce === true;
     const hadFocusInside = legendControl.contains(document.activeElement) || legendTrigger === document.activeElement;
     legendControl.classList.toggle('is-open', open);
+    // While the slate is open it sits above the shore stones: on a short screen
+    // it reaches down into their corner, and a map with pebble labels bleeding
+    // through its rows is not a map. One keystroke puts it back.
+    document.body.classList.toggle('map-open', open);
     legendTrigger.setAttribute('aria-expanded', a11y.expandedState(open));
     if (open) {
+      // Fit the slate to the water before focus moves into it: a panel that
+      // runs past the bottom edge would otherwise scroll the whole pond to
+      // reveal its close button on a short screen.
+      fitLegendPanel();
       markLegendSeen();
       if (introduce) {
         status.textContent = a11y.legendIntroText();
@@ -1311,6 +1326,15 @@
     if (!legendOpen()) return;
     legendIntroDismissed = true;
     setLegendOpen(false);
+  }
+  // The map is a guest of the water, never its landlord: on a short screen it
+  // takes only the room left below its trigger and scrolls inside, so focusing
+  // its close button can never shift the pond up off the top of the screen.
+  function fitLegendPanel() {
+    if (!(legendPanel instanceof HTMLElement) || !legendTrigger) return;
+    const fit = a11y.legendFitHeight(legendTrigger.getBoundingClientRect().bottom, innerHeight);
+    if (fit === null || fit <= 0) return;
+    legendPanel.style.maxHeight = `${fit}px`;
   }
   document.addEventListener('keydown', () => { keyboardVisited = true; }, { capture: true });
   document.addEventListener('pointerdown', () => { keyboardVisited = false; }, { capture: true });
@@ -1351,6 +1375,9 @@
     // The pond survives a change of screen: every live pixel-space artifact
     // keeps its normalized place on the water and lands in the new space,
     // so pitch, depth and stereo meaning of what already sounds stay put.
+    // An open keyboard map re-measures itself too: turning a phone upright
+    // must never leave it taller than the water it hangs over.
+    if (legendOpen()) fitLegendPanel();
     const previousWidth = width, previousHeight = height;
     dpr = Math.min(devicePixelRatio || 1, 2);
     width = innerWidth; height = innerHeight;

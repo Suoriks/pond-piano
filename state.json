@@ -1,12 +1,12 @@
 {
  "project": "pond-piano",
  "phase": "device-validation",
- "iteration": 69,
- "status": "keyboard-map-introduces-itself",
- "current_goal": "Iteration 0069: the keyboard map introduces itself - on the first honest keyboard visit the quiet «Клавиши пуда» slate opens once on this device without pulling focus off the water, any real gesture (arrow, strike, G, H) dismisses it like a guest, and it never returns in the session or after a reload.",
- "previous_goal": "Iteration 0068: the keyboard's own map - a quiet \"Клавиши пруда\" slate in the corner opens with \"?\" (or a tap) and names every honest route the water answers (arrows, Space/Enter, the held dive, G, H, ?, Escape) as the same frozen list screen readers hear; it follows the shore panels' dialog rules (honest aria-expanded, focus inside, Tab trap, Escape back to the trigger), never steals \"?\" from a real text field, and fits all seven rows on a 390x844 phone without scrolling.",
- "last_verified": "2026-09-28: Node tests pass (89), 65 JS syntax clean. Instrumented production-loopback Chromium 390x844: map closed before the player arrives, a pointer touch on the water never summons it, the first Tab opens it with aria-expanded true / panel visible, focus stays on pond, the device key is stored as «seen» and the status reads the introduction, ArrowRight closes it in the same keystroke, re-focusing the water and a full reload never reopen it, the explicit \"?\" still opens it and moves focus to Закрыть, Escape closes it, and Space afterwards still strikes a bowl (voices 1 -> 0); no browser errors. 0068 regression (keyboard-legend-smoke.js) green: 7 rows, 44 px targets, \"?\" not stolen from a field. Screenshot output/pond-piano/keyboard-legend-intro-69.png inspected directly: all seven rows and Закрыть fully inside the panel over calm water, title and shore stones intact.",
- "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari) with a Bluetooth keyboard and TalkBack/VoiceOver: does the introduction read as one calm list, does the open map get in the way of the first touch on a small screen, and should its first water touch (not only an outside pointerdown) close it.",
+ "iteration": 70,
+ "status": "keyboard-map-fits-the-water",
+ "current_goal": "Iteration 0070: the keyboard map never pushes the pond - on a short viewport (a phone in landscape, a small window) it takes only the honest room left below its trigger, scrolls inside, reads above the shore stones it covers, and stays reachable from the keyboard, so the water never shifts up and the title is never cut off.",
+ "previous_goal": "Iteration 0069: the keyboard map introduces itself - on the first honest keyboard visit the quiet «Клавиши пуда» slate opens once on this device without pulling focus off the water, any real gesture (arrow, strike, G, H) dismisses it like a guest, and it never returns in the session or after a reload.",
+ "last_verified": "2026-09-28: Node tests pass (90), 68 JS syntax clean. Instrumented production-loopback Chromium at 844x390, 667x375, 1280x640 and 390x844: main.scrollTop and document.scrollTop stay 0, .title-block stays at y=24, the open map's bottom (378/363/628) and Закрыть (363/348/613) stay inside the water, all seven routes are present, the map wins the elementFromPoint hit test in the shore stones' corner, and on 390x844 the list is still unclipped; from the keyboard, Tab reaches the list, End scrolls the clipped routes, Escape closes, and Space still strikes a bowl (voices 1 -> 0); no browser errors. 0068 and 0069 regressions green. Screenshots output/pond-piano/landscape-map-70-*.png inspected directly: title and water edge intact, the map reads as one quiet slate above the water, shore labels no longer bleed through its rows.",
+ "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari) with a Bluetooth keyboard and TalkBack/VoiceOver: how does a clipped map feel to scroll by finger (inertia, screen edge), and should a phone lying down open the map from the opposite edge where there is more room.",
  "alpha_feedback": {
   "captured_at": "2026-07-26T13:59:00+03:00",
   "observations": [
@@ -701,5 +701,27 @@
    "screenshot inspected directly: full map inside panel on 390x844"
   ],
   "next_step": "done; device-pass backlog updated with the introduction readability and first-touch-dismiss questions"
+ },
+ "iteration_70": {
+  "started": "2026-09-28T02:20:00+03:00",
+  "finished": "2026-09-28T03:05:00+03:00",
+  "phase": "done",
+  "plan": [
+   "add pure legendFitHeight(anchorBottom, viewportHeight) to pond-a11y.js: the honest room under the trigger, 0 when the screen is shorter, null on broken input",
+   "cap the open keyboard map with that height in pond.js before focus enters it, and re-measure on resize/rotation while open",
+   "stop main from ever being a scroll container (overflow: clip) so no focus() can shift the pond",
+   "read the open map above the shore stones (body.map-open .title-block z-index 6) instead of letting their labels bleed through",
+   "make the panel a flex column and the list shrink+scroll inside; give #legend-list tabindex=0 as the trap's second stop so a clipped route is keyboard-reachable",
+   "add scripts/landscape-map-smoke.js for 844x390, 667x375, 1280x640 and 390x844; update the 0068 regression Tab assertion honestly",
+   "run all node tests + syntax, inspect screenshots, bump eyebrow 70 and shell v67, write KAIZEN 0070, commit and push"
+  ],
+  "verified": [
+   "node tests: 90 pass (legendFitHeight asserts: 173 px under anchor 197 at 390, 627 in portrait > the real 469 so the seven rows stay uncut, 0 when shorter than the anchor, null on broken input, never taller than the room below)",
+   "syntax: 68 JS files clean",
+   "instrumented production-loopback Chromium: 844x390, 667x375, 1280x640, 390x844 - main.scrollTop and document.scrollTop stay 0, .title-block stays at y=24, panel bottom (378/363/628) and Закрыть (363/348/613) stay inside the water, all seven routes present, and the open map wins the hit test in the stones' corner; portrait list still unclipped",
+   "keyboard: Tab from Закрыть reaches the list, End really scrolls the clipped routes (scrollTop > 0), Escape closes, and Space afterwards still strikes a bowl (voices 1 -> 0); no console/page errors",
+   "0068 and 0069 regressions green; screenshots landscape-map-70-*.png inspected directly: title and edge intact, map reads as one quiet slate, shore labels no longer bleed through"
+  ],
+  "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari) with a Bluetooth keyboard and TalkBack/VoiceOver: how does a clipped map feel to scroll by finger (inertia, screen edge), and should a phone lying down open the map from the opposite edge where there is more room."
  }
 }

@@ -94,6 +94,31 @@ test('the map introduces itself once, and only to a keyboard stranger', () => {
   assert.equal(a11y.shouldIntroduceLegend({ keyboardVisit: 'yes', seen: false }), false);
 });
 
+test('the open map is never taller than the water below its trigger', () => {
+  // A phone in landscape: trigger bottom 197, a 390-tall viewport. The panel
+  // may take 390 - 197 - 8 gap - 12 edge = 173 px, so the close button stays
+  // inside the water and nothing has to scroll the composition up.
+  assert.equal(a11y.legendFitHeight(197, 390), 173);
+  // A portrait phone has room for the whole map: nothing is clipped there.
+  assert.equal(a11y.legendFitHeight(197, 844), 627);
+  assert.ok(a11y.legendFitHeight(197, 844) > 469, 'portrait must not clip the seven rows');
+  // A small desktop window.
+  assert.equal(a11y.legendFitHeight(208, 640), 412);
+  // The promise itself: never taller than the honest room left below.
+  for (const [bottom, height] of [[197, 390], [208, 640], [100, 300], [197, 844]]) {
+    assert.ok(a11y.legendFitHeight(bottom, height) <= height - bottom,
+      'the panel must fit between its anchor and the bottom edge');
+  }
+  // A viewport shorter than the anchor collapses to nothing rather than
+  // reporting an imaginary height.
+  assert.equal(a11y.legendFitHeight(500, 390), 0);
+  assert.equal(a11y.legendFitHeight(390, 390), 0);
+  // Broken measurements are answered with silence, never a guessed height.
+  assert.equal(a11y.legendFitHeight(NaN, 390), null);
+  assert.equal(a11y.legendFitHeight(197, undefined), null);
+  assert.equal(a11y.legendFitHeight('tall', 'wide'), null);
+});
+
 test('the introduction storage key is versioned and never empty', () => {
   assert.equal(a11y.legendIntroKey(), 'pond-piano.legend-intro.v1');
   assert.equal(a11y.legendIntroKey(2), 'pond-piano.legend-intro.v2');

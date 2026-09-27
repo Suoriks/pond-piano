@@ -96,8 +96,27 @@
     return 'Карта клавиш открылась сама: стрелки, пробел и G с H — вода отвечает. Закройте Escape или просто играйте.';
   }
 
+  // ---- The map never pushes the pond -------------------------------------
+  // The slate hangs below its trigger. On a short viewport — a phone in
+  // landscape, a small window — a fixed panel runs past the water's bottom
+  // edge, and then revealing the close button scrolls the whole composition
+  // up and cuts the title off the top: the pond moved to make room for a
+  // document. The panel may only be as tall as the honest room left below its
+  // anchor, so the water stays where it is and the list scrolls inside. The
+  // shell measures; the model decides.
+  const LEGEND_FIT_GAP = 8;
+  const LEGEND_FIT_EDGE = 12;
+
+  function legendFitHeight(anchorBottom, viewportHeight, options = {}) {
+    const gap = Number.isFinite(options.gap) ? options.gap : LEGEND_FIT_GAP;
+    const edge = Number.isFinite(options.edge) ? options.edge : LEGEND_FIT_EDGE;
+    const bottom = Number(anchorBottom), height = Number(viewportHeight);
+    if (!Number.isFinite(bottom) || !Number.isFinite(height)) return null;
+    return Math.max(0, Math.round(height - bottom - gap - edge));
+  }
+
   return Object.freeze({
     expandedState, countIndex: trapIndex, openIndex, bowlLocation, keyboardLegend,
-    legendIntroKey, shouldIntroduceLegend, legendIntroText
+    legendIntroKey, shouldIntroduceLegend, legendIntroText, legendFitHeight
   });
 });
