@@ -1,5 +1,5 @@
-const CACHE = 'pond-piano-shell-v63';
-// Iteration 0066: the two-finger gather has an honest keyboard route - the pond builds the same validated pair.
+const CACHE = 'pond-piano-shell-v64';
+// Iteration 0067: the three-voice chord flower has an honest keyboard route - the held bowl opens two companion currents.
 const SHELL = [
   './',
   './index.html',

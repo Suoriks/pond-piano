@@ -1,12 +1,12 @@
 {
   "project": "pond-piano",
   "phase": "device-validation",
-  "iteration": 66,
-  "status": "keyboard-gather-verified",
-  "current_goal": "Iteration 0066: the two-finger gathering pearl has an honest keyboard route - holding a bowl and holding G opens a second current beside it that folds in after the same hold a touch pair waits, and the touch gesture itself still validates the synthesized pair, so no pocket of the pond is unreachable without two fingers.",
-  "previous_goal": "Iteration 0065: the two-finger gathering pearl and the depth dive answer with bounded two-mode bowls (seated pitch + fast octave that finishes first) instead of ascending/falling pitch sweeps; both share the rate-limited collision voice pool, so no short pond answer slides between two artificial pitches.",
-  "last_verified": "2026-09-27: Node tests pass (85), 61 JS syntax clean. Instrumented production loopback Chromium 390x844 with real Web Audio and a real keyboard: holding Space then holding G opened the second current (two voices, its own bowl pitch 490.548 beside the held 392.438, status announced), the fold after the touch hold produced exactly one pearl (gatheringPearlEvents 1, peakGatheringPearlVoices 1), and the pearl pool and the voice count both drained back to 0; no browser errors. Screenshot output/pond-piano/keyboard-gather-66.png inspected: one bright bead with the two folding arm currents on calm full water, title and eyebrow 66 intact, no clipping.",
-  "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari) for the keyboard path with a Bluetooth keyboard or TalkBack/VoiceOver quick-nav: does the G route read as \"open a second current, then fold\", and should the pond also offer a keyboard route to the three-voice chord bloom, which is the remaining gesture a single current cannot reach.",
+  "iteration": 67,
+  "status": "keyboard-chord-verified",
+  "current_goal": "Iteration 0067: the three-voice chord flower has an honest keyboard route - holding a bowl and holding H opens two companion currents at their own bowls of water on either side, and after the same calm hold a touch trio must keep, the chord plane reads the trio and the shared flower opens; the chord's own geometry still validates the trio, so no pocket of the pond needs three fingers.",
+  "previous_goal": "Iteration 0066: the two-finger gathering pearl has an honest keyboard route - holding a bowl and holding G opens a second current beside it that folds in after the same hold a touch pair waits, and the touch gesture itself still validates the synthesized pair, so no pocket of the pond is unreachable without two fingers.",
+  "last_verified": "2026-09-27: Node tests pass (85), 62 JS syntax clean. Instrumented production loopback Chromium 390x844 with real Web Audio and a real keyboard: holding Space then H opened exactly two companion currents (three voices), the calm hold opened exactly one shared flower (chordBloomEvents 1, chordBloomVoices 1, chordBlooms 1), and both the flower pool and the voice count drained back to 0; no browser errors. Screenshot output/pond-piano/keyboard-chord-67.png inspected: three converging ring currents with a shared bright flower at the centre on calm full water, title intact, no clipping.",
+  "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari) with a Bluetooth keyboard and TalkBack/VoiceOver: does the H route read as \"open two companion currents, then hold the chord\", does the three-voice trio strain small-screen assistive tech, and should the pond give screen readers an explicit note about the new G/H keys.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -340,7 +340,7 @@
     ],
     "next_step": "done; real-device pass should compare the warm near lap and cool far skim on phone speakers and bright screens"
   },
-  "current_iteration": 66,
+  "current_iteration": 67,
   "iteration_51": {
     "started": "2026-09-02T22:17:00+03:00",
     "phase": "done",
@@ -643,5 +643,23 @@
       "screenshot output/pond-piano/keyboard-gather-66.png inspected directly: one bead with two folding arms on calm water, no clipping, no dashboard artifact"
     ],
     "next_step": "done; the device-pass backlog now includes the keyboard route and the still keyboard-unreachable three-voice chord bloom"
+  },
+  "iteration_67": {
+    "started": "2026-09-27T23:17:00+03:00",
+    "finished": "2026-09-27T23:45:00+03:00",
+    "phase": "done",
+    "plan": [
+      "pure keyboardChord() in pond-gesture.js: the held bowl is one of three voices, two companions open on either side (roomier side at an edge) at their own water bowls, calm hold set honestly, refusal when no trio fits, and chordBloom still validates the trio",
+      "pond.js: hold H beside a held bowl opens two companion voices with their own ripples and coronas; the frame feeds them into chordContacts and the live currents; the shared single chordVoices pool opens the flower; releasing H, the note or focus closes them",
+      "unit asserts for the trio, each companion sounding its own bowl, the honest hold, symmetric/edge placement and safe refusal; instrumented Chromium keyboard smoke",
+      "eyebrow 67, shell v64, README sentence, one commit and push"
+    ],
+    "verified": [
+      "node tests: 85 pass; new asserts confirm three voices, each companion sounding its own bowl of water, a newborn trio not blooming early, the shared hold opening the flower, and the edge refusing a trio with no room",
+      "syntax: 62 JS files clean",
+      "instrumented production-loopback Chromium 390x844 + real keyboard: two companions opened (three voices), one flower (events 1, pool 1), pools drained to 0, no browser errors",
+      "screenshot output/pond-piano/keyboard-chord-67.png inspected directly: three converging ring currents with a shared bright flower, no clipping, no dashboard artifact"
+    ],
+    "next_step": "done; the device-pass backlog now covers the whole gesture set on keyboard and one-finger routes"
   }
 }

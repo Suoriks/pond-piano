@@ -262,6 +262,54 @@
     ]);
   }
 
+  // A keyboard has one finger, so the three-voice chord flower - the last
+  // gesture a single current cannot reach - gets its own honest route here.
+  // Holding the struck bowl opens two companion currents at their own bowls
+  // of water, one on each side when the water has room, and the same calm
+  // hold a touch trio must keep lets chordBloom read the trio. Geometry is
+  // the chord path's own: chordBloom still validates the contacts, so a
+  // keyboard chord is neither easier nor richer than three real fingers.
+  const KEYBOARD_CHORD_SPAN_RATIO = .16;
+
+  function keyboardChord(bounds = {}) {
+    const width = Number(bounds.width), height = Number(bounds.height);
+    const now = Number(bounds.now), born = Number(bounds.born);
+    if (![width, height, now, born].every(Number.isFinite) || width <= 0 || height <= 0) return null;
+    const x = Number(bounds.x), y = Number(bounds.y);
+    const frequency = Number(bounds.frequency);
+    if (![x, y, frequency].every(Number.isFinite) || frequency <= 0) return null;
+    const pitchAt = typeof bounds.pitchAt === 'function'
+      ? px => { const value = Number(bounds.pitchAt(px)); return Number.isFinite(value) && value > 0 ? value : frequency; }
+      : () => frequency;
+    const span = Math.max(1, Math.min(width, height));
+    const anchorX = clamp(x, 0, width), anchorY = clamp(y, 0, height);
+    const offset = span * KEYBOARD_CHORD_SPAN_RATIO;
+    const inset = span * .03;
+    const inside = px => px >= inset && px <= width - inset;
+    // Prefer a symmetric trio around the held bowl; a bowl near one edge may
+    // only have room for both companions on the other side; if neither the
+    // symmetric nor a one-sided trio fits, the water offers no chord at all.
+    let companions = null;
+    if (inside(anchorX - offset) && inside(anchorX + offset)) companions = [-offset, offset];
+    else {
+      const roomier = anchorX <= width / 2 ? 1 : -1;
+      if (inside(anchorX + roomier * offset) && inside(anchorX + roomier * offset * 2)) {
+        companions = [roomier * offset, roomier * offset * 2];
+      } else if (inside(anchorX - roomier * offset) && inside(anchorX - roomier * offset * 2)) {
+        companions = [-roomier * offset, -roomier * offset * 2];
+      }
+    }
+    if (!companions) return null;
+    const companion = (id, px) => Object.freeze({
+      id, x: px, y: anchorY, pressure: .44, frequency: pitchAt(px), born, lastMotion: born, sounding: true
+    });
+    return Object.freeze([
+      Object.freeze({ id: 'keyboard', x: anchorX, y: anchorY, pressure: .48, frequency, born, lastMotion: born, sounding: true }),
+      companion('keyboard-chord-a', anchorX + companions[0]),
+      companion('keyboard-chord-b', anchorX + companions[1])
+    ]);
+  }
+
   // Two live currents can be deliberately pulled into one pearl. Both
   // contacts must begin safely apart, travel towards their original shared
   // midpoint, and close most of the distance without dragging that midpoint
@@ -442,6 +490,8 @@
     skippingStone,
     gatheringKey,
     keyboardGather,
+    KEYBOARD_CHORD_SPAN_RATIO,
+    keyboardChord,
     gatheringPearl,
     gatheringVisual,
     beginDepthDive,

@@ -2,6 +2,7 @@
 
 const assert = require('node:assert/strict');
 const gesture = require('../pond-gesture.js');
+const chord = require('../pond-chord.js');
 
 function traceCircle({ radius = 18, turns = .82, direction = 1, steps = 22, speedPerSecond = .28 } = {}) {
   const centerX = 120, centerY = 240, span = 390;
@@ -160,6 +161,34 @@ assert.equal(gesture.keyboardGather({ x: 5, y: 300, width: 390, height: 844, now
 assert.equal(gesture.keyboardGather({ x: 120, y: 300, width: 390, height: 844, now: 1000, frequency: 220 }), null);
 assert.equal(gesture.keyboardGather({ x: NaN, y: 300, width: 390, height: 844, now: 1000, born: 760, frequency: 220 }), null);
 assert.equal(gesture.keyboardGather({ x: 120, y: 300, width: 390, height: 844, now: 1000, born: 760, frequency: 0 }), null);
+
+// The keyboard chord: the held bowl opens two companion currents at their
+// own bowls of water. The chord plane still reads the trio, so a keyboard
+// chord is neither easier nor richer than three real fingers.
+const kbdChord = gesture.keyboardChord({
+  x: 195, y: 300, width: 390, height: 844, now: 1000, born: 760, frequency: 220,
+  pitchAt: px => 220 + px
+});
+assert.equal(kbdChord.length, 3, 'the held bowl and two companions make a trio');
+assert.equal(kbdChord[0].id, 'keyboard');
+assert.deepEqual(kbdChord.map(contact => contact.id), ['keyboard', 'keyboard-chord-a', 'keyboard-chord-b']);
+assert.ok(kbdChord.every(contact => contact.x >= 0 && contact.x <= 390), 'all three currents sound inside the water');
+assert.equal(kbdChord[0].x, 195, 'the trio keeps the held bowl as one of its currents');
+assert.equal(kbdChord[1].frequency, 220 + kbdChord[1].x, 'each companion sounds its own bowl of water');
+assert.notEqual(kbdChord[1].x, kbdChord[2].x, 'the two companions are distinct currents');
+assert.ok(kbdChord.every(contact => contact.sounding === true && contact.born === 760), 'the trio is a real held chord');
+const kbdChordPlan = chord.chordBloom(kbdChord, 760 + chord.HOLD_MS + chord.CALM_MS + 1, kbdBounds);
+assert.ok(kbdChordPlan, 'the same calm hold a touch trio keeps opens the keyboard flower');
+assert.equal(kbdChordPlan.count, 3, 'the flower reads all three keyboard currents');
+assert.equal(chord.chordBloom(kbdChord, 760, kbdBounds), null, 'a newborn keyboard trio does not bloom early');
+const kbdChordRight = gesture.keyboardChord({ x: 360, y: 300, width: 390, height: 844, now: 1000, born: 760, frequency: 220 });
+assert.ok(kbdChordRight, 'a bowl near the right shore opens its companions on the roomier side');
+assert.ok(kbdChordRight.every(contact => contact.x >= 0 && contact.x <= 390),
+  'both companions still open inside the water');
+assert.equal(gesture.keyboardChord({ x: 195, y: 300, width: 390, height: 844, now: 1000, frequency: 220 }), null);
+assert.equal(gesture.keyboardChord({ x: 195, y: 300, width: 390, height: 844, now: 1000, born: 760, frequency: 0 }), null);
+assert.equal(gesture.keyboardChord({ x: NaN, y: 300, width: 390, height: 844, now: 1000, born: 760, frequency: 220 }), null);
+assert.equal(gesture.keyboardChord({ x: 195, y: 300, width: 0, height: 844, now: 1000, born: 760, frequency: 220 }), null);
 assert.equal(gesture.gatheringVisual(gathered, gathered.born - 1, false).alpha, 0);
 assert.equal(gesture.gatheringVisual(gathered, gathered.born + gesture.GATHER_LIFE_MS, false).alive, false);
 

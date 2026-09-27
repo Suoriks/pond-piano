@@ -97,7 +97,7 @@
   let diaryOpen = false;
   let lastInkCount = -1;
   let lastPourAt = -Infinity;
-  const keyboard = { x: .5, y: .52, pitchX: .5, pressure: .48, sounding: false, born: 0, lastMotion: 0, motionSpeed: 0, mapping: null, materialBias: null, precisionActive: false, precisionAmount: 0, precisionOriginX: null, scoreSamples: [], distanceTraveled: 0, resonanceX: 0, resonanceY: 0, resonatedMemories: new Set(), dive: null, dived: false, gather: null };
+  const keyboard = { x: .5, y: .52, pitchX: .5, pressure: .48, sounding: false, born: 0, lastMotion: 0, motionSpeed: 0, mapping: null, materialBias: null, precisionActive: false, precisionAmount: 0, precisionOriginX: null, scoreSamples: [], distanceTraveled: 0, resonanceX: 0, resonanceY: 0, resonatedMemories: new Set(), dive: null, dived: false, gather: null, chord: null };
   let audio = null;
   let audioLifecycle = null;
   let masterState = loadMasterState();
@@ -347,6 +347,7 @@
     activeGathered = false;
     keyboard.dive = null;
     keyboard.dived = false;
+    clearKeyboardChord();
     canvas.dataset.eddyVoices = '0';
     reflectDropVoices(engine);
     keyboard.sounding = false;
@@ -1605,6 +1606,40 @@
     endVoice('keyboard-shadow');
   }
 
+  // The keyboard chord: the held bowl plus two companion currents open the
+  // same calm trio a touch player folds with three fingers, and the chord
+  // holds the plane above it. Releasing H, the note or focus closes the
+  // companions early, with no flower.
+  function clearKeyboardChord() {
+    if (!keyboard.chord) return;
+    keyboard.chord = null;
+    endVoice('keyboard-chord-a');
+    endVoice('keyboard-chord-b');
+  }
+
+  function openKeyboardChord(now) {
+    const p = keyboardPoint();
+    const held = keyboard.struckFrequency ?? audio?.voices.get('keyboard')?.targetFrequency ?? pitchAt(p.x);
+    const trio = gesture.keyboardChord({
+      x: p.x, y: p.y, width, height, now, born: now, frequency: held,
+      pitchAt: px => pitchAt(px)
+    });
+    if (!trio) {
+      status.textContent = 'У самой кромки вода не даёт места для аккорда; отойдите к середине';
+      return;
+    }
+    const companions = trio.slice(1);
+    for (const contact of companions) {
+      startVoice(contact.id, contact.x, contact.y, contact.pressure, contact.frequency, contact.pressure, audio, phraseNoteIndex);
+      addRipple(contact.x, contact.y, contact.pressure);
+      spawnDropCorona(contact.x, contact.y, contact.pressure);
+    }
+    keyboard.chord = { born: now, contacts: companions };
+    activeChordMembership = null;
+    activeChordBloomed = false;
+    status.textContent = 'Два соседних течения открылись; удержите аккорд, и вода раскроет общий цветок';
+  }
+
   function updateKeyboardGather(now) {
     const gather = keyboard.sounding ? keyboard.gather : null;
     if (!gather || gather.folded) return;
@@ -2513,6 +2548,13 @@ function disconnectSkipVoice(engine, skip) {
         status.textContent = 'Второе течение открылось; удержите G, и вода сведёт их в жемчужину';
       }
     }
+    // The keyboard chord: hold the bowl and hold H to open two companion
+    // currents beside it; after the same calm hold a touch trio must keep,
+    // the chord plane reads the trio and the shared flower opens.
+    if ((event.code === 'KeyH' || event.key === 'h' || event.key === 'H') && !event.repeat && keyboard.sounding && !keyboard.chord && !keyboard.gather) {
+      event.preventDefault();
+      openKeyboardChord(performance.now());
+    }
     if ((event.code === 'Space' || event.key === 'Enter') && !event.repeat && !keyboard.sounding) {
       event.preventDefault();
       const now = performance.now();
@@ -2539,6 +2581,11 @@ function disconnectSkipVoice(engine, skip) {
       clearKeyboardShadow();
       return;
     }
+    if ((event.code === 'KeyH' || event.key === 'h' || event.key === 'H') && keyboard.chord) {
+      event.preventDefault();
+      clearKeyboardChord();
+      return;
+    }
     if ((event.code === 'Space' || event.key === 'Enter') && keyboard.sounding) {
       event.preventDefault();
       const p = keyboardPoint(), now = performance.now();
@@ -2548,6 +2595,7 @@ function disconnectSkipVoice(engine, skip) {
       keyboard.struckX = null;
       keyboard.dive = null; keyboard.dived = false;
       clearKeyboardShadow();
+      clearKeyboardChord();
       announceKeyboardLocation(true);
       addRipple(p.x, p.y, .48, .55, keyboard.mapping?.frequency ?? pitchAt(p.x));
       // The keyboard voice earns the settle lesson by the same measure as
@@ -2563,6 +2611,7 @@ function disconnectSkipVoice(engine, skip) {
       keyboard.struckX = null;
       keyboard.dive = null; keyboard.dived = false;
       clearKeyboardShadow();
+      clearKeyboardChord();
     }
   });
 
@@ -3449,6 +3498,20 @@ function disconnectSkipVoice(engine, skip) {
         frequency: keyboardVisual.mapping?.frequency ?? pitchAt(keyboardVisual.x),
         born: keyboardVisual.born, lastMotion: keyboardVisual.lastMotion, sounding: true
       });
+      // The keyboard chord's companions are real live currents of their own
+      // bowls of water: they sound, carry the same pitch mapping and take
+      // part in the chord plane exactly like three touch fingers would.
+      if (keyboard.chord) {
+        for (const contact of keyboard.chord.contacts) {
+          const mapping = music.mapPitch(contact.x / Math.max(1, width), 0, 0, tuningFamily);
+          mapping.frequency = contact.frequency;
+          soundingPointers.push({
+            x: contact.x, y: contact.y, pressure: contact.pressure, born: contact.born,
+            lastMotion: contact.lastMotion, mapping, glideWake: null
+          });
+          chordContacts.push({ ...contact });
+        }
+      }
     }
     updateKeyboardGather(now);
     updateGatheringPearl(now, gatheringContacts);
