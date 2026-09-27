@@ -387,13 +387,23 @@
     const geometricMean = Math.sqrt(valid[0] * valid[1]);
     const current = mapPitch(normalizedAtFrequency(geometricMean), 980, 0, familyId);
     const frequency = Math.min(4200, current.frequency * 2);
+    const durationSeconds = .19 + depth * .07 + force * .035;
+    const peakGain = .0038 + force * .0082;
+    // The gathered bead is a bright seated current with a fast octave that
+    // finishes first, not a rising swish. Both modes stay bounded and share
+    // the one collision voice slot, so two fingers never buy a second.
     return Object.freeze({
       frequency,
-      startFrequency: frequency * (1.26 - depth * .08),
-      durationSeconds: .19 + depth * .07 + force * .035,
-      peakGain: .0038 + force * .0082,
+      durationSeconds,
+      peakGain,
       cutoffHz: 2100 + (1 - depth) * 1900,
-      scaleFamily: current.scaleFamily
+      scaleFamily: current.scaleFamily,
+      attackSeconds: .012 + depth * .006,
+      modes: Object.freeze([
+        Object.freeze({ frequency, peak: peakGain * .8, duration: durationSeconds }),
+        Object.freeze({ frequency: frequency * 2, peak: peakGain * (.14 + (1 - depth) * .06),
+          duration: durationSeconds * .5 })
+      ])
     });
   }
 
@@ -407,14 +417,24 @@
     const force = clamp(energy);
     const current = mapPitch(normalizedAtFrequency(parentFrequency), 980, 0, familyId);
     const frequency = Math.max(42, current.frequency * .5);
+    const durationSeconds = .31 + depth * .16 + force * .08;
+    const peakGain = .0034 + force * .0076;
+    // The plunge is now a low seated bowl: a warm fundamental with a fast
+    // octave that sinks first, rather than a falling siren. The depth keeps
+    // it low and warm, and the shared transient ceiling keeps chords from
+    // becoming a rumble.
     return Object.freeze({
       frequency,
-      startFrequency: frequency * (1.14 - depth * .05),
-      endFrequency: frequency * (.91 - depth * .035),
-      durationSeconds: .31 + depth * .16 + force * .08,
-      peakGain: .0034 + force * .0076,
+      durationSeconds,
+      peakGain,
       cutoffHz: 920 + (1 - depth) * 1250,
-      scaleFamily: current.scaleFamily
+      scaleFamily: current.scaleFamily,
+      attackSeconds: .02 + depth * .009,
+      modes: Object.freeze([
+        Object.freeze({ frequency, peak: peakGain * .82, duration: durationSeconds }),
+        Object.freeze({ frequency: frequency * 2, peak: peakGain * (.13 + (1 - depth) * .05),
+          duration: durationSeconds * .46 })
+      ])
     });
   }
 

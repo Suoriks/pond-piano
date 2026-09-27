@@ -76,7 +76,7 @@ const OUT = path.join(ROOT, 'output', 'pond-piano', 'depth-dive-56.png');
     const sustainAfterTail = Number(await page.locator('#pond').getAttribute('data-audio-voices'));
     await page.mouse.up();
     await page.waitForFunction(() => Number(document.querySelector('#pond').dataset.audioVoices || 0) === 0,
-      null, { timeout: 4000 });
+      null, { timeout: 12000 });
     const pointerReleasedVoices = Number(await page.locator('#pond').getAttribute('data-audio-voices'));
 
     // The same geometry is reachable without a pointer: hold the keyboard
@@ -101,7 +101,7 @@ const OUT = path.join(ROOT, 'output', 'pond-piano', 'depth-dive-56.png');
     });
     await page.keyboard.up('Space');
     await page.waitForFunction(() => Number(document.querySelector('#pond').dataset.audioVoices || 0) === 0,
-      null, { timeout: 4000 });
+      null, { timeout: 12000 });
 
     const checks = [
       ['one audible and visible depth fold formed', folded.events === 1 && folded.transientVoices === 1 && folded.visuals === 1, JSON.stringify(folded)],

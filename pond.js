@@ -1556,20 +1556,10 @@
     const response = music.gatheringPearlTone(plan.frequencies, plan.depth, plan.energy, tuningFamily);
     if (!response) return false;
     const now = engine.context.currentTime;
-    const oscillator = engine.context.createOscillator();
-    const filter = engine.context.createBiquadFilter();
-    const gain = engine.context.createGain();
+    const bowl = renderBoundedModes(engine, response, now);
+    const gain = bowl.nodes.at(-1);
     const panner = typeof engine.context.createStereoPanner === 'function' ? engine.context.createStereoPanner() : null;
     const reflectionSend = engine.reflection ? engine.context.createGain() : null;
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(response.startFrequency, now);
-    oscillator.frequency.exponentialRampToValueAtTime(response.frequency, now + response.durationSeconds * .46);
-    oscillator.frequency.exponentialRampToValueAtTime(response.frequency * .994, now + response.durationSeconds);
-    filter.type = 'lowpass'; filter.frequency.value = response.cutoffHz; filter.Q.value = 2.05;
-    gain.gain.setValueAtTime(.0001, now);
-    gain.gain.exponentialRampToValueAtTime(response.peakGain, now + .014);
-    gain.gain.exponentialRampToValueAtTime(.0001, now + response.durationSeconds);
-    oscillator.connect(filter).connect(gain);
     let output = gain;
     if (panner) {
       panner.pan.value = music.spatialPan(plan.x / Math.max(1, width));
@@ -1581,7 +1571,7 @@
       reflectionSend.gain.value = music.depthReflection(plan.depth).sendGain * .5;
       output.connect(reflectionSend).connect(engine.reflection.input);
     }
-    const voice = { oscillator, nodes: [oscillator, filter, gain, panner, reflectionSend] };
+    const voice = { oscillators: bowl.oscillators, nodes: [...bowl.nodes, panner, reflectionSend] };
     engine.collisionVoices.add(voice);
     canvas.dataset.pearlVoices = String(engine.collisionVoices.size);
     canvas.dataset.gatheringPearlVoices = '1';
@@ -1593,12 +1583,10 @@
     gatheringPearls.push({ ...plan });
     if (gatheringPearls.length > 4) gatheringPearls.shift();
     lastGatherAt = visualNow;
-    oscillator.addEventListener('ended', () => {
+    bowl.oscillators[0].addEventListener('ended', () => {
       disconnectCollisionVoice(engine, voice);
       canvas.dataset.gatheringPearlVoices = '0';
     }, { once: true });
-    oscillator.start();
-    oscillator.stop(now + response.durationSeconds + .025);
     if (!gatheringAnnounced) {
       status.textContent = 'Два течения сошлись; вода собрала между пальцами светлую жемчужину';
       gatheringAnnounced = true;
@@ -1635,20 +1623,10 @@
     const response = music.depthDiveTone(plan.frequency, plan.depth, plan.energy, tuningFamily);
     if (!response) return false;
     const now = engine.context.currentTime;
-    const oscillator = engine.context.createOscillator();
-    const filter = engine.context.createBiquadFilter();
-    const gain = engine.context.createGain();
+    const bowl = renderBoundedModes(engine, response, now);
+    const gain = bowl.nodes.at(-1);
     const panner = typeof engine.context.createStereoPanner === 'function' ? engine.context.createStereoPanner() : null;
     const reflectionSend = engine.reflection ? engine.context.createGain() : null;
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(response.startFrequency, now);
-    oscillator.frequency.exponentialRampToValueAtTime(response.frequency, now + response.durationSeconds * .3);
-    oscillator.frequency.exponentialRampToValueAtTime(response.endFrequency, now + response.durationSeconds);
-    filter.type = 'lowpass'; filter.frequency.value = response.cutoffHz; filter.Q.value = .9;
-    gain.gain.setValueAtTime(.0001, now);
-    gain.gain.exponentialRampToValueAtTime(response.peakGain, now + .04);
-    gain.gain.exponentialRampToValueAtTime(.0001, now + response.durationSeconds);
-    oscillator.connect(filter).connect(gain);
     let output = gain;
     if (panner) {
       panner.pan.value = music.spatialPan(plan.x / Math.max(1, width));
@@ -1659,7 +1637,7 @@
       reflectionSend.gain.value = music.depthReflection(plan.depth).sendGain * .7;
       output.connect(reflectionSend).connect(engine.reflection.input);
     }
-    const voice = { oscillator, nodes: [oscillator, filter, gain, panner, reflectionSend] };
+    const voice = { oscillators: bowl.oscillators, nodes: [...bowl.nodes, panner, reflectionSend] };
     engine.collisionVoices.add(voice);
     canvas.dataset.pearlVoices = String(engine.collisionVoices.size);
     canvas.dataset.depthDiveVoices = '1';
@@ -1671,12 +1649,10 @@
     });
     if (depthDives.length > 4) depthDives.shift();
     lastDiveAt = visualNow;
-    oscillator.addEventListener('ended', () => {
+    bowl.oscillators[0].addEventListener('ended', () => {
       disconnectCollisionVoice(engine, voice);
       canvas.dataset.depthDiveVoices = '0';
     }, { once: true });
-    oscillator.start();
-    oscillator.stop(now + response.durationSeconds + .025);
     if (!depthDiveAnnounced) {
       status.textContent = 'Выдержка и быстрый нырок вниз сложили течение в глубокий ответ';
       depthDiveAnnounced = true;

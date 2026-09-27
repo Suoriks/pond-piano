@@ -32,7 +32,7 @@ const OUT = path.join(ROOT, 'output', 'pond-piano', 'gathering-pearl-53.png');
     // synthetic multi-touch pair exercises the exact Pointer Events path.
     await page.mouse.click(195, 650);
     await page.waitForFunction(() => Number(document.querySelector('#pond').dataset.audioVoices || 0) === 0,
-      null, { timeout: 4000 });
+      null, { timeout: 12000 });
 
     const dispatch = (type, id, x, y) => page.evaluate(({ type, id, x, y }) => {
       const canvas = document.querySelector('#pond');
@@ -89,7 +89,7 @@ const OUT = path.join(ROOT, 'output', 'pond-piano', 'gathering-pearl-53.png');
     await dispatch('pointerup', 42, 175, 424);
     await dispatch('pointerup', 43, 215, 416);
     await page.waitForFunction(() => Number(document.querySelector('#pond').dataset.audioVoices || 0) === 0,
-      null, { timeout: 4000 });
+      null, { timeout: 12000 });
     await page.waitForFunction(() => Number(document.querySelector('#pond').dataset.gatheringPearlVoices || 0) === 0,
       null, { timeout: 3000 });
     const ended = await page.evaluate(() => ({

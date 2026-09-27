@@ -393,7 +393,13 @@ assert.notEqual(gatheredDawn.frequency, gatheredDusk.frequency, 'the chosen curr
 assert.ok(gatheredDawn.durationSeconds >= .19 && gatheredDawn.durationSeconds <= .3);
 assert.ok(gatheredDawn.peakGain > .003 && gatheredDawn.peakGain < .012,
   'the gathered pearl stays a bounded transient below a sustain voice');
-assert.ok(gatheredDawn.startFrequency > gatheredDawn.frequency && gatheredDawn.cutoffHz >= 2100 && gatheredDawn.cutoffHz <= 4000);
+assert.equal(gatheredDawn.modes.length, 2, 'the gathered bead is a two-mode bowl, not a rising sweep');
+assert.equal(gatheredDawn.modes[0].frequency, gatheredDawn.frequency, 'the fundamental keeps the seated gathered pitch');
+assert.equal(gatheredDawn.modes[1].frequency, gatheredDawn.frequency * 2, 'the companion mode sits exactly an octave up');
+assert.ok(gatheredDawn.modes[1].duration < gatheredDawn.modes[0].duration,
+  'the gathered octave must finish first so it reads as light, not a second voice');
+assert.equal(gatheredDawn.startFrequency, undefined, 'the gathered pearl no longer slides through an artificial sweep');
+assert.ok(gatheredDawn.cutoffHz >= 2100 && gatheredDawn.cutoffHz <= 4000);
 assert.equal(music.gatheringPearlTone([220], .5, .5), null);
 assert.equal(music.gatheringPearlTone([220, NaN], .5, .5), null);
 assert.ok(tinted.levelCompensation >= .9 && tinted.levelCompensation <= 1.1,
@@ -403,8 +409,13 @@ const diveDawn = music.depthDiveTone(440, .72, .76, 'dawn');
 const diveDusk = music.depthDiveTone(440, .72, .76, 'dusk');
 assert.ok(diveDawn && diveDusk, 'a live pitch must have one family-related low depth answer');
 assert.ok(diveDawn.frequency < 440 && diveDawn.frequency >= 42);
-assert.ok(diveDawn.startFrequency > diveDawn.frequency && diveDawn.endFrequency < diveDawn.frequency,
-  'the transient must fold downward rather than mimic another attack');
+assert.equal(diveDawn.modes.length, 2, 'the plunge is a low seated bowl, not a falling siren');
+assert.equal(diveDawn.modes[0].frequency, diveDawn.frequency, 'the fundamental keeps the low seated depth');
+assert.equal(diveDawn.modes[1].frequency, diveDawn.frequency * 2, 'the companion mode sits exactly an octave up');
+assert.ok(diveDawn.modes[1].duration < diveDawn.modes[0].duration,
+  'the dive octave must sink first so the depth answer stays one transient');
+assert.equal(diveDawn.startFrequency, undefined, 'the dive no longer starts above its seated pitch');
+assert.equal(diveDawn.endFrequency, undefined, 'the dive no longer slides downward after the fact');
 assert.ok(diveDawn.durationSeconds >= .31 && diveDawn.durationSeconds <= .55);
 assert.ok(diveDawn.peakGain > .003 && diveDawn.peakGain < .012,
   'the depth answer stays well below a sustained voice');
