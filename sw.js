@@ -1,5 +1,5 @@
-const CACHE = 'pond-piano-shell-v59';
-// Iteration 0062: wave meetings reply with a finite two-mode bowl pearl.
+const CACHE = 'pond-piano-shell-v60';
+// Iteration 0063: a skipping stone answers with a bounded two-mode pebble, not a falling sweep.
 const SHELL = [
   './',
   './index.html',

@@ -1,12 +1,12 @@
 {
   "project": "pond-piano",
   "phase": "device-validation",
-  "iteration": 62,
-  "status": "collision-bowl-verified",
-  "current_goal": "Iteration 0062: wave collisions answer with a brief consonant two-mode bowl-family pearl, rather than a sliding single-tone chirp; retain existing rate/voice/visual budgets.",
-  "previous_goal": "Iteration 0061: give diary, ink-reading and crossed-score replies one quiet, finite bowl-family resonance at the actual recorded pitch instead of the old triangle pitch-sweep.",
-  "last_verified": "2026-09-27: 85 Node tests, 60 JS syntax, JSON/diff and pack closure (26 files) clean. Production loopback Chromium: one real collision gives sine fundamental/octave at 390.047/780.094 Hz in one transient slot; active pagehide clears pool, next gesture resumes same context, all oscillators end, no browser errors. Screenshot inspected. Desktop shell 6/6 and lifecycle 10/10, maximum 50 oscillators, final zero.",
-  "next_step": "Listen to collision pearl beside struck bowls on Android/iPhone speakers; octave balance and beauty require human judgment. Other short gesture/bank transients still use older timbres.",
+  "iteration": 63,
+  "status": "stone-skip-verified",
+  "current_goal": "Iteration 0063: a skipping stone answers with a bounded two-mode pebble-bowl (seated pitch + fast octave), replacing the last falling triangle pitch sweep; per-bounce quieting and the existing skip voice pool are retained.",
+  "previous_goal": "Iteration 0062: wave collisions answer with a brief consonant two-mode bowl-family pearl, rather than a sliding single-tone chirp.",
+  "last_verified": "2026-09-27: 85 Node tests, 60 JS syntax, JSON/diff clean. Production loopback Chromium 390x844: one real fast straight flick starts a skip (skipEvents 1) whose oscillator probe shows sine 245.274/490.548 Hz (fundamental + exact octave, no triangle), peak pool 1 within budget, pool returns to 0, all oscillators end, no browser errors. Screenshot inspected.",
+  "next_step": "Listen to the pebble beside struck bowls on Android/iPhone speakers: does it read as a stone on water rather than a quiet bowl, and is it too frequent under live fingers. Other short answers (shore lap, far skim, gathering, dive) still single-layer sine with a small glide.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -340,7 +340,7 @@
     ],
     "next_step": "done; real-device pass should compare the warm near lap and cool far skim on phone speakers and bright screens"
   },
-  "current_iteration": 62,
+  "current_iteration": 63,
   "iteration_51": {
     "started": "2026-09-02T22:17:00+03:00",
     "phase": "done",
@@ -576,6 +576,22 @@
       "active collision interrupted by pagehide releases both modes and transient pool; foreground gesture resumes same AudioContext; all oscillators terminate",
       "screenshot output/pond-piano/collision-bowl-62.png inspected: small luminous meeting between two rings, title/shore intact",
       "desktop shell 6/6; lifecycle 10/10, max 50 oscillators, final 0"
+    ]
+  },
+  "iteration_63": {
+    "started": "2026-09-27T19:17:00+03:00",
+    "finished": "2026-09-27T19:35:00+03:00",
+    "phase": "done",
+    "plan": [
+      "rewrite pure stoneSkip to a bounded two-mode pebble plan (seated pitch + fast octave), removing startFrequency/endFrequency",
+      "render both modes into the existing bounded skip voice pool in playStoneSkip; stop skip.oscillators on lifecycle cleanup",
+      "update unit asserts and add scripts/stone-skip-smoke.js; bump eyebrow 63, shell v60, README sentence",
+      "journal/state, one commit and push main"
+    ],
+    "verified": [
+      "85 Node tests; 60 JS syntax checks; JSON, diff clean",
+      "production Chromium 390x844: real fast straight flick sent the pebble once; probe shows sine 245.274/490.548 Hz exact fundamental+octave, no triangle; peak pool 1, drains to 0, oscillators end, no errors",
+      "screenshot output/pond-piano/stone-skip-63.png inspected: two organic meeting rings on calm full-bleed water, title/shore intact"
     ]
   }
 }

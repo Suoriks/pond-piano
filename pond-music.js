@@ -400,19 +400,31 @@
     });
   }
 
+  // A skipping contact is a small pebble-bowl, not a falling whistle: one
+  // seated pitch plus a fast octave that finishes first, wrapped in the same
+  // bounded transient voice as every other water answer. Later bounces answer
+  // quieter and settle a touch longer, so the run still decays, but the stone
+  // no longer slides through an artificial pitch sweep.
   function stoneSkip(frequency, normalizedDepth, energy = .45, index = 0) {
     const pitch = Math.max(20, Number.isFinite(frequency) ? frequency : BASE_FREQUENCY);
     const depth = clamp(normalizedDepth);
     const force = clamp(energy);
     const bounce = Math.max(0, Math.min(2, Math.trunc(Number.isFinite(index) ? index : 0)));
-    return {
+    const fade = Math.pow(.72, bounce); // each successive contact answers more quietly
+    const durationSeconds = .115 + depth * .03 + bounce * .02;
+    const peakGain = (.0048 + force * .012) * fade;
+    return Object.freeze({
       frequency: pitch,
-      startFrequency: pitch * (1.28 - depth * .1 - bounce * .035),
-      endFrequency: pitch * (.985 - bounce * .012),
-      durationSeconds: .105 + depth * .035 + bounce * .018,
-      peakGain: .004 + force * .012,
-      cutoffHz: 1850 + (1 - depth) * 2650 - bounce * 180
-    };
+      durationSeconds,
+      peakGain,
+      attackSeconds: .008 + depth * .004,
+      cutoffHz: 1850 + (1 - depth) * 2500 - bounce * 170,
+      modes: Object.freeze([
+        Object.freeze({ frequency: pitch, peak: peakGain * .82, duration: durationSeconds }),
+        Object.freeze({ frequency: pitch * 2, peak: peakGain * (.17 + (1 - depth) * .07),
+          duration: durationSeconds * .56 })
+      ])
+    });
   }
 
   // The water rereads an old phrase with a small relative of the struck

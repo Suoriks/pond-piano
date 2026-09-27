@@ -240,8 +240,15 @@ assert.equal(farSkim.scaleFamily, 'mist', 'the selected current guides the skim 
 
 const firstSkip = music.stoneSkip(440, .18, .72, 0);
 const lastSkip = music.stoneSkip(660, .82, .35, 2);
-assert.ok(firstSkip.startFrequency > firstSkip.frequency && firstSkip.endFrequency < firstSkip.frequency,
-  'a skipping contact must settle through its visible pitch rather than become a sustained voice');
+assert.equal(firstSkip.frequency, 440, 'a skipping contact keeps its struck pitch');
+assert.equal(firstSkip.modes.length, 2, 'the pebble answers with a fundamental and a fast octave');
+assert.equal(firstSkip.modes[0].frequency, firstSkip.frequency, 'the fundamental sits on the seat pitch');
+assert.ok(Math.abs(firstSkip.modes[1].frequency / firstSkip.frequency - 2) < .001,
+  'the second mode is an octave above the pebble');
+assert.ok(firstSkip.modes[1].duration < firstSkip.modes[0].duration,
+  'the octave finishes before the fundamental');
+assert.ok(!('startFrequency' in firstSkip) && !('endFrequency' in firstSkip),
+  'a skip no longer slides through a falling sweep');
 assert.ok(lastSkip.durationSeconds > firstSkip.durationSeconds && lastSkip.durationSeconds < .2,
   'deeper and later contacts may settle longer but must stay transient');
 assert.ok(firstSkip.peakGain > lastSkip.peakGain && firstSkip.peakGain <= .016,

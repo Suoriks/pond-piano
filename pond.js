@@ -292,7 +292,9 @@
     }
     engine.chordVoices?.clear();
     for (const skip of engine.skipVoices ?? []) {
-      try { skip.oscillator.stop(now); } catch {}
+      for (const oscillator of skip.oscillators ?? []) {
+        try { oscillator.stop(now); } catch {}
+      }
       for (const node of skip.nodes) {
         try { node?.disconnect(); } catch {}
       }
@@ -1934,20 +1936,12 @@ function disconnectSkipVoice(engine, skip) {
     const depth = Math.max(0, Math.min(1, contact.y));
     const response = music.stoneSkip(music.frequencyAt(contact.x), depth, contact.energy, contact.index);
     const now = engine.context.currentTime;
-    const oscillator = engine.context.createOscillator();
     const filter = engine.context.createBiquadFilter();
     const gain = engine.context.createGain();
     const panner = typeof engine.context.createStereoPanner === 'function' ? engine.context.createStereoPanner() : null;
     const reflectionSend = engine.reflection ? engine.context.createGain() : null;
-    oscillator.type = contact.index === 0 ? 'triangle' : 'sine';
-    oscillator.frequency.setValueAtTime(response.startFrequency, now);
-    oscillator.frequency.exponentialRampToValueAtTime(response.frequency, now + response.durationSeconds * .38);
-    oscillator.frequency.exponentialRampToValueAtTime(response.endFrequency, now + response.durationSeconds);
     filter.type = 'lowpass'; filter.frequency.value = response.cutoffHz; filter.Q.value = 1.15;
-    gain.gain.setValueAtTime(.0001, now);
-    gain.gain.exponentialRampToValueAtTime(response.peakGain, now + .008);
-    gain.gain.exponentialRampToValueAtTime(.0001, now + response.durationSeconds);
-    oscillator.connect(filter).connect(gain);
+    gain.gain.value = 1;
     let output = gain;
     if (panner) {
       panner.pan.value = music.spatialPan(contact.x);
@@ -1959,14 +1953,28 @@ function disconnectSkipVoice(engine, skip) {
       reflectionSend.gain.value = music.depthReflection(depth).sendGain * .38;
       output.connect(reflectionSend).connect(engine.reflection.input);
     }
-    const skip = { oscillator, nodes: [oscillator, filter, gain, panner, reflectionSend] };
+    const modes = response.modes.map(mode => {
+      const oscillator = engine.context.createOscillator(), envelope = engine.context.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(mode.frequency, now);
+      envelope.gain.setValueAtTime(0, now);
+      envelope.gain.linearRampToValueAtTime(mode.peak, now + response.attackSeconds);
+      envelope.gain.exponentialRampToValueAtTime(.000001, now + mode.duration);
+      envelope.gain.linearRampToValueAtTime(0, now + mode.duration + .02);
+      oscillator.connect(envelope).connect(filter);
+      oscillator.start(now);
+      oscillator.stop(now + mode.duration + .03);
+      return { oscillator, envelope };
+    });
+    const skip = {
+      oscillators: modes.map(mode => mode.oscillator),
+      nodes: [...modes.flatMap(mode => [mode.oscillator, mode.envelope]), filter, gain, panner, reflectionSend]
+    };
     engine.skipVoices.add(skip);
     canvas.dataset.skipVoices = String(engine.skipVoices.size);
     canvas.dataset.peakSkipVoices = String(Math.max(Number(canvas.dataset.peakSkipVoices) || 0, engine.skipVoices.size));
     canvas.dataset.skipEvents = String(++skipSerial);
-    oscillator.addEventListener('ended', () => disconnectSkipVoice(engine, skip), { once: true });
-    oscillator.start();
-    oscillator.stop(now + response.durationSeconds + .025);
+    modes[0].oscillator.addEventListener('ended', () => disconnectSkipVoice(engine, skip), { once: true });
     addRipple(x, y, .18 + contact.energy * .24, .38 + contact.energy * .24, response.frequency, false);
     return true;
   }
