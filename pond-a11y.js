@@ -71,7 +71,33 @@
     return KEYBOARD_LEGEND;
   }
 
+  // ---- The pond teaches its keyboard once --------------------------------
+  // A sighted player who tabs into the water had to guess that "?" exists;
+  // screen readers already hear the whole sentence. The map may introduce
+  // itself exactly once on the first honest keyboard visit, but only while
+  // it is still a stranger: after the player has played by keyboard, closed
+  // it, or been told once before on this device, it stays quiet. The decision
+  // is pure so the shell never has to re-derive it from the DOM.
+  const LEGEND_INTRO_VERSION = 1;
+
+  function legendIntroKey(version = LEGEND_INTRO_VERSION) {
+    const v = Number.isFinite(version) && version > 0 ? Math.trunc(version) : LEGEND_INTRO_VERSION;
+    return `pond-piano.legend-intro.v${v}`;
+  }
+
+  function shouldIntroduceLegend(state = {}) {
+    const keyboardVisit = state.keyboardVisit === true;
+    const seen = state.seen === true;
+    const dismissed = state.dismissed === true;
+    return keyboardVisit && !seen && !dismissed;
+  }
+
+  function legendIntroText() {
+    return 'Карта клавиш открылась сама: стрелки, пробел и G с H — вода отвечает. Закройте Escape или просто играйте.';
+  }
+
   return Object.freeze({
-    expandedState, countIndex: trapIndex, openIndex, bowlLocation, keyboardLegend
+    expandedState, countIndex: trapIndex, openIndex, bowlLocation, keyboardLegend,
+    legendIntroKey, shouldIntroduceLegend, legendIntroText
   });
 });

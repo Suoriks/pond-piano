@@ -21,6 +21,13 @@ const a11y = require('../pond-a11y.js');
     page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
     await page.goto(url, { waitUntil: 'networkidle' });
 
+    // Iteration 0069 gave the map an honest self-introduction on a first
+    // keyboard visit. This suite keeps proving the explicit paths ("?", the
+    // trigger, Escape, the trap), so it first marks the map as already seen on
+    // this device; the self-introduction has its own suite.
+    await page.evaluate(key => localStorage.setItem(key, 'seen'), a11y.legendIntroKey());
+    await page.reload({ waitUntil: 'networkidle' });
+
     const panelState = () => page.locator('#legend-panel').evaluate(el => ({
       visibility: getComputedStyle(el).visibility,
       expanded: document.querySelector('#legend-trigger').getAttribute('aria-expanded'),

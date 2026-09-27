@@ -79,3 +79,27 @@ test('keyboard legend names the routes the pond really answers', () => {
 test('the keyboard legend is the same list every time, not a rebuild', () => {
   assert.equal(a11y.keyboardLegend(), a11y.keyboardLegend());
 });
+
+test('the map introduces itself once, and only to a keyboard stranger', () => {
+  // First keyboard visit on a fresh device: yes.
+  assert.equal(a11y.shouldIntroduceLegend({ keyboardVisit: true, seen: false }), true);
+  // A pointer player is never interrupted by a keyboard map.
+  assert.equal(a11y.shouldIntroduceLegend({ keyboardVisit: false, seen: false }), false);
+  // Already shown once on this device, or closed by the player: quiet forever.
+  assert.equal(a11y.shouldIntroduceLegend({ keyboardVisit: true, seen: true }), false);
+  assert.equal(a11y.shouldIntroduceLegend({ keyboardVisit: true, seen: false, dismissed: true }), false);
+  // Broken input must fail closed, never open a panel on bad state.
+  assert.equal(a11y.shouldIntroduceLegend(), false);
+  assert.equal(a11y.shouldIntroduceLegend({}), false);
+  assert.equal(a11y.shouldIntroduceLegend({ keyboardVisit: 'yes', seen: false }), false);
+});
+
+test('the introduction storage key is versioned and never empty', () => {
+  assert.equal(a11y.legendIntroKey(), 'pond-piano.legend-intro.v1');
+  assert.equal(a11y.legendIntroKey(2), 'pond-piano.legend-intro.v2');
+  // Broken versions fall back to the current one instead of inventing a key.
+  assert.equal(a11y.legendIntroKey(0), 'pond-piano.legend-intro.v1');
+  assert.equal(a11y.legendIntroKey('nope'), 'pond-piano.legend-intro.v1');
+  assert.match(a11y.legendIntroText(), /Карта клавиш/);
+  assert.match(a11y.legendIntroText(), /Escape/);
+});

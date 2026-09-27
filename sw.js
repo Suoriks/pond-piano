@@ -1,5 +1,5 @@
-const CACHE = 'pond-piano-shell-v65';
-// Iteration 0068: the keyboard's own map - "?" opens the honest list of every route the pond answers.
+const CACHE = 'pond-piano-shell-v66';
+// Iteration 0069: the keyboard map may introduce itself once, and playing dismisses it.
 const SHELL = [
   './',
   './index.html',

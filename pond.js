@@ -1265,21 +1265,55 @@
       legendList.append(term, detail);
     }
   }
+  // The map may also introduce itself, exactly once, to a player who reaches
+  // the water by keyboard. That introduction must never pull focus off the
+  // water (so the player keeps playing), it is marked seen the moment it is
+  // shown, and a real gesture dismisses it for the rest of the session.
+  const LEGEND_INTRO_STORAGE_KEY = a11y.legendIntroKey();
+  let legendIntroSeen = false;
+  try { legendIntroSeen = localStorage.getItem(LEGEND_INTRO_STORAGE_KEY) === 'seen'; } catch {}
+  let legendIntroDismissed = false;
+  let keyboardVisited = false;
+
   function legendOpen() { return legendControl?.classList.contains('is-open') === true; }
   function legendPanelControls() { return legendClose instanceof HTMLButtonElement ? [legendClose] : []; }
-  function setLegendOpen(open) {
+  function markLegendSeen() {
+    if (legendIntroSeen) return;
+    legendIntroSeen = true;
+    try { localStorage.setItem(LEGEND_INTRO_STORAGE_KEY, 'seen'); } catch {}
+  }
+  function setLegendOpen(open, options = {}) {
     if (!legendControl || !legendTrigger) return;
+    const introduce = options.introduce === true;
     const hadFocusInside = legendControl.contains(document.activeElement) || legendTrigger === document.activeElement;
     legendControl.classList.toggle('is-open', open);
     legendTrigger.setAttribute('aria-expanded', a11y.expandedState(open));
-    if (open && !legendControl.contains(document.activeElement)) {
-      const controls = legendPanelControls();
-      controls[a11y.openIndex(controls.length) ?? 0]?.focus();
-      status.textContent = 'Карта клавиш пруда открыта; Escape закрывает её';
+    if (open) {
+      markLegendSeen();
+      if (introduce) {
+        status.textContent = a11y.legendIntroText();
+      } else if (!legendControl.contains(document.activeElement)) {
+        const controls = legendPanelControls();
+        controls[a11y.openIndex(controls.length) ?? 0]?.focus();
+        status.textContent = 'Карта клавиш пруда открыта; Escape закрывает её';
+      }
     } else if (!open && hadFocusInside) {
       legendTrigger.focus();
     }
   }
+  function introduceLegendOnKeyboardVisit() {
+    if (!a11y.shouldIntroduceLegend({
+      keyboardVisit: keyboardVisited, seen: legendIntroSeen, dismissed: legendIntroDismissed
+    })) return;
+    setLegendOpen(true, { introduce: true });
+  }
+  function dismissLegendForPlay() {
+    if (!legendOpen()) return;
+    legendIntroDismissed = true;
+    setLegendOpen(false);
+  }
+  document.addEventListener('keydown', () => { keyboardVisited = true; }, { capture: true });
+  document.addEventListener('pointerdown', () => { keyboardVisited = false; }, { capture: true });
   legendTrigger?.addEventListener('click', () => setLegendOpen(!legendOpen()));
   legendClose?.addEventListener('click', () => setLegendOpen(false));
   legendControl?.addEventListener('focusout', () => {
@@ -2520,10 +2554,28 @@ function disconnectSkipVoice(engine, skip) {
       : next;
   }
 
-  canvas.addEventListener('focus', () => announceKeyboardLocation(true));
+  canvas.addEventListener('focus', () => {
+    announceKeyboardLocation(true);
+    introduceLegendOnKeyboardVisit();
+  });
 
   canvas.addEventListener('keydown', event => {
     const movement = { ArrowLeft: [-.025, 0], ArrowRight: [.025, 0], ArrowUp: [0, -.035], ArrowDown: [0, .035] }[event.key];
+    // Escape closes the map from the water too, and keeps focus on the water:
+    // a keyboard player closing the map is still playing.
+    if (event.key === 'Escape' && legendOpen()) {
+      event.preventDefault();
+      legendIntroDismissed = true;
+      setLegendOpen(false);
+      return;
+    }
+    // Any real gesture dismisses the map: it is a guest, not a gate. "?" is
+    // left to the document-level toggle so the map is not closed and reopened
+    // in the same keystroke.
+    if (legendOpen() && event.key !== '?'
+      && (movement || event.code === 'Space' || event.key === 'Enter' || event.code === 'KeyG' || event.code === 'KeyH')) {
+      dismissLegendForPlay();
+    }
     if (movement) {
       event.preventDefault();
       const previousX = keyboard.x, previousY = keyboard.y;

@@ -1,12 +1,12 @@
 {
  "project": "pond-piano",
  "phase": "device-validation",
- "iteration": 68,
- "status": "keyboard-map-verified",
- "current_goal": "Iteration 0068: the keyboard's own map - a quiet \"Клавиши пруда\" slate in the corner opens with \"?\" (or a tap) and names every honest route the water answers (arrows, Space/Enter, the held dive, G, H, ?, Escape) as the same frozen list screen readers hear; it follows the shore panels' dialog rules (honest aria-expanded, focus inside, Tab trap, Escape back to the trigger), never steals \"?\" from a real text field, and fits all seven rows on a 390x844 phone without scrolling.",
- "previous_goal": "Iteration 0067: the three-voice chord flower has an honest keyboard route - holding a bowl and holding H opens two companion currents at their own bowls of water on either side, and after the same calm hold a touch trio must keep, the chord plane reads the trio and the shared flower opens; the chord's own geometry still validates the trio, so no pocket of the pond needs three fingers.",
- "last_verified": "2026-09-28: Node tests pass (87), 64 JS syntax clean. Instrumented production-loopback Chromium 390x844: the map is closed by default and renders all seven rows from the pure list; Tab still reaches the water first; \"?\" opens it, focus moves to Закрыть, aria-expanded flips true, panel is really visible, both targets are 44 px, Tab stays inside, Escape closes it and returns focus to the trigger, the trigger reopens it, an outside pointerdown closes it, and a \"?\" typed into a real input stays in the field; the water still struck a bowl afterwards (voices 1 -> 0); no browser errors. Screenshot output/pond-piano/keyboard-legend-68.png inspected directly: all seven rows and Закрыть fully inside the panel, no scroll or clipping, title and shore stones intact.",
- "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari) with a Bluetooth keyboard and TalkBack/VoiceOver: does the map read as one list of routes, does the corner slate get in the way of playing near the edge on a small screen, and should the map open by itself on the first keyboard focus.",
+ "iteration": 69,
+ "status": "keyboard-map-introduces-itself",
+ "current_goal": "Iteration 0069: the keyboard map introduces itself - on the first honest keyboard visit the quiet «Клавиши пуда» slate opens once on this device without pulling focus off the water, any real gesture (arrow, strike, G, H) dismisses it like a guest, and it never returns in the session or after a reload.",
+ "previous_goal": "Iteration 0068: the keyboard's own map - a quiet \"Клавиши пруда\" slate in the corner opens with \"?\" (or a tap) and names every honest route the water answers (arrows, Space/Enter, the held dive, G, H, ?, Escape) as the same frozen list screen readers hear; it follows the shore panels' dialog rules (honest aria-expanded, focus inside, Tab trap, Escape back to the trigger), never steals \"?\" from a real text field, and fits all seven rows on a 390x844 phone without scrolling.",
+ "last_verified": "2026-09-28: Node tests pass (89), 65 JS syntax clean. Instrumented production-loopback Chromium 390x844: map closed before the player arrives, a pointer touch on the water never summons it, the first Tab opens it with aria-expanded true / panel visible, focus stays on pond, the device key is stored as «seen» and the status reads the introduction, ArrowRight closes it in the same keystroke, re-focusing the water and a full reload never reopen it, the explicit \"?\" still opens it and moves focus to Закрыть, Escape closes it, and Space afterwards still strikes a bowl (voices 1 -> 0); no browser errors. 0068 regression (keyboard-legend-smoke.js) green: 7 rows, 44 px targets, \"?\" not stolen from a field. Screenshot output/pond-piano/keyboard-legend-intro-69.png inspected directly: all seven rows and Закрыть fully inside the panel over calm water, title and shore stones intact.",
+ "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari) with a Bluetooth keyboard and TalkBack/VoiceOver: does the introduction read as one calm list, does the open map get in the way of the first touch on a small screen, and should its first water touch (not only an outside pointerdown) close it.",
  "alpha_feedback": {
   "captured_at": "2026-07-26T13:59:00+03:00",
   "observations": [
@@ -681,5 +681,25 @@
    "screenshot output/pond-piano/keyboard-legend-68.png inspected directly (vision available this slot): all seven rows and Закрыть inside the panel with no scroll or clipping"
   ],
   "next_step": "done; the device-pass backlog now includes reading the map with TalkBack/VoiceOver and whether it should open on the first keyboard focus"
+ },
+ "iteration_69": {
+  "started": "2026-09-28T01:17:00+03:00",
+  "finished": "2026-09-28T01:50:00+03:00",
+  "phase": "done",
+  "plan": [
+   "pure legendIntroKey/shouldIntroduceLegend/legendIntroText in pond-a11y.js with tests",
+   "pond.js keyboard-modality tracking + once-per-device auto-open without stealing focus",
+   "Escape and real gestures dismiss the guest; ? still toggles and marks seen",
+   "intro smoke + 0068 regression preseed",
+   "eyebrow 69, shell v66, README sentence",
+   "KAIZEN 0069, state, commit"
+  ],
+  "verified": [
+   "node tests 89 pass; 65 JS syntax clean",
+   "intro smoke: pointer never summons, first Tab introduces (focus pond, stored seen, status text), ArrowRight dismisses, no repeat on focus or reload, explicit ? still works, water still strikes, no errors",
+   "0068 regression green: 7 rows, 44 px, field key safe",
+   "screenshot inspected directly: full map inside panel on 390x844"
+  ],
+  "next_step": "done; device-pass backlog updated with the introduction readability and first-touch-dismiss questions"
  }
 }
