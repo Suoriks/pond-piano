@@ -97,7 +97,7 @@
   let diaryOpen = false;
   let lastInkCount = -1;
   let lastPourAt = -Infinity;
-  const keyboard = { x: .5, y: .52, pitchX: .5, pressure: .48, sounding: false, born: 0, lastMotion: 0, motionSpeed: 0, mapping: null, materialBias: null, precisionActive: false, precisionAmount: 0, precisionOriginX: null, scoreSamples: [], distanceTraveled: 0, resonanceX: 0, resonanceY: 0, resonatedMemories: new Set(), dive: null, dived: false };
+  const keyboard = { x: .5, y: .52, pitchX: .5, pressure: .48, sounding: false, born: 0, lastMotion: 0, motionSpeed: 0, mapping: null, materialBias: null, precisionActive: false, precisionAmount: 0, precisionOriginX: null, scoreSamples: [], distanceTraveled: 0, resonanceX: 0, resonanceY: 0, resonatedMemories: new Set(), dive: null, dived: false, gather: null };
   let audio = null;
   let audioLifecycle = null;
   let masterState = loadMasterState();
@@ -1588,11 +1588,38 @@
       canvas.dataset.gatheringPearlVoices = '0';
     }, { once: true });
     if (!gatheringAnnounced) {
-      status.textContent = 'Два течения сошлись; вода собрала между пальцами светлую жемчужину';
+      status.textContent = 'Два течения сошлись; вода собрала светлую жемчужину';
       gatheringAnnounced = true;
     }
     earnedGatherHint = true;
     return true;
+  }
+
+  // The keyboard gather: the held bowl is the meeting point and the second
+  // current opens beside it; after the same hold a touch pair must keep, the
+  // water folds them into one pearl through the very same gesture and voice
+  // pool. Releasing G closes the second current early, with no pearl.
+  function clearKeyboardShadow() {
+    if (!keyboard.gather) return;
+    keyboard.gather = null;
+    endVoice('keyboard-shadow');
+  }
+
+  function updateKeyboardGather(now) {
+    const gather = keyboard.sounding ? keyboard.gather : null;
+    if (!gather || gather.folded) return;
+    if (now - gather.born < gesture.GATHER_MIN_HOLD_MS) return;
+    const pair = gesture.keyboardGather({
+      x: gather.anchorX, y: gather.anchorY, width, height, now, born: gather.born,
+      frequency: keyboard.struckFrequency ?? audio?.voices.get('keyboard')?.targetFrequency ?? pitchAt(gather.anchorX),
+      shadowFrequency: gather.frequency
+    });
+    if (!pair) return;
+    const plan = gesture.gatheringPearl(pair, now, { width, height });
+    if (!plan) return;
+    gather.folded = true;
+    endVoice('keyboard-shadow');
+    playGatheringPearl(plan);
   }
 
   function updateGatheringPearl(now, contacts) {
@@ -2467,6 +2494,25 @@ function disconnectSkipVoice(engine, skip) {
           hue: 152 + 30 * (1 - p.y / height) });
       }
     }
+    // The keyboard has one current, so the two-finger gather needs its own
+    // honest route: hold the bowl and hold G beside it. The second current
+    // opens at its own bowl of water and folds in after the same hold a touch
+    // pair must keep; the touch gesture itself still validates the pair.
+    if ((event.code === 'KeyG' || event.key === 'g' || event.key === 'G') && !event.repeat && keyboard.sounding && !keyboard.gather) {
+      event.preventDefault();
+      const now = performance.now(), p = keyboardPoint();
+      const pair = gesture.keyboardGather({
+        x: p.x, y: p.y, width, height, now, born: now,
+        frequency: keyboard.struckFrequency ?? audio?.voices.get('keyboard')?.targetFrequency ?? pitchAt(p.x)
+      });
+      if (pair) {
+        const shadow = pair[1];
+        keyboard.gather = { born: now, anchorX: p.x, anchorY: p.y, x: shadow.originX, frequency: pitchAt(shadow.originX), folded: false };
+        startVoice('keyboard-shadow', shadow.originX, p.y, .44, keyboard.gather.frequency, .44, audio, phraseNoteIndex);
+        addRipple(shadow.originX, p.y, .44);
+        status.textContent = 'Второе течение открылось; удержите G, и вода сведёт их в жемчужину';
+      }
+    }
     if ((event.code === 'Space' || event.key === 'Enter') && !event.repeat && !keyboard.sounding) {
       event.preventDefault();
       const now = performance.now();
@@ -2488,6 +2534,11 @@ function disconnectSkipVoice(engine, skip) {
     }
   });
   canvas.addEventListener('keyup', event => {
+    if ((event.code === 'KeyG' || event.key === 'g' || event.key === 'G') && keyboard.gather) {
+      event.preventDefault();
+      clearKeyboardShadow();
+      return;
+    }
     if ((event.code === 'Space' || event.key === 'Enter') && keyboard.sounding) {
       event.preventDefault();
       const p = keyboardPoint(), now = performance.now();
@@ -2496,6 +2547,7 @@ function disconnectSkipVoice(engine, skip) {
       keyboard.sounding = false; endVoice('keyboard');
       keyboard.struckX = null;
       keyboard.dive = null; keyboard.dived = false;
+      clearKeyboardShadow();
       announceKeyboardLocation(true);
       addRipple(p.x, p.y, .48, .55, keyboard.mapping?.frequency ?? pitchAt(p.x));
       // The keyboard voice earns the settle lesson by the same measure as
@@ -2510,6 +2562,7 @@ function disconnectSkipVoice(engine, skip) {
       keyboard.sounding = false; endVoice('keyboard');
       keyboard.struckX = null;
       keyboard.dive = null; keyboard.dived = false;
+      clearKeyboardShadow();
     }
   });
 
@@ -3397,6 +3450,7 @@ function disconnectSkipVoice(engine, skip) {
         born: keyboardVisual.born, lastMotion: keyboardVisual.lastMotion, sounding: true
       });
     }
+    updateKeyboardGather(now);
     updateGatheringPearl(now, gatheringContacts);
     updateChordBloom(now, chordContacts);
     for (const pointer of soundingPointers) drawPitchCurrents(pointer, now);

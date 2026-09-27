@@ -1,5 +1,5 @@
-const CACHE = 'pond-piano-shell-v62';
-// Iteration 0063: a skipping stone answers with a bounded two-mode pebble, not a falling sweep.
+const CACHE = 'pond-piano-shell-v63';
+// Iteration 0066: the two-finger gather has an honest keyboard route - the pond builds the same validated pair.
 const SHELL = [
   './',
   './index.html',

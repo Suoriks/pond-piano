@@ -216,6 +216,52 @@
     return pair.map(contact => String(contact.id)).sort().join('|');
   }
 
+  // A keyboard has one live current, so the two-finger gather cannot happen
+  // there at all: a player who cannot touch two points at once never earns
+  // the pearl the pond teaches. This builds the same honest pair a touch
+  // player makes - two currents that open a safe span apart and travel
+  // inward to one meeting point. The held bowl is that meeting point; the
+  // second current opens beside it on whichever side has room, so the fold
+  // can never run off the water. Geometry stays the touch path's own:
+  // gatheringPearl still validates the pair below, so a keyboard gather is
+  // neither easier nor richer than a real one.
+  const KEYBOARD_GATHER_SPAN_RATIO = .34;
+  const KEYBOARD_GATHER_FOLD_RATIO = .012;
+
+  function keyboardGather(bounds = {}) {
+    const width = Number(bounds.width), height = Number(bounds.height);
+    const now = Number(bounds.now), born = Number(bounds.born);
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return null;
+    if (!Number.isFinite(now) || !Number.isFinite(born)) return null;
+    const x = Number(bounds.x), y = Number(bounds.y);
+    const frequency = Number(bounds.frequency);
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(frequency) || frequency <= 0) return null;
+    const shadowFrequency = Number.isFinite(Number(bounds.shadowFrequency)) && Number(bounds.shadowFrequency) > 0
+      ? Number(bounds.shadowFrequency) : frequency;
+    const span = Math.max(1, Math.min(width, height));
+    const anchorX = clamp(x, 0, width), anchorY = clamp(y, 0, height);
+    const half = span * KEYBOARD_GATHER_SPAN_RATIO / 2;
+    const fold = span * KEYBOARD_GATHER_FOLD_RATIO / 2;
+    // Both currents must open inside the water. Prefer the roomier side, but
+    // a bowl near one edge may only have room on the other; if neither side
+    // fits the honest span, no second current opens at all.
+    const fits = direction => {
+      const held = anchorX - direction * half, shadow = anchorX + direction * half;
+      return held >= 0 && held <= width && shadow >= 0 && shadow <= width;
+    };
+    const preferred = anchorX <= width / 2 ? 1 : -1;
+    const direction = fits(preferred) ? preferred : fits(-preferred) ? -preferred : 0;
+    if (!direction) return null;
+    const shadowOriginX = anchorX + direction * half;
+    const heldOriginX = anchorX - direction * half;
+    return Object.freeze([
+      Object.freeze({ id: 'keyboard', x: anchorX - direction * fold, y: anchorY,
+        originX: heldOriginX, originY: anchorY, frequency, born }),
+      Object.freeze({ id: 'keyboard-shadow', x: anchorX + direction * fold, y: anchorY,
+        originX: shadowOriginX, originY: anchorY, frequency: shadowFrequency, born })
+    ]);
+  }
+
   // Two live currents can be deliberately pulled into one pearl. Both
   // contacts must begin safely apart, travel towards their original shared
   // midpoint, and close most of the distance without dragging that midpoint
@@ -395,6 +441,7 @@
     eddyExpression,
     skippingStone,
     gatheringKey,
+    keyboardGather,
     gatheringPearl,
     gatheringVisual,
     beginDepthDive,

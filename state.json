@@ -1,12 +1,12 @@
 {
   "project": "pond-piano",
   "phase": "device-validation",
-  "iteration": 65,
-  "status": "dive-gather-bowls-verified",
-  "current_goal": "Iteration 0065: the two-finger gathering pearl and the depth dive answer with bounded two-mode bowls (seated pitch + fast octave that finishes first) instead of ascending/falling pitch sweeps; both share the rate-limited collision voice pool, so no short pond answer slides between two artificial pitches.",
-  "previous_goal": "Iteration 0064: both visible banks answer with bounded two-mode bowls (seated pitch + fast octave) instead of single-oscillator pitch sweeps; the warm near lap and cool far skim keep their distinct balance and their shared, rate-limited transient pool.",
-  "last_verified": "2026-09-27: Node tests pass (85), 61 JS syntax clean. Instrumented production loopback Chromium 390x844 with real Web Audio: a two-finger gather formed exactly one pearl (pearlEvents 1, peakPearlVoices 1, pool back to 0, no child ripple or score entry) and the post-rest downward stroke folded into one low answer (transient pool drained to 0, sustain alive); keyboard hold+ArrowDown reaches the same fold; no browser errors. Baseline HEAD also flaked the same smoke, so the 4s unlock-tail wait was widened to 12s (pre-existing flake, not a regression).",
-  "next_step": "Listen to the gathered pearl and the depth dive beside the accepted bowls on real Android/iPhone speakers: does the bright bead read as two currents meeting and does the low dive survive a phone speaker. The note's own drop (waterDrop) and the pearl-node birth still carry their own older shape; other non-transient voices unchanged.",
+  "iteration": 66,
+  "status": "keyboard-gather-verified",
+  "current_goal": "Iteration 0066: the two-finger gathering pearl has an honest keyboard route - holding a bowl and holding G opens a second current beside it that folds in after the same hold a touch pair waits, and the touch gesture itself still validates the synthesized pair, so no pocket of the pond is unreachable without two fingers.",
+  "previous_goal": "Iteration 0065: the two-finger gathering pearl and the depth dive answer with bounded two-mode bowls (seated pitch + fast octave that finishes first) instead of ascending/falling pitch sweeps; both share the rate-limited collision voice pool, so no short pond answer slides between two artificial pitches.",
+  "last_verified": "2026-09-27: Node tests pass (85), 61 JS syntax clean. Instrumented production loopback Chromium 390x844 with real Web Audio and a real keyboard: holding Space then holding G opened the second current (two voices, its own bowl pitch 490.548 beside the held 392.438, status announced), the fold after the touch hold produced exactly one pearl (gatheringPearlEvents 1, peakGatheringPearlVoices 1), and the pearl pool and the voice count both drained back to 0; no browser errors. Screenshot output/pond-piano/keyboard-gather-66.png inspected: one bright bead with the two folding arm currents on calm full water, title and eyebrow 66 intact, no clipping.",
+  "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari) for the keyboard path with a Bluetooth keyboard or TalkBack/VoiceOver quick-nav: does the G route read as \"open a second current, then fold\", and should the pond also offer a keyboard route to the three-voice chord bloom, which is the remaining gesture a single current cannot reach.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -340,7 +340,7 @@
     ],
     "next_step": "done; real-device pass should compare the warm near lap and cool far skim on phone speakers and bright screens"
   },
-  "current_iteration": 65,
+  "current_iteration": 66,
   "iteration_51": {
     "started": "2026-09-02T22:17:00+03:00",
     "phase": "done",
@@ -625,5 +625,23 @@
       "61 JS files pass syntax; git diff --check clean",
       "instrumented loopback Chromium 390x844: one gather pearl (pool back to 0, no child ripple/score) and one low dive answer (pool drained, sustain alive); no page/console errors; screenshots inspected"
     ]
+  },
+  "iteration_66": {
+    "started": "2026-09-27T22:20:00+03:00",
+    "finished": "2026-09-27T22:55:00+03:00",
+    "phase": "done",
+    "plan": [
+      "pure keyboardGather() in pond-gesture.js: the held bowl is the meeting point, the second current opens a safe span beside it on the roomier side, both currents close, and the touch gesture still validates the pair",
+      "pond.js: hold G beside a held bowl opens the second voice and an honest ripple; after GATHER_MIN_HOLD_MS the fold runs the touch gesture and the shared pearl pool; releasing G closes it early",
+      "unit asserts for the keyboard pair, the shared hold, the edge with no room, and the moved meeting point; instrumented Chromium keyboard smoke",
+      "eyebrow 66, shell v63, README sentence, one commit and push"
+    ],
+    "verified": [
+      "node tests: 85 pass; new asserts confirm two currents inside the water, the same 240ms hold, one pearl at the held bowl, the edge refusing a second current",
+      "syntax: 61 JS files clean",
+      "instrumented production-loopback Chromium 390x844 + real keyboard: one pearl, peak pool 1, both pools drained to 0, second current sounded its own bowl",
+      "screenshot output/pond-piano/keyboard-gather-66.png inspected directly: one bead with two folding arms on calm water, no clipping, no dashboard artifact"
+    ],
+    "next_step": "done; the device-pass backlog now includes the keyboard route and the still keyboard-unreachable three-voice chord bloom"
   }
 }

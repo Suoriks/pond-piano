@@ -137,6 +137,29 @@ assert.ok(gatherEarly.alive && gatherEarly.alpha > 0);
 assert.ok(gatherOpen.fold > gatherEarly.fold && gatherOpen.radius > gatherEarly.radius);
 assert.equal(gatherReduced.fold, .82, 'reduced motion keeps a calm gathered shape instead of animated convergence');
 assert.ok(gatherReduced.alpha > 0);
+
+// The keyboard has one current, so the pond builds the pair for it. The same
+// touch validation still runs, so a keyboard gather can never outrun a hand.
+const kbdBounds = { width: 390, height: 844 };
+const kbdPair = gesture.keyboardGather({ x: 120, y: 300, width: 390, height: 844, now: 1000, born: 760, frequency: 220, shadowFrequency: 330 });
+assert.equal(kbdPair.length, 2);
+assert.equal(kbdPair[0].id, 'keyboard');
+assert.equal(kbdPair[1].id, 'keyboard-shadow');
+assert.ok(kbdPair.every(contact => contact.originX >= 0 && contact.originX <= 390), 'both currents open inside the water');
+assert.equal(gesture.gatheringPearl(kbdPair, 900, kbdBounds), null, 'the keyboard still waits the same hold a touch pair waits');
+const kbdPearl = gesture.gatheringPearl(kbdPair, 1000, kbdBounds);
+assert.ok(kbdPearl, 'a held keyboard pair gathers through the touch gesture itself');
+assert.equal(kbdPearl.x, 120, 'the pearl is born at the held bowl');
+assert.deepEqual(kbdPearl.frequencies, [220, 330], 'the pearl keeps the two bowls that met');
+assert.notEqual(kbdPair[0].x, kbdPair[1].x, 'the two currents close most of their opening span');
+const kbdRight = gesture.keyboardGather({ x: 300, y: 300, width: 390, height: 844, now: 1000, born: 760, frequency: 220 });
+assert.ok(kbdRight.every(contact => contact.originX >= 0 && contact.originX <= 390),
+  'a bowl near the right shore opens its second current on the roomier side');
+assert.equal(gesture.keyboardGather({ x: 5, y: 300, width: 390, height: 844, now: 1000, born: 760, frequency: 220 }), null,
+  'no room for a second current means the water offers none');
+assert.equal(gesture.keyboardGather({ x: 120, y: 300, width: 390, height: 844, now: 1000, frequency: 220 }), null);
+assert.equal(gesture.keyboardGather({ x: NaN, y: 300, width: 390, height: 844, now: 1000, born: 760, frequency: 220 }), null);
+assert.equal(gesture.keyboardGather({ x: 120, y: 300, width: 390, height: 844, now: 1000, born: 760, frequency: 0 }), null);
 assert.equal(gesture.gatheringVisual(gathered, gathered.born - 1, false).alpha, 0);
 assert.equal(gesture.gatheringVisual(gathered, gathered.born + gesture.GATHER_LIFE_MS, false).alive, false);
 
