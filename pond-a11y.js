@@ -49,7 +49,29 @@
       text: `чаша ${index} из 11, вода: ${depthName}` });
   }
 
+  // ---- The keyboard's own slate -------------------------------------------
+  // The pond answers more than a strike: arrows choose a bowl and a depth, the
+  // held dive sinks, G folds two currents into a pearl, H opens the three-voice
+  // flower. A sighted keyboard player had no way to discover any of that, and
+  // screen readers only heard one long sentence. This is the same honest list
+  // for both: every route names a key the shell really handles, in the order a
+  // new player needs them, and the copy is rendered as text rather than baked
+  // into markup so it cannot drift from the layer that proves it.
+  const KEYBOARD_LEGEND = Object.freeze([
+    Object.freeze({ keys: 'Стрелки', text: 'выбрать одну из 11 чаш и глубину следующего удара' }),
+    Object.freeze({ keys: 'Пробел или Enter', text: 'ударить выбранную чашу' }),
+    Object.freeze({ keys: 'Выдержка + ↓', text: 'после спокойной выдержки нырнуть в глубину' }),
+    Object.freeze({ keys: 'G с зажатой чашей', text: 'открыть второе течение и свести его в жемчужину' }),
+    Object.freeze({ keys: 'H с зажатой чашей', text: 'открыть два соседних течения и удержать общий цветок' }),
+    Object.freeze({ keys: '?', text: 'открыть или закрыть эту карту' }),
+    Object.freeze({ keys: 'Escape', text: 'закрыть карту или панель берега' })
+  ]);
+
+  function keyboardLegend() {
+    return KEYBOARD_LEGEND;
+  }
+
   return Object.freeze({
-    expandedState, countIndex: trapIndex, openIndex, bowlLocation
+    expandedState, countIndex: trapIndex, openIndex, bowlLocation, keyboardLegend
   });
 });

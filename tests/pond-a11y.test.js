@@ -50,3 +50,32 @@ test('spoken position matches the eleven actual bowl cells and coarse depth', ()
   assert.deepEqual(a11y.bowlLocation(NaN, Infinity), a11y.bowlLocation(1, 1));
   assert.ok(Object.isFrozen(a11y.bowlLocation(.5, .5)));
 });
+
+test('keyboard legend names the routes the pond really answers', () => {
+  const legend = a11y.keyboardLegend();
+  assert.ok(Array.isArray(legend) && Object.isFrozen(legend));
+  // Every route is a small immutable record with a real key and a real act,
+  // and the list is long enough to cover the whole gesture set.
+  assert.ok(legend.length >= 5);
+  for (const route of legend) {
+    assert.ok(Object.isFrozen(route));
+    assert.equal(typeof route.keys, 'string');
+    assert.equal(typeof route.text, 'string');
+    assert.ok(route.keys.trim().length > 0, 'a route must name its keys');
+    assert.ok(route.text.trim().length > 0, 'a route must name its act');
+  }
+  // No two rows may teach the same key, or a player would read a duplicate.
+  const keys = legend.map(route => route.keys);
+  assert.equal(new Set(keys).size, keys.length);
+  const spoken = legend.map(route => `${route.keys} — ${route.text}`).join('\n');
+  assert.match(spoken, /Стрелки/);
+  assert.match(spoken, /Пробел или Enter/);
+  assert.match(spoken, /Выдержка \+ ↓/);
+  assert.match(spoken, /G с зажатой чашей/);
+  assert.match(spoken, /H с зажатой чашей/);
+  assert.match(spoken, /\?/);
+});
+
+test('the keyboard legend is the same list every time, not a rebuild', () => {
+  assert.equal(a11y.keyboardLegend(), a11y.keyboardLegend());
+});

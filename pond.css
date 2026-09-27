@@ -231,14 +231,63 @@ h1 { margin: 0; font: 400 clamp(24px, 4vw, 44px)/1.05 Georgia, serif; letter-spa
 .diary-return:hover { border-color: rgba(214, 234, 186, .58); filter: brightness(1.12); transform: translateY(-1px); }
 .diary-return:focus-visible { outline: 3px solid #dae7b4; outline-offset: 2px; }
 .diary-return:active { filter: brightness(1.25); }
+/* The keyboard's own slate. The pond answers arrows, a strike, the held dive,
+   G and H, but a sighted keyboard player had nothing to discover that from.
+   A quiet corner slate opens the honest map with "?" and closes with Escape,
+   by the same dialog rules as the other two shore panels. */
+.legend-control { position: relative; margin-top: 16px; pointer-events: auto; }
+.legend-trigger {
+  min-height: 44px; padding: 10px 15px; cursor: pointer;
+  color: #dce6ce; font: 600 12px/1.2 inherit; letter-spacing: .03em;
+  border: 1px solid rgba(190, 214, 180, .3);
+  border-radius: 46% 54% 50% 50% / 52% 46% 54% 48%;
+  background: linear-gradient(150deg, rgba(31, 46, 36, .82), rgba(10, 24, 19, .82));
+  box-shadow: inset 0 1px rgba(232, 240, 210, .08), 0 8px 18px rgba(0, 7, 5, .5);
+  transition: border-color .2s ease, filter .2s ease, transform .2s ease;
+}
+.legend-trigger:hover { border-color: rgba(218, 232, 191, .54); filter: brightness(1.08); }
+.legend-trigger:focus-visible { outline: 3px solid #dae7b4; outline-offset: 3px; }
+.legend-control.is-open .legend-trigger { border-color: rgba(206, 226, 186, .6); }
+.legend-panel {
+  position: absolute; left: 0; top: calc(100% + 8px); width: min(340px, calc(100vw - 24px)); padding: 15px 17px 14px;
+  color: #edf2de; border: 1px solid rgba(190, 214, 180, .3);
+  border-radius: 44% 56% 48% 52% / 14% 18% 16% 20%;
+  background: linear-gradient(155deg, rgba(33, 48, 37, .97), rgba(10, 24, 19, .97));
+  box-shadow: inset 0 1px rgba(232, 240, 210, .09), 0 16px 34px rgba(0, 7, 5, .58);
+  opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(9px) scale(.97); transform-origin: 8% 0;
+  transition: opacity .18s ease, transform .22s ease, visibility 0s linear .22s;
+}
+.legend-control.is-open .legend-panel { opacity: 1; visibility: visible; pointer-events: auto; transform: translateY(0) scale(1); transition-delay: 0s; }
+.legend-heading { margin: 0 0 9px 2px; color: #9fb7a5; font: 600 10px/1.2 ui-monospace, monospace; letter-spacing: .14em; text-transform: uppercase; }
+.legend-list { display: grid; grid-template-columns: auto 1fr; gap: 6px 11px; align-items: start; margin: 0; max-height: 52vh; overflow-y: auto; }
+.legend-key {
+  margin: 0; padding: 3px 8px; white-space: nowrap;
+  color: #eef4e0; font: 600 11px/1.5 ui-monospace, monospace;
+  border: 1px solid rgba(198, 224, 182, .3); border-radius: 10px;
+  background: rgba(88, 122, 96, .22);
+}
+.legend-text { margin: 0; color: #d3ddc4; font-size: 12.5px; line-height: 1.45; }
+.legend-close {
+  width: 100%; min-height: 44px; margin-top: 11px; padding: 8px 12px; cursor: pointer;
+  color: #dcead1; font: 600 12px/1.2 inherit;
+  border: 1px solid rgba(198, 224, 182, .3);
+  border-radius: 46% 54% 52% 48% / 54% 46% 52% 48%;
+  background: linear-gradient(150deg, hsla(96 38% 26% / .55), hsla(96 40% 12% / .7));
+  transition: border-color .18s ease, filter .18s ease, transform .18s ease;
+}
+.legend-close:hover { border-color: rgba(214, 234, 186, .58); filter: brightness(1.12); }
+.legend-close:focus-visible { outline: 3px solid #dae7b4; outline-offset: 2px; }
+.legend-close:active { filter: brightness(1.25); }
 @media (max-width: 420px) {
   .tuning-control { left: max(12px, env(safe-area-inset-left)); bottom: max(11px, env(safe-area-inset-bottom)); }
   .shore-control { right: max(14px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); }
   .volume-panel { right: -2px; }
   .diary-control { left: max(10px, env(safe-area-inset-left)); bottom: max(76px, calc(env(safe-area-inset-bottom) + 76px)); }
   .diary-panel { left: -2px; width: min(248px, calc(100vw - 88px)); }
+  .legend-panel { left: -8px; width: min(334px, calc(100vw - 40px)); }
 }
 @media (prefers-reduced-motion: reduce) {
   .hint, .tuning-pebble, .volume-stone, .volume-stone::after, .volume-panel,
-  .diary-stone, .diary-stone::after, .diary-panel, .diary-entry, #diary-count { transition: none; }
+  .diary-stone, .diary-stone::after, .diary-panel, .diary-entry, #diary-count,
+  .legend-trigger, .legend-panel, .legend-close { transition: none; }
 }

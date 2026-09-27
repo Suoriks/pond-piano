@@ -1,665 +1,685 @@
 {
-  "project": "pond-piano",
-  "phase": "device-validation",
-  "iteration": 67,
-  "status": "keyboard-chord-verified",
-  "current_goal": "Iteration 0067: the three-voice chord flower has an honest keyboard route - holding a bowl and holding H opens two companion currents at their own bowls of water on either side, and after the same calm hold a touch trio must keep, the chord plane reads the trio and the shared flower opens; the chord's own geometry still validates the trio, so no pocket of the pond needs three fingers.",
-  "previous_goal": "Iteration 0066: the two-finger gathering pearl has an honest keyboard route - holding a bowl and holding G opens a second current beside it that folds in after the same hold a touch pair waits, and the touch gesture itself still validates the synthesized pair, so no pocket of the pond is unreachable without two fingers.",
-  "last_verified": "2026-09-27: Node tests pass (85), 62 JS syntax clean. Instrumented production loopback Chromium 390x844 with real Web Audio and a real keyboard: holding Space then H opened exactly two companion currents (three voices), the calm hold opened exactly one shared flower (chordBloomEvents 1, chordBloomVoices 1, chordBlooms 1), and both the flower pool and the voice count drained back to 0; no browser errors. Screenshot output/pond-piano/keyboard-chord-67.png inspected: three converging ring currents with a shared bright flower at the centre on calm full water, title intact, no clipping.",
-  "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari) with a Bluetooth keyboard and TalkBack/VoiceOver: does the H route read as \"open two companion currents, then hold the chord\", does the three-voice trio strain small-screen assistive tech, and should the pond give screen readers an explicit note about the new G/H keys.",
-  "alpha_feedback": {
-    "captured_at": "2026-07-26T13:59:00+03:00",
-    "observations": [
-      "Random short taps currently sound too similar apart from pitch.",
-      "Visible wave collisions should sometimes produce their own sound.",
-      "Android multi-touch needs real-device proof and polish."
-    ],
-    "constraints": [
-      "Keep variation coherent and gesture-derived rather than arbitrary random presets.",
-      "Collision sounds must be rate-limited, non-recursive and cheap enough for mobile.",
-      "Preserve up to six musical voices unless device measurements prove a lower limit is necessary."
-    ]
-  },
-  "platform_target": [
-    "desktop",
-    "linux",
-    "android",
-    "ios"
+ "project": "pond-piano",
+ "phase": "device-validation",
+ "iteration": 68,
+ "status": "keyboard-map-verified",
+ "current_goal": "Iteration 0068: the keyboard's own map - a quiet \"Клавиши пруда\" slate in the corner opens with \"?\" (or a tap) and names every honest route the water answers (arrows, Space/Enter, the held dive, G, H, ?, Escape) as the same frozen list screen readers hear; it follows the shore panels' dialog rules (honest aria-expanded, focus inside, Tab trap, Escape back to the trigger), never steals \"?\" from a real text field, and fits all seven rows on a 390x844 phone without scrolling.",
+ "previous_goal": "Iteration 0067: the three-voice chord flower has an honest keyboard route - holding a bowl and holding H opens two companion currents at their own bowls of water on either side, and after the same calm hold a touch trio must keep, the chord plane reads the trio and the shared flower opens; the chord's own geometry still validates the trio, so no pocket of the pond needs three fingers.",
+ "last_verified": "2026-09-28: Node tests pass (87), 64 JS syntax clean. Instrumented production-loopback Chromium 390x844: the map is closed by default and renders all seven rows from the pure list; Tab still reaches the water first; \"?\" opens it, focus moves to Закрыть, aria-expanded flips true, panel is really visible, both targets are 44 px, Tab stays inside, Escape closes it and returns focus to the trigger, the trigger reopens it, an outside pointerdown closes it, and a \"?\" typed into a real input stays in the field; the water still struck a bowl afterwards (voices 1 -> 0); no browser errors. Screenshot output/pond-piano/keyboard-legend-68.png inspected directly: all seven rows and Закрыть fully inside the panel, no scroll or clipping, title and shore stones intact.",
+ "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari) with a Bluetooth keyboard and TalkBack/VoiceOver: does the map read as one list of routes, does the corner slate get in the way of playing near the edge on a small screen, and should the map open by itself on the first keyboard focus.",
+ "alpha_feedback": {
+  "captured_at": "2026-07-26T13:59:00+03:00",
+  "observations": [
+   "Random short taps currently sound too similar apart from pitch.",
+   "Visible wave collisions should sometimes produce their own sound.",
+   "Android multi-touch needs real-device proof and polish."
   ],
-  "shell_hypothesis": "offline-first-pwa",
-  "iteration_34": {
-    "started": "2026-08-23T13:10:00+03:00",
-    "finished": "2026-08-23T13:45:00+03:00",
-    "phase": "done",
-    "plan": [
-      "add clean keepScreenAwake({visible, soundingVoices}) policy to the audio-lifecycle layer",
-      "add keepScreenAwake tests (live note holds, silence/background/negative release)",
-      "wrap the pond canvas in .gesture-surface: user-select/touch-callout/tap-highlight+overscroll none; leave shore controls and panels interactive",
-      "hook scheduleWakeSync() into voice start/release and lifecycle events; debounce 260ms; swallow unsupported",
-      "verify: node tests (23), syntax (25 JS incl scripts), JSON + git diff --check, headless Chromium smoke + screenshot inspection",
-      "bump eyebrow to 34 and shell cache to v31; commit one iteration and push to main"
-    ],
-    "verified": [
-      "node tests: 23 pass across 9 suites (incl keepScreenAwake asserts)",
-      "syntax: 25 JS files clean",
-      "JSON validity + git diff --check clean",
-      "headless Chromium smoke green: no console errors, gesture-surface holds user-select:none + overscroll:none, gesture voices 1 while held, 0 after release",
-      "screenshot direct inspection: full-bleed water, intact controls, no crop, organic composition",
-      "vision model unavailable (image-model limit), replaced by direct pixel/screenshot proof"
-    ],
-    "next_step": "done; real-device pass remains as the shared backlog, now with 0034 shell readiness folded in"
+  "constraints": [
+   "Keep variation coherent and gesture-derived rather than arbitrary random presets.",
+   "Collision sounds must be rate-limited, non-recursive and cheap enough for mobile.",
+   "Preserve up to six musical voices unless device measurements prove a lower limit is necessary."
+  ]
+ },
+ "platform_target": [
+  "desktop",
+  "linux",
+  "android",
+  "ios"
+ ],
+ "shell_hypothesis": "offline-first-pwa",
+ "iteration_34": {
+  "started": "2026-08-23T13:10:00+03:00",
+  "finished": "2026-08-23T13:45:00+03:00",
+  "phase": "done",
+  "plan": [
+   "add clean keepScreenAwake({visible, soundingVoices}) policy to the audio-lifecycle layer",
+   "add keepScreenAwake tests (live note holds, silence/background/negative release)",
+   "wrap the pond canvas in .gesture-surface: user-select/touch-callout/tap-highlight+overscroll none; leave shore controls and panels interactive",
+   "hook scheduleWakeSync() into voice start/release and lifecycle events; debounce 260ms; swallow unsupported",
+   "verify: node tests (23), syntax (25 JS incl scripts), JSON + git diff --check, headless Chromium smoke + screenshot inspection",
+   "bump eyebrow to 34 and shell cache to v31; commit one iteration and push to main"
+  ],
+  "verified": [
+   "node tests: 23 pass across 9 suites (incl keepScreenAwake asserts)",
+   "syntax: 25 JS files clean",
+   "JSON validity + git diff --check clean",
+   "headless Chromium smoke green: no console errors, gesture-surface holds user-select:none + overscroll:none, gesture voices 1 while held, 0 after release",
+   "screenshot direct inspection: full-bleed water, intact controls, no crop, organic composition",
+   "vision model unavailable (image-model limit), replaced by direct pixel/screenshot proof"
+  ],
+  "next_step": "done; real-device pass remains as the shared backlog, now with 0034 shell readiness folded in"
+ },
+ "git_sync": "synced",
+ "git_remote": "https://github.com/Suoriks/pond-piano.git",
+ "git_branch": "main",
+ "iteration_40": {
+  "started": "2026-08-23T21:50:00+03:00",
+  "finished": "2026-08-23T22:25:00+03:00",
+  "phase": "done",
+  "resumed_from_interrupted_slot": true,
+  "plan": [
+   "finish tests/pond-music.test.js: fix reserved-word 'with' variable, series dropScale asserts, honest neutral-shade expectation, budget bounds for stronger tint",
+   "run pond-music suite, then all node suites + syntax + JSON + git diff --check",
+   "bump eyebrow 40 and sw.js shell v37",
+   "instrumented headless Chromium smoke: tap series exposes distinct droplet transients, X pitch untouched by shades, release clean, no console errors; screenshot",
+   "KAIZEN 0040 entry, README sentence, state.json final, one commit, push to main, watch Windows CI"
+  ],
+  "verified": [
+   "node tests: 47 pass across 13 suites (shade asserts updated: deterministic 3-length droplet series, honest neutral base, budget bounds for stronger tint)",
+   "syntax: 34 JS files clean; JSON validity + git diff --check clean",
+   "instrumented same-X three-tap smoke green: droplet spans 0.1284 (clear) < 0.1625 (neutral) < 0.1763 (deep), matching dropScale .9/1/1.1 on the 0.1425s base (~48ms spread)",
+   "smoke retry scoping fixed on the way: per-attempt baseline so a failed first tap's oscillators no longer pollute the window; product unchanged",
+   "no console/page errors; screenshot output/pond-piano/shade-taps-40.png; vision model unavailable (limit), water surface unchanged this slot"
+  ],
+  "next_step": "done; device-pass backlog includes listening to a quick tap series on a real speaker"
+ },
+ "iteration_35": {
+  "started": "2026-08-23T14:20:00+03:00",
+  "phase": "done",
+  "plan": [
+   "pure invitation(now, reducedMotion, played) in pond-score.js with tests",
+   "shell: #water-invitation line in .title-block, eyebrow 35",
+   "pond.js: pond-piano.invitation.v1 persistence, markPondPlayed() on pointer+keyboard paths, breathing ring drawn on canvas while unseen",
+   "sw.js shell v32; README sentence",
+   "verify: node suites, syntax, JSON, headless smoke with pixel probes + reload persistence",
+   "KAIZEN 0035 entry, commit, push to main"
+  ],
+  "verified": [
+   "node tests: 23 pass across suites incl new invitation asserts",
+   "syntax: 24 JS files clean",
+   "JSON validity + git diff --check clean (pending final run)",
+   "headless Chromium smoke: line visible before, gone after first gesture, still hidden after reload; inviteAlpha breathes 0.612->0.337 then 0",
+   "pixel breath proof: ring patch delta 60.8 vs 0.1 in quiet water",
+   "PNG screenshot pixel probe: ring 279.8 vs 113.0 quiet water; after play 147.0 background level",
+   "vision model unavailable (limit), replaced by direct pixel proof as in 24/28-33"
+  ],
+  "next_step": "done; device-pass backlog updated with invitation readability check",
+  "finished": "2026-08-23T14:40:00+03:00"
+ },
+ "iteration_36": {
+  "started": "2026-08-23T15:26:37+03:00",
+  "finished": "2026-08-23T15:32:25+03:00",
+  "phase": "done",
+  "plan": [
+   "new pure layer pond-budget.js: measure p95 frame cost over a window, degrade quality in steps when over budget, recover when sustained idle low cost",
+   "pond-budget.test.js: budget thresholds, degrade/stable-ignore/recover rules, reduced-motion floor, honor original intended level",
+   "hook into pond.js draw loop: budget.step(costMs) before render, apply ripple/motes/tide/ink styles per current quality",
+   "index.html + sw.js shell v33 + package.json add pond-budget.js; README one sentence",
+   "verify: node suites, syntax, JSON, git diff --check, headless smoke with budget-reduction pixel probe",
+   "bump eyebrow to 36; KAIZEN 0036; commit one iteration and push to main"
+  ],
+  "verified": [
+   "node tests: 28 pass across 10 suites (incl 6 new pond-budget asserts: calm start, no single-frame drop, sustained-load degradation, reduced-motion floor, easy-stretch recovery, unknown-family calm)",
+   "syntax: 28 JS files clean",
+   "JSON validity + git diff --check clean",
+   "headless Chromium 390x844 smoke: budget layer wired (budgetFrameMs measured 0.20 before, 0.50 after a short ripple gesture; budgetStep=0 on a fast desktop renderer with no errors), shell stays calm under a note",
+   "budget logic proven in pure layer unit tests, since a fast desktop renderer legitimately stays under the p95 budget; real-device tone stays the measured source of truth"
+  ],
+  "next_step": "real device pass: on Android/iOS measure actual p95 frame cost and confirm the eased steps engage and recover; keep thresholds derived only from measured devices"
+ },
+ "iteration_37": {
+  "started": "2026-08-23T15:45:00+03:00",
+  "finished": "2026-08-23T17:35:00+03:00",
+  "phase": "done",
+  "plan": [
+   "pure PondA11y layer in pond-a11y.js: honest expandedState, Tab trap countIndex, openIndex; freeze as deterministic API",
+   "tests pond-a11y.test.js: honest closed/muted/open, trap forward/backward, damaged bounds, first-target when present",
+   "wire into pond.js: setVolumePanelOpen/setDiaryPanelOpen keep aria-expanded honest, focus in on open / back to stone on close, bounded Tab trap inside open panel",
+   "diary panel role=dialog aria-modal=false, triggers aria-haspopup=dialog; opening diary with rows lands focus on row 1",
+   "index.html + sw.js shell v34 + package.json add pond-a11y.js; README + eyebrow 37",
+   "verify: node suites, syntax, JSON, git diff --check, instrumented headless smoke (+ pixel proof), KAIZEN 0037, commit and push to main"
+  ],
+  "verified": [
+   "node tests: 32 pass across 11 suites (incl 4 new a11y asserts)",
+   "syntax: 31 JS files clean",
+   "JSON validity + git diff --check clean",
+   "instrumented Chromium smoke green: honest closed/open states, focus-in on open, Tab wrap range->mute->range, Esc return to stones, diary with rows opens onto row 1 entry",
+   "PNG screenshot shore-a11y-37.png saved as valid full-frame 390x844; vision model unavailable (limit), direct inspection as in 24/28-36"
+  ],
+  "next_step": "done; the two smoke scenarios that expected panel-close on loop-start were corrected to the realistic diary path (product unchanged); real-device focus/Tab check stays on the shared backlog"
+ },
+ "iteration_39": {
+  "started": "2026-08-23T20:20:00+03:00",
+  "finished": "2026-08-23T21:05:00+03:00",
+  "phase": "done",
+  "plan": [
+   "pure pond-repose.js: re-seat live pixel layers into new space at normalized places, polar eddy arm stretch, damaged-input clamps",
+   "tests pond-repose.test.js: normalized invariance both axes, wave voice fields kept, trail ends, splash angle, corona ray plan, flight contacts, pointer anchors + eddy re-arm, NaN/negative/junk safety",
+   "pond.js resize(): repose ripples/trails/splashes/coronas/pearls/glints/flights + pointers Map; clear stale collision timers/latches; layerless fallback drops artifacts instead of stranding them",
+   "index.html + sw.js shell v36 + package.json (files & build.files) add pond-repose.js; eyebrow 39; README sentence",
+   "verify: node suites, syntax, JSON, git diff --check, instrumented resize smoke with held-note pixel probes, two-voice five-resize stress",
+   "KAIZEN 0039, state final, one commit, push to main"
+  ],
+  "verified": [
+   "node tests: 47 pass across 13 suites (incl 12 new repose asserts)",
+   "syntax: 34 JS files clean",
+   "JSON validity + git diff --check clean",
+   "resize smoke green: held voice 1->1 across 1280x720 -> 390x844, contact light at new normalized place (297.9 vs quiet 112.8), old spot faded to background, fresh ripple in new space, release clean, no console errors",
+   "stress pass: two held voices survived five consecutive resizes (2->2->0 after release)",
+   "measurement artifact caught: audioVoices counts release tails (~1.5s); instant keyboard press-release looked like a lost voice - product unchanged, smoke learned to wait out tails",
+   "vision model unavailable (limit); direct pixel probes as in 24-38; screenshot output/pond-piano/repose-resize-39.png"
+  ],
+  "next_step": "done; shared backlog now includes device-side resize-heavy moments: orientation change and keyboard appearance"
+ },
+ "iteration_41": {
+  "started": "2026-08-23T22:20:00+03:00",
+  "phase": "done",
+  "plan": [
+   "add pure phraseScroll + routePhrase to pond-score.js with tests",
+   "browser: third diary action per row copies a self-contained scroll to clipboard + live status",
+   "sw.js v38, eyebrow 41, README sentence",
+   "verify node suite, syntax, JSON, git diff, headless smoke + screenshot",
+   "KAIZEN 0041, commit one iteration, push main"
+  ],
+  "finished": "2026-08-23T23:05:00+03:00",
+  "verified": [
+   "node tests: 48 pass across 13 suites (6 new phrase-scroll asserts)",
+   "syntax: 35 JS files clean (36 with scroll-smoke.js present); JSON validity + git diff --check clean",
+   "instrumented headless Chromium 390x844: diary row after one phrase shows three actions, click lifts a real compact scroll (Pond phrase, contour from 22 points, pitch 64 depth 49 flow 1.1s, dawn), lastScroll dataset set, status announces the phrase left the pond with no console errors",
+   "screenshot output/pond-piano/scroll-take-41.png direct inspection: diary panel open, row carries three buttons, water organic and full-bleed; cramped phrase wrapping in the narrow panel is a pre-existing trait, not this iteration"
+  ],
+  "next_step": "done; the shared device-pass backlog now includes the diary pane (rows + Zabrat) and pasting the scroll on a real device"
+ },
+ "iteration_42": {
+  "started": "2026-08-23T23:17:00+03:00",
+  "finished": "2026-08-23T23:40:00+03:00",
+  "phase": "done",
+  "plan": [
+   "add pure parseScrollText + inkFromScroll to pond-score.js with tests",
+   "browser: diary return stone reads the clipboard scroll back as fresh ink + status",
+   "diaryPanelControls includes return; sw.js v39, eyebrow 42, README sentence",
+   "verify node suite, syntax, JSON, git diff, headless smoke + screenshot",
+   "KAIZEN 0042, commit one iteration, push main"
+  ],
+  "verified": [
+   "node tests: 47 pass across suites (13 new scroll-return asserts); syntax 36 JS clean; JSON + git diff --check clean",
+   "instrumented headless Chromium 390x844: diary row has 3 actions, take lifts a real scroll; return stone reads it back, inkLines 1->2, status announces returned to water; no console errors",
+   "screenshot output/pond-piano/scroll-return-42.png; pixel probe confirmed the green return stone at the panel bottom edge; vision model unavailable (limit), unpacked by direct probe as in 24/28-41"
+  ],
+  "next_step": "done; the shared device-pass backlog now includes pasting a scroll into a note and returning it on a live device, plus return-stone readability in the narrow diary panel"
+ },
+ "iteration_43": {
+  "started": "2026-08-24T00:20:00+03:00",
+  "phase": "in-progress",
+  "plan": [
+   "pure scrollSummary(scroll) in pond-score.js with tests",
+   "shell: #diary-leaf preview sheet in diary panel; copyPhraseScroll fills it; #leaf-return seats via shared return path",
+   "keyboard trap includes the leaf action; focus restore guards leaf focus; sw.js v40, eyebrow 43, README sentence",
+   "verify node suite, syntax, JSON, git diff --check, instrumented smoke + screenshot",
+   "KAIZEN 0043, state final, one commit, push main"
+  ],
+  "finished": "2026-08-24T00:52:00+03:00",
+  "verified": [
+   "node tests: 47 pass across 13 suites (incl scrollSummary asserts)",
+   "syntax: 37 JS files clean; JSON validity + git diff --check clean",
+   "instrumented headless Chromium 390x844: leaf appears with real carried text after take, Tab order rows->leaf->return stone, leaf click seats phrase back (inkLines 1->2, honest status), clipboard return still works (2->3), background hides leaf with other deferred echoes",
+   "screenshots output/pond-piano/shore-leaf-open-43.png + shore-leaf-43.png; pixel probe: paper band RGB 61/75/62 over water 23/60/58; vision model unavailable (limit)"
+  ],
+  "next_step": "done; device-pass backlog now includes leaf readability/touch on live screens and rotation behavior"
+ },
+ "iteration_44": {
+  "started": "2026-08-24T01:20:00+03:00",
+  "phase": "done",
+  "plan": [
+   "pure waterRelease(holdMs, normalizedDepth, materialBaseSeconds) in pond-music.js with bounds + clamps",
+   "tests in tests/pond-music.test.js: tap keeps material base, long hold stretches with depth, shallow stays dry, bounded, monotonic, broken inputs safe",
+   "pond.js endVoice(): schedule stop at waterRelease result, fade time-constant follows the tail, dataset.lastRelease probe",
+   "sw.js v41, eyebrow 44, README sentence about the departure",
+   "verify: node suites, syntax, JSON, git diff --check, instrumented headless Chromium audio smoke (tap vs 1.6s hold at same point)",
+   "KAIZEN 0044, state final, one commit, push main, watch Windows CI"
+  ],
+  "finished": "2026-08-24T01:45:00+03:00",
+  "verified": [
+   "node tests: 47 pass across suites (incl 11 new waterRelease asserts); module smoothstep no longer passes NaN through",
+   "syntax: 38 JS files clean; JSON validity + git diff --check clean",
+   "instrumented headless Chromium 390x844 live-audio smoke green: mid tap .502 -> hold .590, deep tap .578 -> hold .722; stop spans 0.64/2.28 mid, 0.73/2.43 deep match gesture+tail; bounded <= 1.15; no console errors",
+   "screenshot output/pond-piano/water-release-44.png; pixel probe center 163.8 vs shore 47.2, 23 bright patches; vision model unavailable (limit)"
+  ],
+  "next_step": "done; device-pass backlog now includes whether the stretched deep-note departure feels like sinking, not lag"
+ },
+ "iteration_45": {
+  "started": "2026-08-24T02:20:00+03:00",
+  "phase": "done",
+  "plan": [
+   "pure releaseGlint(depth, releaseSeconds, now, born, reducedMotion) in pond-waves.js: life from the stretched release (bounded min/max), sink progress, warmth by depth, broken-input safe",
+   "tests/pond-waves.test.js: tap keeps short visible life, hold/deep lives longer and bounded, sink grows with progress and reduced motion cancels it, broken clocks bounded, strict end",
+   "pond.js: voices remember last x/y; endVoice pushes releaseGlints (cap 12); drawReleaseGlint budget-gated like collision glint; resize repose + fallback drop; dataset.releaseGlints live counter",
+   "departure-glint-smoke.js instrumented probe: held-deep glint visible life follows waterRelease stretch (950ms vs ~900ms), quick tap shorter+bounded (642ms), counter returns to 0 and stays, relative same-frame pixel delta +169",
+   "sw.js shell v42, eyebrow 45, README sentence about the light departing with the sound",
+   "verify: node suites (51), syntax (39 JS), JSON + git diff --check, instrumented headless Chromium smoke + screenshot",
+   "KAIZEN 0045, state final, one commit, push main, watch Windows CI"
+  ],
+  "finished": "2026-08-24T11:20:00+03:00",
+  "verified": [
+   "node tests: 51 pass (incl 4 new releaseGlint asserts: life follows the stretched tail, dims/sinks monotonically, strict end + broken-clock safety, reduced motion rests instead of sinking)",
+   "syntax: 39 JS files clean; JSON validity + git diff --check clean",
+   "instrumented headless Chromium 390x844 live-audio smoke green: deep hold 1.65s -> lastRelease .707s, glint visible life ~950ms vs expected ~900ms (measured rAF-to-rAF from mouse.up), quick mid tap 642ms (shorter and bounded), dataset.releaseGlints returns to 0 after departure and stays 0",
+   "relative same-frame pixel probe: glint spot +169 vs same-band control point; screenshot output/pond-piano/departure-glint-45.png",
+   "no console/page errors"
+  ],
+  "next_step": "done; shared device-pass backlog now includes watching+listening: does the stretched departure of a held deep note feel like \"the note sank, light going with it\" rather than a pause before the next touch"
+ },
+ "iteration_46": {
+  "started": "2026-08-24T18:40:00+03:00",
+  "finished": "2026-08-24T20:15:00+03:00",
+  "phase": "done",
+  "plan": [
+   "add pure whisperState/whisperHint/whisperVisibility to pond-score.js mapping real gesture facts to one short lesson at a time",
+   "add whisper tests (once per session, honest pause, reduced-motion life, refuse broken inputs)",
+   "wire pond.js: offerWhisper only after first play, never while a hand/keyboard voice sounds, once per session, gather earned eddy/stone/settle at release",
+   "drawWhisper renders a calm dark plate on open water; dataset.whisperAlpha for instrumentation",
+   "index.html eyebrow 46, sw.js shell v43, README sentence",
+   "scripts/whisper-smoke.js instrumented headless Chromium smoke + screenshot",
+   "verify node tests, syntax, JSON + git diff --check, then one commit and push to main"
+  ],
+  "verified": [
+   "node tests: 54 pass (was 51, +3 whisper asserts)",
+   "syntax: 41 JS files clean; JSON + git diff --check clean",
+   "instrumented headless Chromium 390x844 live Web Audio: no whispers before first touch; 1.25s hold earns settle (alpha 0.606, status names it), plate moves its band beyond ambient drift (box -20.7 vs edge +0.9); second hold silent (once per session); flick in pause earned but declined; after 16s pause a fast straight flick earns the stone lesson (alpha 0.875, status names it); reload resets whispers and keeps played; no console errors",
+   "screenshot output/pond-piano/water-whisper-46.png direct-inspected: calm dark whisper plate on open water, organic composition, controls intact, no crop"
+  ],
+  "next_step": "shared device backlog continues; for the whisper add a live-listening item: does the one-line lesson read as a quiet whisper rather than copy, and is the 16s pause comfortable on a real device"
+ },
+ "iteration_47": {
+  "started": "2026-08-24T20:15:00+03:00",
+  "finished": "2026-08-24T21:20:00+03:00",
+  "phase": "done",
+  "plan": [
+   "add pure predictShore/shoreFold to pond-waves.js (ring reaching the near bank folds as one quiet return; broken/expired/resting rings stay quiet)",
+   "add shoreLap note to pond-music.js (shorter, lower, quieter than a pearl; shares the collision voice pool)",
+   "wire pond.js: scheduleShoreLaps from addRipple, playShoreLap draw a warm return curl on the shoreline and play the note rate-limited; dataset.shoreLaps counter",
+   "bump eyebrow to 47 and sw.js shell v44, README sentence",
+   "shore-lap-smoke.js instrumented headless Chromium smoke + screenshot",
+   "verify node tests, syntax, JSON + git diff --check, then one commit and push to main"
+  ],
+  "verified": [
+   "node tests: 58 pass (was 54, +4 shore-fold/shore-prediction)",
+   "syntax: 42 JS clean; JSON + git diff --check clean",
+   "instrumented headless Chromium 390x844 live Web Audio: prognost, a tap in open water near the bank honestly earned a shore lap (dataset.shoreLaps 1>0, proof the audio pool was live and the note truly played); after return pearlVoices is 0 again (the voice resigned the pool); no console errors",
+   "screenshot output/pond-piano/shore-lap-47.png direct-inspected: warm organic teal water with an amber returning fold at the shore, controls intact, no artifacts"
+  ],
+  "next_step": "shared device backlog continues; add a listening/viewing item for the shore lap - does a near-bank return read as a quiet wave answer rather than a second hit, and does it fire too often on a crowded real pond under live fingers"
+ },
+ "iteration_48": {
+  "started": "2026-08-24T21:30:00+03:00",
+  "finished": "2026-08-24T22:30:00+03:00",
+  "phase": "done",
+  "plan": [
+   "pure rehearsalDecision(taps, ink, now, reducedMotion, options) in pond-score.js: exactly two calm taps close in time and place summon the newest readable ink line; single/machine-gun/wide/slid taps and absent-or-expired ink stay silent",
+   "export shared REHEARSAL_TAP_HOLD_MS / REHEARSAL_TAP_MOVE / REHEARSAL_WINDOW_MS / REHEARSAL_MAX_TAPS; fix place-spread to normalized (0..1) units",
+   "pond.js: keep a short tap history; on a calm double-tap on open water call startPourLoop(newest line) so the phrase begins its quiet circling echo",
+   "rehearsal-smoke.js instrumented headless Chromium smoke + screenshot",
+   "verify node tests, syntax, JSON + git diff --check, then one commit and push to main; Windows CI to follow"
+  ],
+  "verified": [
+   "node tests: 63 pass (was 58, +5 rehearsalDecision suites)",
+   "syntax: 34 JS + scripts clean; JSON + git diff --check clean",
+   "instrumented headless Chromium 390x844 live Web Audio: after a held note laid an ink line, two calm close taps set dataset.loopingLine=1 + rehearsalSummon=1 and loopPasses=1 (the newest phrase began circling and pouring); no console errors",
+   "screenshot output/pond-piano/rehearsal-48.png direct-inspected: warm organic teal water, a visible ink line, a warm amber circling mark at the loop, controls intact, no crop"
+  ],
+  "next_step": "shared device backlog continues; does the double-tap rehearsal read as an intentional summon rather than a miscount of two quick notes on real touch, and does its quiet repeated echo stay comfortable on live speakers"
+ },
+ "iteration_50": {
+  "started": "2026-09-02T21:17:00+03:00",
+  "finished": "2026-09-02T21:27:00+03:00",
+  "phase": "done",
+  "resumed_from_interrupted_slot": true,
+  "plan": [
+   "complete pure predictFarSkim/farSkimFold geometry and family-guided farSkim transient",
+   "wire one scheduled far-edge response into the browser using the shared bank timer registry and collision voice pool",
+   "draw and resize a cool inward fold; keep reduced motion still and frame-budget-aware",
+   "add unit coverage and a live-Web-Audio Chromium smoke with screenshot inspection",
+   "update product docs, cache/eyebrow, kaizen state, commit one iteration and push main"
+  ],
+  "verified": [
+   "69 node tests pass; four new wave suites cover prediction/refusal/fold/reduced-motion and music assertions compare the skim with the near-bank lap",
+   "45 JavaScript files pass syntax; JSON validity and git diff --check clean",
+   "instrumented Chromium 390x844: farSkims 0->1, shared transient pool 1 while sounding and 0 after ended, no browser errors",
+   "existing shore-lap smoke remains green; near-bank transient now honestly occupies the shared pool until oscillator ended",
+   "screenshot output/pond-piano/far-bank-50.png inspected: organic full-bleed water, subtle cool upper-right fold, controls/title intact, no clipping or UI rectangle"
+  ],
+  "next_step": "done; real-device pass should compare the warm near lap and cool far skim on phone speakers and bright screens"
+ },
+ "current_iteration": 67,
+ "iteration_51": {
+  "started": "2026-09-02T22:17:00+03:00",
+  "phase": "done",
+  "pivot": "Pre-implementation shell inspection found a release-blocking compatibility bug more important than the proposed chord bloom: index.html requests pond-repose.js, pond-tide.js, pond-budget.js and pond-a11y.js, but Electron static-server allowlist returns 404 for all four. pond.js then throws before rendering. Iteration narrowed to one complete desktop-shell repair.",
+  "plan": [
+   "make the secure Electron loopback allowlist serve every current script required by index.html, without widening it to arbitrary repository files",
+   "add a closure regression that compares index script dependencies, server allowlist and packaged Electron files",
+   "run the exact desktop static server through Chromium, make a real sound gesture, verify live rendering/audio/no 404 or console errors and inspect a screenshot",
+   "update product docs and kaizen state, commit exactly this compatibility repair and push main"
+  ],
+  "verified": [
+   "71 Node tests pass (was 69); two closure tests bind every local index.html script to the Electron allowlist, package.files, build.files and a real file",
+   "47 JavaScript files pass syntax; state/package JSON and git diff --check are clean",
+   "production createStaticServer Chromium smoke 1280x800 passes 6/6: 12 scripts loaded with no HTTP failures, one real Web Audio voice sounded, renderer stayed alive at 0.40ms sampled frame, one score memory was recorded, and voice pool returned to zero with no console/page errors",
+   "npm pack --dry-run contains 25 files and all four repaired runtime layers plus the desktop server and index; no required file missing",
+   "screenshot output/pond-piano/desktop-shell-51.png inspected after final eyebrow/cache update: Etude 51, full-bleed organic pond, held-note ripple, title and shore controls intact, no blank/error or rectangular artifact"
+  ],
+  "next_step": "done; Windows CI artifact build follows push, and a real Windows launch remains the release-pass",
+  "finished": "2026-09-02T22:22:00+03:00"
+ },
+ "iteration_52": {
+  "started": "2026-09-03T08:17:00+03:00",
+  "phase": "done",
+  "plan": [
+   "add a pure pond-chord.js layer for stable chord membership, weighted centroid/spread/energy and bounded bloom timing",
+   "add a family-guided quiet chord-bloom tone derived from the live frequencies",
+   "wire one latched bloom per unchanged 3-6 voice chord into Canvas/Web Audio without child ripples or score entries; clean it on background",
+   "include the layer in PWA/Electron/package closure and add unit plus instrumented Chromium coverage with screenshot inspection",
+   "update product docs, kaizen state, commit exactly iteration 0052 and push main"
+  ],
+  "verified": [
+   "76 Node tests pass (was 71); five new pure chord suites cover stable membership, held/calm gates, bounded 3-6 voice geometry, malformed input and reduced motion; music assertions bound the family-guided shared tone",
+   "50 JavaScript files pass syntax; package/state JSON and git diff --check are clean; npm pack dry-run contains pond-chord.js and all required shell files",
+   "production Electron loopback Chromium 390x844 passes 7/7: 3 sustain voices -> one audible+visible bloom; unchanged membership stays at event 1; changed membership reaches exactly event 2; ripple count stays 3->3 and score stays 0; sustain and bloom pools both return to zero; no page/console errors",
+   "first smoke exposed and fixed a renderer clock split: performance.now() could sit just ahead of the current rAF timestamp and cull the newborn bloom; visual birth now uses the pure plan rAF clock",
+   "screenshot output/pond-piano/chord-bloom-52.png inspected: three contact centres and their shared organic flower are readable; title and shore stones intact; no clipping or rectangular dashboard artifact"
+  ],
+  "next_step": "done; real-device backlog now includes a three-finger hold to judge the 520ms intent threshold, low root on phone speakers and bloom legibility under fingers",
+  "finished": "2026-09-03T08:25:00+03:00"
+ },
+ "iteration_53": {
+  "started": "2026-09-03T15:17:00+03:00",
+  "phase": "done",
+  "plan": [
+   "add a pure two-contact gathering gesture: meaningful inward travel from a safely separated start, stable midpoint and bounded trigger geometry",
+   "derive one quiet family-guided pearl tone from both live frequencies and draw two converging water folds plus a resting bead",
+   "latch once per unchanged pair; use the shared bounded transient pool; create no sustain voice, child ripple or score entry; respect reduced motion and lifecycle cleanup",
+   "add unit coverage and a production-loopback Chromium multi-pointer smoke with screenshot inspection",
+   "update shell closure, product docs and kaizen state, commit exactly iteration 0053 and push main"
+  ],
+  "finished": "2026-09-03T15:27:00+03:00",
+  "verified": [
+   "76 Node tests pass; pond-gesture and pond-music assertions now cover valid inward gathering, stable pair order, fresh/parallel/drifting/three-contact refusals, reduced motion, strict lifetime, family-guided pitch and transient bounds",
+   "51 JavaScript files pass syntax; package/state JSON, git diff --check and npm pack dry-run are clean; package still contains all required shared shell layers",
+   "production Electron loopback Chromium 390x844 passes 6/6: two independent touch sustain voices converge 250->60px into one audible+visible pearl, unchanged pair stays at one event, child ripple and score deltas remain zero, sustain/transient pools release, no page/console errors",
+   "screenshot output/pond-piano/gathering-pearl-53.png inspected after final shell update: eyebrow 53, two organic converging folds and central bright bead visible between live contacts; title and shore controls intact, no clipping or rectangular dashboard artifact"
+  ],
+  "next_step": "done; real-device backlog now includes two-finger gathering ergonomics, accidental-pinch rejection and the high pearl tone on phone speakers"
+ },
+ "iteration_54": {
+  "started": "2026-09-03T18:17:00+03:00",
+  "finished": "2026-09-03T18:40:00+03:00",
+  "phase": "done",
+  "plan": [
+   "add chord and gather whisper keys/texts to pond-score.js with whisperState shown map",
+   "earn flags in playChordBloom/playGatheringPearl and emit events in end()",
+   "retire earned flags only when a whisper is accepted, so multi-touch releases let the last finger speak",
+   "wrap long lessons onto two calm lines; size each plate to its own text",
+   "unit tests for the new lessons + golden-path queue",
+   "instrumented Chromium smoke: real chord bloom -> flower whisper, real gathering -> pearl whisper, second gathering silent",
+   "eyebrow 54, shell cache v51, README sentence, KAIZEN entry, commit and push main"
+  ],
+  "verified": [
+   "79 Node tests pass (was 76); new whisper tests cover chord once-per-session, gather once-per-session and the golden-path queue settle->chord->gather with honest pauses",
+   "52 JavaScript files pass syntax; state JSON, git diff --check clean",
+   "whisper-chord-gather-smoke.js production loopback Chromium 390x844: 6/6 - real 3-voice chord bloom earned the flower whisper (alpha .305, text names the shared bloom), real two-finger gathering earned the pearl whisper (alpha .304, text names the pearl), a second gathering stayed whisper-silent; no page/console errors",
+   "screenshot whisper-chord-gather-54.png inspected: two-line lesson plate fully inside the phone screen with side margins, title and shore stones intact, no rectangular dashboard artifact; earlier single-line clipping fixed by the wrap"
+  ],
+  "next_step": "device-pass: read the flower and pearl lessons on Android Chrome/PWA and iPhone Safari"
+ },
+ "iteration_55": {
+  "started": "2026-09-04T14:17:00+03:00",
+  "phase": "done",
+  "plan": [
+   "add pure glideWake(speed, age) expression to pond-music.js with bounded sound/visual outputs and tests",
+   "retarget the existing voice filter/overtone from the decaying measured movement speed; add no audio nodes and do not alter pitch/depth mapping",
+   "carry the same wake amount into pointer and keyboard trails, with reduced-motion retaining one calm local strand",
+   "add production-loopback Chromium smoke proving wake rise, decay, fixed positional pitch, clean release and a visual screenshot",
+   "update docs/cache/eyebrow/kaizen state, commit exactly iteration 0055 and push main"
+  ],
+  "verified": [
+   "79 Node tests pass; glideWake asserts cover attack/rest silence, monotonic speed, sound/visual ceilings, immutable output and damaged-input fallback",
+   "53 JavaScript files pass syntax; state/package/manifest JSON and git diff --check are clean; npm pack dry-run contains 26 files and the changed runtime shell",
+   "production Electron loopback Chromium 390x844 passes 7/7: one held voice wake 0->1->0, existing cutoff 2667.1->3147.2->2667.1 Hz and overtone 0.1399->0.1739->0.1399, exact moving X pitch 601.058 Hz, four live visual wake segments, clean release, no errors",
+   "first smoke assertion wrongly expected the resting held pitch to remain continuous; corrected because the existing held-note current attraction is intentional and independent of wake closure; product unchanged",
+   "desktop-shell smoke 6/6 and gathering-pearl smoke 6/6 remain green",
+   "screenshot output/pond-piano/glide-wake-55.png inspected: paired organic wake visible, eyebrow 55 and controls intact, no clipping/dashboard artifact",
+   "KAIZEN restored the omitted 0054 journal entry while recording 0055"
+  ],
+  "next_step": "device-pass: on Android Chrome/PWA and iPhone Safari, compare slow and fast glides at one depth; the paired wake should feel attached to the hand and its brightness audible without resembling a new attack. Tune numeric ceilings only from real-device evidence.",
+  "finished": "2026-09-04T14:52:00+03:00"
+ },
+ "iteration_56": {
+  "started": "2026-09-04T23:20:00+03:00",
+  "phase": "done",
+  "plan": [
+   "add pure beginDepthDive/updateDepthDive/depthDiveVisual gesture geometry with refusal and reduced-motion tests",
+   "add one family-related bounded low depthDiveTone derived from the live pitch",
+   "wire one latched dive per held contact into the existing transient pool without changing sustain pitch, score or ripple count",
+   "draw the real stroke as a sinking seam with bounded bubbles; include resize/lifecycle cleanup and instrumentation",
+   "run unit/syntax/package checks plus production-loopback Chromium gesture smoke and screenshot inspection",
+   "update shell cache, product docs and kaizen state; commit exactly iteration 0056 and push main"
+  ],
+  "verified": [
+   "79 Node tests pass; pure dive tests cover acceptance, verticality/travel/energy bounds, diagonal/upward/slow/stale refusal, malformed input and reduced-motion stillness; music tests bound family-guided low tone pitch, envelope, cutoff and gain",
+   "54 JavaScript files pass syntax; state/package/manifest JSON, git diff --check and npm pack dry-run (26 files) are clean",
+   "production Electron loopback Chromium 390x844 passes 9/9: pointer and keyboard each create one audible+visible fold, original sustain remains live, no child ripple or score entry, same contact stays latched, transient and sustain pools release, no errors",
+   "keyboard smoke exposed first-sample velocity dilution by the preceding hold; an 80ms sampling grace preserves the candidate while genuinely slow completed motion still dissolves; rerun passes",
+   "desktop shell 6/6, gathering pearl 6/6 and glide wake 7/7 regressions pass",
+   "screenshot output/pond-piano/depth-dive-56.png inspected: organic near-vertical seam, three subtle bubbles and lower fold visible; eyebrow 56 and shore controls intact, no clipping or rectangular UI"
+  ],
+  "next_step": "device-pass: on Android Chrome/PWA and iPhone Safari, hold a note then plunge down quickly with one finger; the low response should feel like depth beneath the same voice, not a second hit. Check accidental triggering during ordinary vertical glissando and system-edge gestures; tune thresholds only from real-device evidence.",
+  "finished": "2026-09-04T23:27:00+03:00"
+ },
+ "sound_feedback_20260905": {
+  "reference": "singing bowls: simple, meditative",
+  "acceptance": "A child taps randomly and it sounds good; no training required.",
+  "rejected": "unmelodic, dull, repetitive howling",
+  "priority": "sound quality before extra gestures or visuals",
+  "listening_verdict_1316": "Евгений прослушал before/after итерации57: «Да, новая звучит лучше». Направление принято, не означает готовность1.0 или проверку реальных устройств."
+ },
+ "iteration_57": {
+  "phase": "accepted-baseline",
+  "implemented_at": "2026-09-05T13:11:04.851839+03:00",
+  "audio_evidence": "output/bowls-57/summary.json",
+  "before_audio": "output/bowls-57/before.wav",
+  "after_audio": "output/bowls-57/after.wav",
+  "windows_gate": {
+   "requires_exact_commit": true,
+   "receipt": "output/bowls-57/windows-ci.json",
+   "note": "Commit-time snapshot: CI result is written to the local receipt after push, not asserted before the build."
   },
-  "git_sync": "synced",
-  "git_remote": "https://github.com/Suoriks/pond-piano.git",
-  "git_branch": "main",
-  "iteration_40": {
-    "started": "2026-08-23T21:50:00+03:00",
-    "finished": "2026-08-23T22:25:00+03:00",
-    "phase": "done",
-    "resumed_from_interrupted_slot": true,
-    "plan": [
-      "finish tests/pond-music.test.js: fix reserved-word 'with' variable, series dropScale asserts, honest neutral-shade expectation, budget bounds for stronger tint",
-      "run pond-music suite, then all node suites + syntax + JSON + git diff --check",
-      "bump eyebrow 40 and sw.js shell v37",
-      "instrumented headless Chromium smoke: tap series exposes distinct droplet transients, X pitch untouched by shades, release clean, no console errors; screenshot",
-      "KAIZEN 0040 entry, README sentence, state.json final, one commit, push to main, watch Windows CI"
-    ],
-    "verified": [
-      "node tests: 47 pass across 13 suites (shade asserts updated: deterministic 3-length droplet series, honest neutral base, budget bounds for stronger tint)",
-      "syntax: 34 JS files clean; JSON validity + git diff --check clean",
-      "instrumented same-X three-tap smoke green: droplet spans 0.1284 (clear) < 0.1625 (neutral) < 0.1763 (deep), matching dropScale .9/1/1.1 on the 0.1425s base (~48ms spread)",
-      "smoke retry scoping fixed on the way: per-attempt baseline so a failed first tap's oscillators no longer pollute the window; product unchanged",
-      "no console/page errors; screenshot output/pond-piano/shade-taps-40.png; vision model unavailable (limit), water surface unchanged this slot"
-    ],
-    "next_step": "done; device-pass backlog includes listening to a quick tap series on a real speaker"
-  },
-  "iteration_35": {
-    "started": "2026-08-23T14:20:00+03:00",
-    "phase": "done",
-    "plan": [
-      "pure invitation(now, reducedMotion, played) in pond-score.js with tests",
-      "shell: #water-invitation line in .title-block, eyebrow 35",
-      "pond.js: pond-piano.invitation.v1 persistence, markPondPlayed() on pointer+keyboard paths, breathing ring drawn on canvas while unseen",
-      "sw.js shell v32; README sentence",
-      "verify: node suites, syntax, JSON, headless smoke with pixel probes + reload persistence",
-      "KAIZEN 0035 entry, commit, push to main"
-    ],
-    "verified": [
-      "node tests: 23 pass across suites incl new invitation asserts",
-      "syntax: 24 JS files clean",
-      "JSON validity + git diff --check clean (pending final run)",
-      "headless Chromium smoke: line visible before, gone after first gesture, still hidden after reload; inviteAlpha breathes 0.612->0.337 then 0",
-      "pixel breath proof: ring patch delta 60.8 vs 0.1 in quiet water",
-      "PNG screenshot pixel probe: ring 279.8 vs 113.0 quiet water; after play 147.0 background level",
-      "vision model unavailable (limit), replaced by direct pixel proof as in 24/28-33"
-    ],
-    "next_step": "done; device-pass backlog updated with invitation readability check",
-    "finished": "2026-08-23T14:40:00+03:00"
-  },
-  "iteration_36": {
-    "started": "2026-08-23T15:26:37+03:00",
-    "finished": "2026-08-23T15:32:25+03:00",
-    "phase": "done",
-    "plan": [
-      "new pure layer pond-budget.js: measure p95 frame cost over a window, degrade quality in steps when over budget, recover when sustained idle low cost",
-      "pond-budget.test.js: budget thresholds, degrade/stable-ignore/recover rules, reduced-motion floor, honor original intended level",
-      "hook into pond.js draw loop: budget.step(costMs) before render, apply ripple/motes/tide/ink styles per current quality",
-      "index.html + sw.js shell v33 + package.json add pond-budget.js; README one sentence",
-      "verify: node suites, syntax, JSON, git diff --check, headless smoke with budget-reduction pixel probe",
-      "bump eyebrow to 36; KAIZEN 0036; commit one iteration and push to main"
-    ],
-    "verified": [
-      "node tests: 28 pass across 10 suites (incl 6 new pond-budget asserts: calm start, no single-frame drop, sustained-load degradation, reduced-motion floor, easy-stretch recovery, unknown-family calm)",
-      "syntax: 28 JS files clean",
-      "JSON validity + git diff --check clean",
-      "headless Chromium 390x844 smoke: budget layer wired (budgetFrameMs measured 0.20 before, 0.50 after a short ripple gesture; budgetStep=0 on a fast desktop renderer with no errors), shell stays calm under a note",
-      "budget logic proven in pure layer unit tests, since a fast desktop renderer legitimately stays under the p95 budget; real-device tone stays the measured source of truth"
-    ],
-    "next_step": "real device pass: on Android/iOS measure actual p95 frame cost and confirm the eased steps engage and recover; keep thresholds derived only from measured devices"
-  },
-  "iteration_37": {
-    "started": "2026-08-23T15:45:00+03:00",
-    "finished": "2026-08-23T17:35:00+03:00",
-    "phase": "done",
-    "plan": [
-      "pure PondA11y layer in pond-a11y.js: honest expandedState, Tab trap countIndex, openIndex; freeze as deterministic API",
-      "tests pond-a11y.test.js: honest closed/muted/open, trap forward/backward, damaged bounds, first-target when present",
-      "wire into pond.js: setVolumePanelOpen/setDiaryPanelOpen keep aria-expanded honest, focus in on open / back to stone on close, bounded Tab trap inside open panel",
-      "diary panel role=dialog aria-modal=false, triggers aria-haspopup=dialog; opening diary with rows lands focus on row 1",
-      "index.html + sw.js shell v34 + package.json add pond-a11y.js; README + eyebrow 37",
-      "verify: node suites, syntax, JSON, git diff --check, instrumented headless smoke (+ pixel proof), KAIZEN 0037, commit and push to main"
-    ],
-    "verified": [
-      "node tests: 32 pass across 11 suites (incl 4 new a11y asserts)",
-      "syntax: 31 JS files clean",
-      "JSON validity + git diff --check clean",
-      "instrumented Chromium smoke green: honest closed/open states, focus-in on open, Tab wrap range->mute->range, Esc return to stones, diary with rows opens onto row 1 entry",
-      "PNG screenshot shore-a11y-37.png saved as valid full-frame 390x844; vision model unavailable (limit), direct inspection as in 24/28-36"
-    ],
-    "next_step": "done; the two smoke scenarios that expected panel-close on loop-start were corrected to the realistic diary path (product unchanged); real-device focus/Tab check stays on the shared backlog"
-  },
-  "iteration_39": {
-    "started": "2026-08-23T20:20:00+03:00",
-    "finished": "2026-08-23T21:05:00+03:00",
-    "phase": "done",
-    "plan": [
-      "pure pond-repose.js: re-seat live pixel layers into new space at normalized places, polar eddy arm stretch, damaged-input clamps",
-      "tests pond-repose.test.js: normalized invariance both axes, wave voice fields kept, trail ends, splash angle, corona ray plan, flight contacts, pointer anchors + eddy re-arm, NaN/negative/junk safety",
-      "pond.js resize(): repose ripples/trails/splashes/coronas/pearls/glints/flights + pointers Map; clear stale collision timers/latches; layerless fallback drops artifacts instead of stranding them",
-      "index.html + sw.js shell v36 + package.json (files & build.files) add pond-repose.js; eyebrow 39; README sentence",
-      "verify: node suites, syntax, JSON, git diff --check, instrumented resize smoke with held-note pixel probes, two-voice five-resize stress",
-      "KAIZEN 0039, state final, one commit, push to main"
-    ],
-    "verified": [
-      "node tests: 47 pass across 13 suites (incl 12 new repose asserts)",
-      "syntax: 34 JS files clean",
-      "JSON validity + git diff --check clean",
-      "resize smoke green: held voice 1->1 across 1280x720 -> 390x844, contact light at new normalized place (297.9 vs quiet 112.8), old spot faded to background, fresh ripple in new space, release clean, no console errors",
-      "stress pass: two held voices survived five consecutive resizes (2->2->0 after release)",
-      "measurement artifact caught: audioVoices counts release tails (~1.5s); instant keyboard press-release looked like a lost voice - product unchanged, smoke learned to wait out tails",
-      "vision model unavailable (limit); direct pixel probes as in 24-38; screenshot output/pond-piano/repose-resize-39.png"
-    ],
-    "next_step": "done; shared backlog now includes device-side resize-heavy moments: orientation change and keyboard appearance"
-  },
-  "iteration_41": {
-    "started": "2026-08-23T22:20:00+03:00",
-    "phase": "done",
-    "plan": [
-      "add pure phraseScroll + routePhrase to pond-score.js with tests",
-      "browser: third diary action per row copies a self-contained scroll to clipboard + live status",
-      "sw.js v38, eyebrow 41, README sentence",
-      "verify node suite, syntax, JSON, git diff, headless smoke + screenshot",
-      "KAIZEN 0041, commit one iteration, push main"
-    ],
-    "finished": "2026-08-23T23:05:00+03:00",
-    "verified": [
-      "node tests: 48 pass across 13 suites (6 new phrase-scroll asserts)",
-      "syntax: 35 JS files clean (36 with scroll-smoke.js present); JSON validity + git diff --check clean",
-      "instrumented headless Chromium 390x844: diary row after one phrase shows three actions, click lifts a real compact scroll (Pond phrase, contour from 22 points, pitch 64 depth 49 flow 1.1s, dawn), lastScroll dataset set, status announces the phrase left the pond with no console errors",
-      "screenshot output/pond-piano/scroll-take-41.png direct inspection: diary panel open, row carries three buttons, water organic and full-bleed; cramped phrase wrapping in the narrow panel is a pre-existing trait, not this iteration"
-    ],
-    "next_step": "done; the shared device-pass backlog now includes the diary pane (rows + Zabrat) and pasting the scroll on a real device"
-  },
-  "iteration_42": {
-    "started": "2026-08-23T23:17:00+03:00",
-    "finished": "2026-08-23T23:40:00+03:00",
-    "phase": "done",
-    "plan": [
-      "add pure parseScrollText + inkFromScroll to pond-score.js with tests",
-      "browser: diary return stone reads the clipboard scroll back as fresh ink + status",
-      "diaryPanelControls includes return; sw.js v39, eyebrow 42, README sentence",
-      "verify node suite, syntax, JSON, git diff, headless smoke + screenshot",
-      "KAIZEN 0042, commit one iteration, push main"
-    ],
-    "verified": [
-      "node tests: 47 pass across suites (13 new scroll-return asserts); syntax 36 JS clean; JSON + git diff --check clean",
-      "instrumented headless Chromium 390x844: diary row has 3 actions, take lifts a real scroll; return stone reads it back, inkLines 1->2, status announces returned to water; no console errors",
-      "screenshot output/pond-piano/scroll-return-42.png; pixel probe confirmed the green return stone at the panel bottom edge; vision model unavailable (limit), unpacked by direct probe as in 24/28-41"
-    ],
-    "next_step": "done; the shared device-pass backlog now includes pasting a scroll into a note and returning it on a live device, plus return-stone readability in the narrow diary panel"
-  },
-  "iteration_43": {
-    "started": "2026-08-24T00:20:00+03:00",
-    "phase": "in-progress",
-    "plan": [
-      "pure scrollSummary(scroll) in pond-score.js with tests",
-      "shell: #diary-leaf preview sheet in diary panel; copyPhraseScroll fills it; #leaf-return seats via shared return path",
-      "keyboard trap includes the leaf action; focus restore guards leaf focus; sw.js v40, eyebrow 43, README sentence",
-      "verify node suite, syntax, JSON, git diff --check, instrumented smoke + screenshot",
-      "KAIZEN 0043, state final, one commit, push main"
-    ],
-    "finished": "2026-08-24T00:52:00+03:00",
-    "verified": [
-      "node tests: 47 pass across 13 suites (incl scrollSummary asserts)",
-      "syntax: 37 JS files clean; JSON validity + git diff --check clean",
-      "instrumented headless Chromium 390x844: leaf appears with real carried text after take, Tab order rows->leaf->return stone, leaf click seats phrase back (inkLines 1->2, honest status), clipboard return still works (2->3), background hides leaf with other deferred echoes",
-      "screenshots output/pond-piano/shore-leaf-open-43.png + shore-leaf-43.png; pixel probe: paper band RGB 61/75/62 over water 23/60/58; vision model unavailable (limit)"
-    ],
-    "next_step": "done; device-pass backlog now includes leaf readability/touch on live screens and rotation behavior"
-  },
-  "iteration_44": {
-    "started": "2026-08-24T01:20:00+03:00",
-    "phase": "done",
-    "plan": [
-      "pure waterRelease(holdMs, normalizedDepth, materialBaseSeconds) in pond-music.js with bounds + clamps",
-      "tests in tests/pond-music.test.js: tap keeps material base, long hold stretches with depth, shallow stays dry, bounded, monotonic, broken inputs safe",
-      "pond.js endVoice(): schedule stop at waterRelease result, fade time-constant follows the tail, dataset.lastRelease probe",
-      "sw.js v41, eyebrow 44, README sentence about the departure",
-      "verify: node suites, syntax, JSON, git diff --check, instrumented headless Chromium audio smoke (tap vs 1.6s hold at same point)",
-      "KAIZEN 0044, state final, one commit, push main, watch Windows CI"
-    ],
-    "finished": "2026-08-24T01:45:00+03:00",
-    "verified": [
-      "node tests: 47 pass across suites (incl 11 new waterRelease asserts); module smoothstep no longer passes NaN through",
-      "syntax: 38 JS files clean; JSON validity + git diff --check clean",
-      "instrumented headless Chromium 390x844 live-audio smoke green: mid tap .502 -> hold .590, deep tap .578 -> hold .722; stop spans 0.64/2.28 mid, 0.73/2.43 deep match gesture+tail; bounded <= 1.15; no console errors",
-      "screenshot output/pond-piano/water-release-44.png; pixel probe center 163.8 vs shore 47.2, 23 bright patches; vision model unavailable (limit)"
-    ],
-    "next_step": "done; device-pass backlog now includes whether the stretched deep-note departure feels like sinking, not lag"
-  },
-  "iteration_45": {
-    "started": "2026-08-24T02:20:00+03:00",
-    "phase": "done",
-    "plan": [
-      "pure releaseGlint(depth, releaseSeconds, now, born, reducedMotion) in pond-waves.js: life from the stretched release (bounded min/max), sink progress, warmth by depth, broken-input safe",
-      "tests/pond-waves.test.js: tap keeps short visible life, hold/deep lives longer and bounded, sink grows with progress and reduced motion cancels it, broken clocks bounded, strict end",
-      "pond.js: voices remember last x/y; endVoice pushes releaseGlints (cap 12); drawReleaseGlint budget-gated like collision glint; resize repose + fallback drop; dataset.releaseGlints live counter",
-      "departure-glint-smoke.js instrumented probe: held-deep glint visible life follows waterRelease stretch (950ms vs ~900ms), quick tap shorter+bounded (642ms), counter returns to 0 and stays, relative same-frame pixel delta +169",
-      "sw.js shell v42, eyebrow 45, README sentence about the light departing with the sound",
-      "verify: node suites (51), syntax (39 JS), JSON + git diff --check, instrumented headless Chromium smoke + screenshot",
-      "KAIZEN 0045, state final, one commit, push main, watch Windows CI"
-    ],
-    "finished": "2026-08-24T11:20:00+03:00",
-    "verified": [
-      "node tests: 51 pass (incl 4 new releaseGlint asserts: life follows the stretched tail, dims/sinks monotonically, strict end + broken-clock safety, reduced motion rests instead of sinking)",
-      "syntax: 39 JS files clean; JSON validity + git diff --check clean",
-      "instrumented headless Chromium 390x844 live-audio smoke green: deep hold 1.65s -> lastRelease .707s, glint visible life ~950ms vs expected ~900ms (measured rAF-to-rAF from mouse.up), quick mid tap 642ms (shorter and bounded), dataset.releaseGlints returns to 0 after departure and stays 0",
-      "relative same-frame pixel probe: glint spot +169 vs same-band control point; screenshot output/pond-piano/departure-glint-45.png",
-      "no console/page errors"
-    ],
-    "next_step": "done; shared device-pass backlog now includes watching+listening: does the stretched departure of a held deep note feel like \"the note sank, light going with it\" rather than a pause before the next touch"
-  },
-  "iteration_46": {
-    "started": "2026-08-24T18:40:00+03:00",
-    "finished": "2026-08-24T20:15:00+03:00",
-    "phase": "done",
-    "plan": [
-      "add pure whisperState/whisperHint/whisperVisibility to pond-score.js mapping real gesture facts to one short lesson at a time",
-      "add whisper tests (once per session, honest pause, reduced-motion life, refuse broken inputs)",
-      "wire pond.js: offerWhisper only after first play, never while a hand/keyboard voice sounds, once per session, gather earned eddy/stone/settle at release",
-      "drawWhisper renders a calm dark plate on open water; dataset.whisperAlpha for instrumentation",
-      "index.html eyebrow 46, sw.js shell v43, README sentence",
-      "scripts/whisper-smoke.js instrumented headless Chromium smoke + screenshot",
-      "verify node tests, syntax, JSON + git diff --check, then one commit and push to main"
-    ],
-    "verified": [
-      "node tests: 54 pass (was 51, +3 whisper asserts)",
-      "syntax: 41 JS files clean; JSON + git diff --check clean",
-      "instrumented headless Chromium 390x844 live Web Audio: no whispers before first touch; 1.25s hold earns settle (alpha 0.606, status names it), plate moves its band beyond ambient drift (box -20.7 vs edge +0.9); second hold silent (once per session); flick in pause earned but declined; after 16s pause a fast straight flick earns the stone lesson (alpha 0.875, status names it); reload resets whispers and keeps played; no console errors",
-      "screenshot output/pond-piano/water-whisper-46.png direct-inspected: calm dark whisper plate on open water, organic composition, controls intact, no crop"
-    ],
-    "next_step": "shared device backlog continues; for the whisper add a live-listening item: does the one-line lesson read as a quiet whisper rather than copy, and is the 16s pause comfortable on a real device"
-  },
-  "iteration_47": {
-    "started": "2026-08-24T20:15:00+03:00",
-    "finished": "2026-08-24T21:20:00+03:00",
-    "phase": "done",
-    "plan": [
-      "add pure predictShore/shoreFold to pond-waves.js (ring reaching the near bank folds as one quiet return; broken/expired/resting rings stay quiet)",
-      "add shoreLap note to pond-music.js (shorter, lower, quieter than a pearl; shares the collision voice pool)",
-      "wire pond.js: scheduleShoreLaps from addRipple, playShoreLap draw a warm return curl on the shoreline and play the note rate-limited; dataset.shoreLaps counter",
-      "bump eyebrow to 47 and sw.js shell v44, README sentence",
-      "shore-lap-smoke.js instrumented headless Chromium smoke + screenshot",
-      "verify node tests, syntax, JSON + git diff --check, then one commit and push to main"
-    ],
-    "verified": [
-      "node tests: 58 pass (was 54, +4 shore-fold/shore-prediction)",
-      "syntax: 42 JS clean; JSON + git diff --check clean",
-      "instrumented headless Chromium 390x844 live Web Audio: prognost, a tap in open water near the bank honestly earned a shore lap (dataset.shoreLaps 1>0, proof the audio pool was live and the note truly played); after return pearlVoices is 0 again (the voice resigned the pool); no console errors",
-      "screenshot output/pond-piano/shore-lap-47.png direct-inspected: warm organic teal water with an amber returning fold at the shore, controls intact, no artifacts"
-    ],
-    "next_step": "shared device backlog continues; add a listening/viewing item for the shore lap - does a near-bank return read as a quiet wave answer rather than a second hit, and does it fire too often on a crowded real pond under live fingers"
-  },
-  "iteration_48": {
-    "started": "2026-08-24T21:30:00+03:00",
-    "finished": "2026-08-24T22:30:00+03:00",
-    "phase": "done",
-    "plan": [
-      "pure rehearsalDecision(taps, ink, now, reducedMotion, options) in pond-score.js: exactly two calm taps close in time and place summon the newest readable ink line; single/machine-gun/wide/slid taps and absent-or-expired ink stay silent",
-      "export shared REHEARSAL_TAP_HOLD_MS / REHEARSAL_TAP_MOVE / REHEARSAL_WINDOW_MS / REHEARSAL_MAX_TAPS; fix place-spread to normalized (0..1) units",
-      "pond.js: keep a short tap history; on a calm double-tap on open water call startPourLoop(newest line) so the phrase begins its quiet circling echo",
-      "rehearsal-smoke.js instrumented headless Chromium smoke + screenshot",
-      "verify node tests, syntax, JSON + git diff --check, then one commit and push to main; Windows CI to follow"
-    ],
-    "verified": [
-      "node tests: 63 pass (was 58, +5 rehearsalDecision suites)",
-      "syntax: 34 JS + scripts clean; JSON + git diff --check clean",
-      "instrumented headless Chromium 390x844 live Web Audio: after a held note laid an ink line, two calm close taps set dataset.loopingLine=1 + rehearsalSummon=1 and loopPasses=1 (the newest phrase began circling and pouring); no console errors",
-      "screenshot output/pond-piano/rehearsal-48.png direct-inspected: warm organic teal water, a visible ink line, a warm amber circling mark at the loop, controls intact, no crop"
-    ],
-    "next_step": "shared device backlog continues; does the double-tap rehearsal read as an intentional summon rather than a miscount of two quick notes on real touch, and does its quiet repeated echo stay comfortable on live speakers"
-  },
-  "iteration_50": {
-    "started": "2026-09-02T21:17:00+03:00",
-    "finished": "2026-09-02T21:27:00+03:00",
-    "phase": "done",
-    "resumed_from_interrupted_slot": true,
-    "plan": [
-      "complete pure predictFarSkim/farSkimFold geometry and family-guided farSkim transient",
-      "wire one scheduled far-edge response into the browser using the shared bank timer registry and collision voice pool",
-      "draw and resize a cool inward fold; keep reduced motion still and frame-budget-aware",
-      "add unit coverage and a live-Web-Audio Chromium smoke with screenshot inspection",
-      "update product docs, cache/eyebrow, kaizen state, commit one iteration and push main"
-    ],
-    "verified": [
-      "69 node tests pass; four new wave suites cover prediction/refusal/fold/reduced-motion and music assertions compare the skim with the near-bank lap",
-      "45 JavaScript files pass syntax; JSON validity and git diff --check clean",
-      "instrumented Chromium 390x844: farSkims 0->1, shared transient pool 1 while sounding and 0 after ended, no browser errors",
-      "existing shore-lap smoke remains green; near-bank transient now honestly occupies the shared pool until oscillator ended",
-      "screenshot output/pond-piano/far-bank-50.png inspected: organic full-bleed water, subtle cool upper-right fold, controls/title intact, no clipping or UI rectangle"
-    ],
-    "next_step": "done; real-device pass should compare the warm near lap and cool far skim on phone speakers and bright screens"
-  },
-  "current_iteration": 67,
-  "iteration_51": {
-    "started": "2026-09-02T22:17:00+03:00",
-    "phase": "done",
-    "pivot": "Pre-implementation shell inspection found a release-blocking compatibility bug more important than the proposed chord bloom: index.html requests pond-repose.js, pond-tide.js, pond-budget.js and pond-a11y.js, but Electron static-server allowlist returns 404 for all four. pond.js then throws before rendering. Iteration narrowed to one complete desktop-shell repair.",
-    "plan": [
-      "make the secure Electron loopback allowlist serve every current script required by index.html, without widening it to arbitrary repository files",
-      "add a closure regression that compares index script dependencies, server allowlist and packaged Electron files",
-      "run the exact desktop static server through Chromium, make a real sound gesture, verify live rendering/audio/no 404 or console errors and inspect a screenshot",
-      "update product docs and kaizen state, commit exactly this compatibility repair and push main"
-    ],
-    "verified": [
-      "71 Node tests pass (was 69); two closure tests bind every local index.html script to the Electron allowlist, package.files, build.files and a real file",
-      "47 JavaScript files pass syntax; state/package JSON and git diff --check are clean",
-      "production createStaticServer Chromium smoke 1280x800 passes 6/6: 12 scripts loaded with no HTTP failures, one real Web Audio voice sounded, renderer stayed alive at 0.40ms sampled frame, one score memory was recorded, and voice pool returned to zero with no console/page errors",
-      "npm pack --dry-run contains 25 files and all four repaired runtime layers plus the desktop server and index; no required file missing",
-      "screenshot output/pond-piano/desktop-shell-51.png inspected after final eyebrow/cache update: Etude 51, full-bleed organic pond, held-note ripple, title and shore controls intact, no blank/error or rectangular artifact"
-    ],
-    "next_step": "done; Windows CI artifact build follows push, and a real Windows launch remains the release-pass",
-    "finished": "2026-09-02T22:22:00+03:00"
-  },
-  "iteration_52": {
-    "started": "2026-09-03T08:17:00+03:00",
-    "phase": "done",
-    "plan": [
-      "add a pure pond-chord.js layer for stable chord membership, weighted centroid/spread/energy and bounded bloom timing",
-      "add a family-guided quiet chord-bloom tone derived from the live frequencies",
-      "wire one latched bloom per unchanged 3-6 voice chord into Canvas/Web Audio without child ripples or score entries; clean it on background",
-      "include the layer in PWA/Electron/package closure and add unit plus instrumented Chromium coverage with screenshot inspection",
-      "update product docs, kaizen state, commit exactly iteration 0052 and push main"
-    ],
-    "verified": [
-      "76 Node tests pass (was 71); five new pure chord suites cover stable membership, held/calm gates, bounded 3-6 voice geometry, malformed input and reduced motion; music assertions bound the family-guided shared tone",
-      "50 JavaScript files pass syntax; package/state JSON and git diff --check are clean; npm pack dry-run contains pond-chord.js and all required shell files",
-      "production Electron loopback Chromium 390x844 passes 7/7: 3 sustain voices -> one audible+visible bloom; unchanged membership stays at event 1; changed membership reaches exactly event 2; ripple count stays 3->3 and score stays 0; sustain and bloom pools both return to zero; no page/console errors",
-      "first smoke exposed and fixed a renderer clock split: performance.now() could sit just ahead of the current rAF timestamp and cull the newborn bloom; visual birth now uses the pure plan rAF clock",
-      "screenshot output/pond-piano/chord-bloom-52.png inspected: three contact centres and their shared organic flower are readable; title and shore stones intact; no clipping or rectangular dashboard artifact"
-    ],
-    "next_step": "done; real-device backlog now includes a three-finger hold to judge the 520ms intent threshold, low root on phone speakers and bloom legibility under fingers",
-    "finished": "2026-09-03T08:25:00+03:00"
-  },
-  "iteration_53": {
-    "started": "2026-09-03T15:17:00+03:00",
-    "phase": "done",
-    "plan": [
-      "add a pure two-contact gathering gesture: meaningful inward travel from a safely separated start, stable midpoint and bounded trigger geometry",
-      "derive one quiet family-guided pearl tone from both live frequencies and draw two converging water folds plus a resting bead",
-      "latch once per unchanged pair; use the shared bounded transient pool; create no sustain voice, child ripple or score entry; respect reduced motion and lifecycle cleanup",
-      "add unit coverage and a production-loopback Chromium multi-pointer smoke with screenshot inspection",
-      "update shell closure, product docs and kaizen state, commit exactly iteration 0053 and push main"
-    ],
-    "finished": "2026-09-03T15:27:00+03:00",
-    "verified": [
-      "76 Node tests pass; pond-gesture and pond-music assertions now cover valid inward gathering, stable pair order, fresh/parallel/drifting/three-contact refusals, reduced motion, strict lifetime, family-guided pitch and transient bounds",
-      "51 JavaScript files pass syntax; package/state JSON, git diff --check and npm pack dry-run are clean; package still contains all required shared shell layers",
-      "production Electron loopback Chromium 390x844 passes 6/6: two independent touch sustain voices converge 250->60px into one audible+visible pearl, unchanged pair stays at one event, child ripple and score deltas remain zero, sustain/transient pools release, no page/console errors",
-      "screenshot output/pond-piano/gathering-pearl-53.png inspected after final shell update: eyebrow 53, two organic converging folds and central bright bead visible between live contacts; title and shore controls intact, no clipping or rectangular dashboard artifact"
-    ],
-    "next_step": "done; real-device backlog now includes two-finger gathering ergonomics, accidental-pinch rejection and the high pearl tone on phone speakers"
-  },
-  "iteration_54": {
-    "started": "2026-09-03T18:17:00+03:00",
-    "finished": "2026-09-03T18:40:00+03:00",
-    "phase": "done",
-    "plan": [
-      "add chord and gather whisper keys/texts to pond-score.js with whisperState shown map",
-      "earn flags in playChordBloom/playGatheringPearl and emit events in end()",
-      "retire earned flags only when a whisper is accepted, so multi-touch releases let the last finger speak",
-      "wrap long lessons onto two calm lines; size each plate to its own text",
-      "unit tests for the new lessons + golden-path queue",
-      "instrumented Chromium smoke: real chord bloom -> flower whisper, real gathering -> pearl whisper, second gathering silent",
-      "eyebrow 54, shell cache v51, README sentence, KAIZEN entry, commit and push main"
-    ],
-    "verified": [
-      "79 Node tests pass (was 76); new whisper tests cover chord once-per-session, gather once-per-session and the golden-path queue settle->chord->gather with honest pauses",
-      "52 JavaScript files pass syntax; state JSON, git diff --check clean",
-      "whisper-chord-gather-smoke.js production loopback Chromium 390x844: 6/6 - real 3-voice chord bloom earned the flower whisper (alpha .305, text names the shared bloom), real two-finger gathering earned the pearl whisper (alpha .304, text names the pearl), a second gathering stayed whisper-silent; no page/console errors",
-      "screenshot whisper-chord-gather-54.png inspected: two-line lesson plate fully inside the phone screen with side margins, title and shore stones intact, no rectangular dashboard artifact; earlier single-line clipping fixed by the wrap"
-    ],
-    "next_step": "device-pass: read the flower and pearl lessons on Android Chrome/PWA and iPhone Safari"
-  },
-  "iteration_55": {
-    "started": "2026-09-04T14:17:00+03:00",
-    "phase": "done",
-    "plan": [
-      "add pure glideWake(speed, age) expression to pond-music.js with bounded sound/visual outputs and tests",
-      "retarget the existing voice filter/overtone from the decaying measured movement speed; add no audio nodes and do not alter pitch/depth mapping",
-      "carry the same wake amount into pointer and keyboard trails, with reduced-motion retaining one calm local strand",
-      "add production-loopback Chromium smoke proving wake rise, decay, fixed positional pitch, clean release and a visual screenshot",
-      "update docs/cache/eyebrow/kaizen state, commit exactly iteration 0055 and push main"
-    ],
-    "verified": [
-      "79 Node tests pass; glideWake asserts cover attack/rest silence, monotonic speed, sound/visual ceilings, immutable output and damaged-input fallback",
-      "53 JavaScript files pass syntax; state/package/manifest JSON and git diff --check are clean; npm pack dry-run contains 26 files and the changed runtime shell",
-      "production Electron loopback Chromium 390x844 passes 7/7: one held voice wake 0->1->0, existing cutoff 2667.1->3147.2->2667.1 Hz and overtone 0.1399->0.1739->0.1399, exact moving X pitch 601.058 Hz, four live visual wake segments, clean release, no errors",
-      "first smoke assertion wrongly expected the resting held pitch to remain continuous; corrected because the existing held-note current attraction is intentional and independent of wake closure; product unchanged",
-      "desktop-shell smoke 6/6 and gathering-pearl smoke 6/6 remain green",
-      "screenshot output/pond-piano/glide-wake-55.png inspected: paired organic wake visible, eyebrow 55 and controls intact, no clipping/dashboard artifact",
-      "KAIZEN restored the omitted 0054 journal entry while recording 0055"
-    ],
-    "next_step": "device-pass: on Android Chrome/PWA and iPhone Safari, compare slow and fast glides at one depth; the paired wake should feel attached to the hand and its brightness audible without resembling a new attack. Tune numeric ceilings only from real-device evidence.",
-    "finished": "2026-09-04T14:52:00+03:00"
-  },
-  "iteration_56": {
-    "started": "2026-09-04T23:20:00+03:00",
-    "phase": "done",
-    "plan": [
-      "add pure beginDepthDive/updateDepthDive/depthDiveVisual gesture geometry with refusal and reduced-motion tests",
-      "add one family-related bounded low depthDiveTone derived from the live pitch",
-      "wire one latched dive per held contact into the existing transient pool without changing sustain pitch, score or ripple count",
-      "draw the real stroke as a sinking seam with bounded bubbles; include resize/lifecycle cleanup and instrumentation",
-      "run unit/syntax/package checks plus production-loopback Chromium gesture smoke and screenshot inspection",
-      "update shell cache, product docs and kaizen state; commit exactly iteration 0056 and push main"
-    ],
-    "verified": [
-      "79 Node tests pass; pure dive tests cover acceptance, verticality/travel/energy bounds, diagonal/upward/slow/stale refusal, malformed input and reduced-motion stillness; music tests bound family-guided low tone pitch, envelope, cutoff and gain",
-      "54 JavaScript files pass syntax; state/package/manifest JSON, git diff --check and npm pack dry-run (26 files) are clean",
-      "production Electron loopback Chromium 390x844 passes 9/9: pointer and keyboard each create one audible+visible fold, original sustain remains live, no child ripple or score entry, same contact stays latched, transient and sustain pools release, no errors",
-      "keyboard smoke exposed first-sample velocity dilution by the preceding hold; an 80ms sampling grace preserves the candidate while genuinely slow completed motion still dissolves; rerun passes",
-      "desktop shell 6/6, gathering pearl 6/6 and glide wake 7/7 regressions pass",
-      "screenshot output/pond-piano/depth-dive-56.png inspected: organic near-vertical seam, three subtle bubbles and lower fold visible; eyebrow 56 and shore controls intact, no clipping or rectangular UI"
-    ],
-    "next_step": "device-pass: on Android Chrome/PWA and iPhone Safari, hold a note then plunge down quickly with one finger; the low response should feel like depth beneath the same voice, not a second hit. Check accidental triggering during ordinary vertical glissando and system-edge gestures; tune thresholds only from real-device evidence.",
-    "finished": "2026-09-04T23:27:00+03:00"
-  },
-  "sound_feedback_20260905": {
-    "reference": "singing bowls: simple, meditative",
-    "acceptance": "A child taps randomly and it sounds good; no training required.",
-    "rejected": "unmelodic, dull, repetitive howling",
-    "priority": "sound quality before extra gestures or visuals",
-    "listening_verdict_1316": "Евгений прослушал before/after итерации57: «Да, новая звучит лучше». Направление принято, не означает готовность1.0 или проверку реальных устройств."
-  },
-  "iteration_57": {
-    "phase": "accepted-baseline",
-    "implemented_at": "2026-09-05T13:11:04.851839+03:00",
-    "audio_evidence": "output/bowls-57/summary.json",
-    "before_audio": "output/bowls-57/before.wav",
-    "after_audio": "output/bowls-57/after.wav",
-    "windows_gate": {
-      "requires_exact_commit": true,
-      "receipt": "output/bowls-57/windows-ci.json",
-      "note": "Commit-time snapshot: CI result is written to the local receipt after push, not asserted before the build."
-    },
-    "limitations": [
-      "Human sound acceptance pending",
-      "Real Android/iPhone and Windows launch pending",
-      "Secondary short gesture/collision timbres not redesigned"
-    ],
-    "next_step": "Human listening; no public release in this iteration."
-  },
-  "iteration_58": {
-    "started": "2026-09-25T23:22:37.171Z",
-    "finished": "2026-09-25T23:28:13.577Z",
-    "phase": "done",
-    "verified": [
-      "84 Node tests pass (was 79); new asserts cover bounded/deterministic shine, damaged-input safety, eleven bowls differ (character spread > 0.25) and three same-pitch strikes inside one cell differing",
-      "57 JS files pass syntax; state/package JSON and git diff --check clean",
-      "pure before/after on the same 12 seeded tap positions: 12 distinct timbres vs 11; max mode-peak sum 0.12252 < 0.125",
-      "real production Web Audio output/bowls-58/after.wav: no clipping, peak -14.33 dBFS, 12 distinct tap shines, one cell one pitch with three timbres 0.254/0.386/0.518, autoplayContexts 0, final voices 0",
-      "screenshot output/bowls-58/after.png captured"
-    ],
-    "next_step": "Human listening of output/bowls-58/after.wav beside accepted output/bowls-57/after.wav: is the variety audible and does no bowl sound harsh? Then Android/iPhone on real speakers. Numbers describe variety and level, not timbral beauty."
-  },
-  "iteration_59": {
-    "started": "2026-09-26T16:18:24.549592+03:00",
-    "phase": "done",
-    "plan": [
-      "unhide the playable canvas from the accessibility tree; retain decorative layers hidden",
-      "add a pure bounded bowl-location narration for keyboard position/strike; announce a fixed struck bowl rather than an imaginary moving pitch",
-      "prove via pure tests and Chromium AX tree + keyboard sound smoke; run full suite and inspect screenshot",
-      "update README/KAIZEN/state, cache and one commit/push"
-    ],
-    "finished": "2026-09-26T16:25:42.521033+03:00",
-    "verified": [
-      "85 Node tests pass and 58 JS files pass syntax; state/package JSON valid and git diff --check clean",
-      "production Electron loopback Chromium 390x844 AX application node visible with described instructions and radio controls",
-      "Tab focus-visible solid outline; keyboard bowl 7 strike 441.493 Hz held through move to next bowl 8; after release live status describes next strike and voices return to 0",
-      "screenshot output/pond-piano/keyboard-water-59.png inspected: focus ring inside viewport, intact ripples and shore, no clipping"
-    ],
-    "next_step": "Pushed to origin/main before 0060; real VoiceOver/TalkBack and mobile validation remain."
-  },
-  "iteration_60": {
-    "started": "2026-09-27T04:18:40+03:00",
-    "phase": "done",
-    "plan": [
-      "record struck bowl pitch independent of gesture path for pointer and keyboard",
-      "diary pour/loop and ripple-ink reading keep line pitch while retaining geometry",
-      "pure regression and production browser smoke: dragged bowl score/echo pitch, visual path and cleanup",
-      "update docs/KAIZEN/state, cache version; one commit and push main"
-    ],
-    "finished": "2026-09-27T04:24:25+03:00",
-    "verified": [
-      "85 Node tests; 59 JS syntax; JSON and git diff --check clean",
-      "production Chromium 390x844: pointer moves score across the pond with 16 points at one struck pitch, diary pour starts actual echo note; keyboard moves 20 points with same held pitch; no page/console errors",
-      "screenshot output/pond-piano/bowl-score-60.png inspected: ink, water and shore unclipped",
-      "desktop shell 6/6, keyboard AX regression, bowl lifecycle 10/10 including 49 peak oscillators and final cleanup; npm pack contains 26 files"
-    ],
-    "next_step": "Real mobile device pass; listen to legacy short echo timbre beside the new bowls. Old saved phrases keep their previous pitch data."
-  },
-  "iteration_61": {
-    "started": "2026-09-27T10:18:05+03:00",
-    "phase": "done",
-    "plan": [
-      "replace triangle sweep echoNote with a bounded two-mode quiet bowl response derived from recorded pitch and depth",
-      "share one lifecycle-safe Web Audio renderer for pour, ink-read and crossed-score echo routes",
-      "unit tests plus real-browser replay/cleanup and visual inspection",
-      "update journal and state, then one commit/push"
-    ],
-    "last_verified": "2026-09-27: 85 Node tests, 59 JS syntax, JSON/diff clean. Production Chromium 390x844 verified sine bowl fundamental+octave on diary replay, physical score crossing and ink-read wave; echo pool 0 after release; pointer/keyboard score unchanged; screenshot inspected. Desktop shell 6/6, lifecycle 10/10, max 48 oscillators, final 0; no page/console errors.",
-    "next_step": "Listen to the short bowl-related echo against accepted struck bowls on phone speakers, then Android/iPhone real-device pass. Other short transient effects remain old timbres.",
-    "finished": "2026-09-27T10:25:17+03:00",
-    "verified": [
-      "85 Node tests and 59 JavaScript syntax checks pass; JSON and git diff clean",
-      "production Chromium: diary replay of 245.274 Hz score produced sine fundamental/octave; physically crossing same visible line produced the same echo; ripple crossing another ink line produced 441.493/882.986 Hz and echo pool returned to zero",
-      "score keyboard path retained one pitch over 20 points; browser no errors; screenshot output/pond-piano/bowl-echo-61.png inspected at 390x844",
-      "desktop-shell 6/6 and lifecycle 10/10; max transient oscillators 48, final live 0"
-    ]
-  },
-  "iteration_62": {
-    "started": "2026-09-27T12:17:56+03:00",
-    "phase": "done",
-    "plan": [
-      "two-mode bounded collision pearl derived from the selected current",
-      "use existing collision voice budget and life-cycle cleanup for both oscillators",
-      "unit and actual wave-intersection Web Audio smoke with visual inspection",
-      "journal/state, one commit and push main"
-    ],
-    "last_verified": "2026-09-27: 85 Node tests, 60 JS syntax, JSON/diff and pack closure (26 files) clean. Production loopback Chromium: one real collision gives sine fundamental/octave at 390.047/780.094 Hz in one transient slot; active pagehide clears pool, next gesture resumes same context, all oscillators end, no browser errors. Screenshot inspected. Desktop shell 6/6 and lifecycle 10/10, maximum 50 oscillators, final zero.",
-    "next_step": "Listen to collision pearl beside struck bowls on Android/iPhone speakers; octave balance and beauty require human judgment. Other short gesture/bank transients still use older timbres.",
-    "finished": "2026-09-27T12:22:14+03:00",
-    "verified": [
-      "85 Node tests; 60 JS syntax checks; JSON, diff and pack closure clean",
-      "production Chromium 390x844: real wave crossing starts sine 390.047 Hz and octave 780.094 Hz; one bounded collision voice, no runtime errors",
-      "active collision interrupted by pagehide releases both modes and transient pool; foreground gesture resumes same AudioContext; all oscillators terminate",
-      "screenshot output/pond-piano/collision-bowl-62.png inspected: small luminous meeting between two rings, title/shore intact",
-      "desktop shell 6/6; lifecycle 10/10, max 50 oscillators, final 0"
-    ]
-  },
-  "iteration_63": {
-    "started": "2026-09-27T19:17:00+03:00",
-    "finished": "2026-09-27T19:35:00+03:00",
-    "phase": "done",
-    "plan": [
-      "rewrite pure stoneSkip to a bounded two-mode pebble plan (seated pitch + fast octave), removing startFrequency/endFrequency",
-      "render both modes into the existing bounded skip voice pool in playStoneSkip; stop skip.oscillators on lifecycle cleanup",
-      "update unit asserts and add scripts/stone-skip-smoke.js; bump eyebrow 63, shell v60, README sentence",
-      "journal/state, one commit and push main"
-    ],
-    "verified": [
-      "85 Node tests; 60 JS syntax checks; JSON, diff clean",
-      "production Chromium 390x844: real fast straight flick sent the pebble once; probe shows sine 245.274/490.548 Hz exact fundamental+octave, no triangle; peak pool 1, drains to 0, oscillators end, no errors",
-      "screenshot output/pond-piano/stone-skip-63.png inspected: two organic meeting rings on calm full-bleed water, title/shore intact"
-    ]
-  },
-  "iteration_64": {
-    "started": "2026-09-27T17:18:14.130Z",
-    "phase": "done",
-    "plan": [
-      "rewrite pure shoreLap and farSkim to bounded two-mode plans (seated pitch + fast octave), removing startFrequency sweeps",
-      "render both banks through one shared two-mode transient helper in playShoreLap/playFarSkim; keep the collision voice pool and rate limits",
-      "update unit asserts and the shore-lap/far-bank smokes; bump eyebrow 64 and shell cache v61; README sentence",
-      "journal/state, one commit and push main"
-    ],
-    "finished": "2026-09-27T17:21:23.782Z",
-    "verified": [
-      "all Node tests pass; new asserts: both banks plan exactly two modes, an octave that finishes first, no startFrequency sweep; far bank stays quieter+higher than the near fold",
-      "61 JS files pass syntax",
-      "instrumented loopback Chromium 390x844: a near-bank tap honestly earned a shore lap (dataset.shoreLaps 1>0) and the collision pool returned to 0; no page/console errors"
-    ]
-  },
-  "iteration_65": {
-    "started": "2026-09-27T18:20:00+03:00",
-    "finished": "2026-09-27T18:47:00+03:00",
-    "phase": "done",
-    "plan": [
-      "rewrite pure gatheringPearlTone and depthDiveTone to bounded two-mode plans (seated pitch + fast octave), removing startFrequency/endFrequency sweeps",
-      "render both through the shared renderBoundedModes helper in playGatheringPearl/playDepthDive; keep the collision voice pool and rate limits",
-      "update unit asserts; widen the flaky unlock-tail wait in the gather/dive smokes; bump eyebrow 65 and shell cache v62; README sentence",
-      "journal/state, one commit and push main"
-    ],
-    "verified": [
-      "85 Node tests; asserts confirm exactly two modes, an exact octave finishing first, and no startFrequency/endFrequency in either plan",
-      "61 JS files pass syntax; git diff --check clean",
-      "instrumented loopback Chromium 390x844: one gather pearl (pool back to 0, no child ripple/score) and one low dive answer (pool drained, sustain alive); no page/console errors; screenshots inspected"
-    ]
-  },
-  "iteration_66": {
-    "started": "2026-09-27T22:20:00+03:00",
-    "finished": "2026-09-27T22:55:00+03:00",
-    "phase": "done",
-    "plan": [
-      "pure keyboardGather() in pond-gesture.js: the held bowl is the meeting point, the second current opens a safe span beside it on the roomier side, both currents close, and the touch gesture still validates the pair",
-      "pond.js: hold G beside a held bowl opens the second voice and an honest ripple; after GATHER_MIN_HOLD_MS the fold runs the touch gesture and the shared pearl pool; releasing G closes it early",
-      "unit asserts for the keyboard pair, the shared hold, the edge with no room, and the moved meeting point; instrumented Chromium keyboard smoke",
-      "eyebrow 66, shell v63, README sentence, one commit and push"
-    ],
-    "verified": [
-      "node tests: 85 pass; new asserts confirm two currents inside the water, the same 240ms hold, one pearl at the held bowl, the edge refusing a second current",
-      "syntax: 61 JS files clean",
-      "instrumented production-loopback Chromium 390x844 + real keyboard: one pearl, peak pool 1, both pools drained to 0, second current sounded its own bowl",
-      "screenshot output/pond-piano/keyboard-gather-66.png inspected directly: one bead with two folding arms on calm water, no clipping, no dashboard artifact"
-    ],
-    "next_step": "done; the device-pass backlog now includes the keyboard route and the still keyboard-unreachable three-voice chord bloom"
-  },
-  "iteration_67": {
-    "started": "2026-09-27T23:17:00+03:00",
-    "finished": "2026-09-27T23:45:00+03:00",
-    "phase": "done",
-    "plan": [
-      "pure keyboardChord() in pond-gesture.js: the held bowl is one of three voices, two companions open on either side (roomier side at an edge) at their own water bowls, calm hold set honestly, refusal when no trio fits, and chordBloom still validates the trio",
-      "pond.js: hold H beside a held bowl opens two companion voices with their own ripples and coronas; the frame feeds them into chordContacts and the live currents; the shared single chordVoices pool opens the flower; releasing H, the note or focus closes them",
-      "unit asserts for the trio, each companion sounding its own bowl, the honest hold, symmetric/edge placement and safe refusal; instrumented Chromium keyboard smoke",
-      "eyebrow 67, shell v64, README sentence, one commit and push"
-    ],
-    "verified": [
-      "node tests: 85 pass; new asserts confirm three voices, each companion sounding its own bowl of water, a newborn trio not blooming early, the shared hold opening the flower, and the edge refusing a trio with no room",
-      "syntax: 62 JS files clean",
-      "instrumented production-loopback Chromium 390x844 + real keyboard: two companions opened (three voices), one flower (events 1, pool 1), pools drained to 0, no browser errors",
-      "screenshot output/pond-piano/keyboard-chord-67.png inspected directly: three converging ring currents with a shared bright flower, no clipping, no dashboard artifact"
-    ],
-    "next_step": "done; the device-pass backlog now covers the whole gesture set on keyboard and one-finger routes"
-  }
+  "limitations": [
+   "Human sound acceptance pending",
+   "Real Android/iPhone and Windows launch pending",
+   "Secondary short gesture/collision timbres not redesigned"
+  ],
+  "next_step": "Human listening; no public release in this iteration."
+ },
+ "iteration_58": {
+  "started": "2026-09-25T23:22:37.171Z",
+  "finished": "2026-09-25T23:28:13.577Z",
+  "phase": "done",
+  "verified": [
+   "84 Node tests pass (was 79); new asserts cover bounded/deterministic shine, damaged-input safety, eleven bowls differ (character spread > 0.25) and three same-pitch strikes inside one cell differing",
+   "57 JS files pass syntax; state/package JSON and git diff --check clean",
+   "pure before/after on the same 12 seeded tap positions: 12 distinct timbres vs 11; max mode-peak sum 0.12252 < 0.125",
+   "real production Web Audio output/bowls-58/after.wav: no clipping, peak -14.33 dBFS, 12 distinct tap shines, one cell one pitch with three timbres 0.254/0.386/0.518, autoplayContexts 0, final voices 0",
+   "screenshot output/bowls-58/after.png captured"
+  ],
+  "next_step": "Human listening of output/bowls-58/after.wav beside accepted output/bowls-57/after.wav: is the variety audible and does no bowl sound harsh? Then Android/iPhone on real speakers. Numbers describe variety and level, not timbral beauty."
+ },
+ "iteration_59": {
+  "started": "2026-09-26T16:18:24.549592+03:00",
+  "phase": "done",
+  "plan": [
+   "unhide the playable canvas from the accessibility tree; retain decorative layers hidden",
+   "add a pure bounded bowl-location narration for keyboard position/strike; announce a fixed struck bowl rather than an imaginary moving pitch",
+   "prove via pure tests and Chromium AX tree + keyboard sound smoke; run full suite and inspect screenshot",
+   "update README/KAIZEN/state, cache and one commit/push"
+  ],
+  "finished": "2026-09-26T16:25:42.521033+03:00",
+  "verified": [
+   "85 Node tests pass and 58 JS files pass syntax; state/package JSON valid and git diff --check clean",
+   "production Electron loopback Chromium 390x844 AX application node visible with described instructions and radio controls",
+   "Tab focus-visible solid outline; keyboard bowl 7 strike 441.493 Hz held through move to next bowl 8; after release live status describes next strike and voices return to 0",
+   "screenshot output/pond-piano/keyboard-water-59.png inspected: focus ring inside viewport, intact ripples and shore, no clipping"
+  ],
+  "next_step": "Pushed to origin/main before 0060; real VoiceOver/TalkBack and mobile validation remain."
+ },
+ "iteration_60": {
+  "started": "2026-09-27T04:18:40+03:00",
+  "phase": "done",
+  "plan": [
+   "record struck bowl pitch independent of gesture path for pointer and keyboard",
+   "diary pour/loop and ripple-ink reading keep line pitch while retaining geometry",
+   "pure regression and production browser smoke: dragged bowl score/echo pitch, visual path and cleanup",
+   "update docs/KAIZEN/state, cache version; one commit and push main"
+  ],
+  "finished": "2026-09-27T04:24:25+03:00",
+  "verified": [
+   "85 Node tests; 59 JS syntax; JSON and git diff --check clean",
+   "production Chromium 390x844: pointer moves score across the pond with 16 points at one struck pitch, diary pour starts actual echo note; keyboard moves 20 points with same held pitch; no page/console errors",
+   "screenshot output/pond-piano/bowl-score-60.png inspected: ink, water and shore unclipped",
+   "desktop shell 6/6, keyboard AX regression, bowl lifecycle 10/10 including 49 peak oscillators and final cleanup; npm pack contains 26 files"
+  ],
+  "next_step": "Real mobile device pass; listen to legacy short echo timbre beside the new bowls. Old saved phrases keep their previous pitch data."
+ },
+ "iteration_61": {
+  "started": "2026-09-27T10:18:05+03:00",
+  "phase": "done",
+  "plan": [
+   "replace triangle sweep echoNote with a bounded two-mode quiet bowl response derived from recorded pitch and depth",
+   "share one lifecycle-safe Web Audio renderer for pour, ink-read and crossed-score echo routes",
+   "unit tests plus real-browser replay/cleanup and visual inspection",
+   "update journal and state, then one commit/push"
+  ],
+  "last_verified": "2026-09-27: 85 Node tests, 59 JS syntax, JSON/diff clean. Production Chromium 390x844 verified sine bowl fundamental+octave on diary replay, physical score crossing and ink-read wave; echo pool 0 after release; pointer/keyboard score unchanged; screenshot inspected. Desktop shell 6/6, lifecycle 10/10, max 48 oscillators, final 0; no page/console errors.",
+  "next_step": "Listen to the short bowl-related echo against accepted struck bowls on phone speakers, then Android/iPhone real-device pass. Other short transient effects remain old timbres.",
+  "finished": "2026-09-27T10:25:17+03:00",
+  "verified": [
+   "85 Node tests and 59 JavaScript syntax checks pass; JSON and git diff clean",
+   "production Chromium: diary replay of 245.274 Hz score produced sine fundamental/octave; physically crossing same visible line produced the same echo; ripple crossing another ink line produced 441.493/882.986 Hz and echo pool returned to zero",
+   "score keyboard path retained one pitch over 20 points; browser no errors; screenshot output/pond-piano/bowl-echo-61.png inspected at 390x844",
+   "desktop-shell 6/6 and lifecycle 10/10; max transient oscillators 48, final live 0"
+  ]
+ },
+ "iteration_62": {
+  "started": "2026-09-27T12:17:56+03:00",
+  "phase": "done",
+  "plan": [
+   "two-mode bounded collision pearl derived from the selected current",
+   "use existing collision voice budget and life-cycle cleanup for both oscillators",
+   "unit and actual wave-intersection Web Audio smoke with visual inspection",
+   "journal/state, one commit and push main"
+  ],
+  "last_verified": "2026-09-27: 85 Node tests, 60 JS syntax, JSON/diff and pack closure (26 files) clean. Production loopback Chromium: one real collision gives sine fundamental/octave at 390.047/780.094 Hz in one transient slot; active pagehide clears pool, next gesture resumes same context, all oscillators end, no browser errors. Screenshot inspected. Desktop shell 6/6 and lifecycle 10/10, maximum 50 oscillators, final zero.",
+  "next_step": "Listen to collision pearl beside struck bowls on Android/iPhone speakers; octave balance and beauty require human judgment. Other short gesture/bank transients still use older timbres.",
+  "finished": "2026-09-27T12:22:14+03:00",
+  "verified": [
+   "85 Node tests; 60 JS syntax checks; JSON, diff and pack closure clean",
+   "production Chromium 390x844: real wave crossing starts sine 390.047 Hz and octave 780.094 Hz; one bounded collision voice, no runtime errors",
+   "active collision interrupted by pagehide releases both modes and transient pool; foreground gesture resumes same AudioContext; all oscillators terminate",
+   "screenshot output/pond-piano/collision-bowl-62.png inspected: small luminous meeting between two rings, title/shore intact",
+   "desktop shell 6/6; lifecycle 10/10, max 50 oscillators, final 0"
+  ]
+ },
+ "iteration_63": {
+  "started": "2026-09-27T19:17:00+03:00",
+  "finished": "2026-09-27T19:35:00+03:00",
+  "phase": "done",
+  "plan": [
+   "rewrite pure stoneSkip to a bounded two-mode pebble plan (seated pitch + fast octave), removing startFrequency/endFrequency",
+   "render both modes into the existing bounded skip voice pool in playStoneSkip; stop skip.oscillators on lifecycle cleanup",
+   "update unit asserts and add scripts/stone-skip-smoke.js; bump eyebrow 63, shell v60, README sentence",
+   "journal/state, one commit and push main"
+  ],
+  "verified": [
+   "85 Node tests; 60 JS syntax checks; JSON, diff clean",
+   "production Chromium 390x844: real fast straight flick sent the pebble once; probe shows sine 245.274/490.548 Hz exact fundamental+octave, no triangle; peak pool 1, drains to 0, oscillators end, no errors",
+   "screenshot output/pond-piano/stone-skip-63.png inspected: two organic meeting rings on calm full-bleed water, title/shore intact"
+  ]
+ },
+ "iteration_64": {
+  "started": "2026-09-27T17:18:14.130Z",
+  "phase": "done",
+  "plan": [
+   "rewrite pure shoreLap and farSkim to bounded two-mode plans (seated pitch + fast octave), removing startFrequency sweeps",
+   "render both banks through one shared two-mode transient helper in playShoreLap/playFarSkim; keep the collision voice pool and rate limits",
+   "update unit asserts and the shore-lap/far-bank smokes; bump eyebrow 64 and shell cache v61; README sentence",
+   "journal/state, one commit and push main"
+  ],
+  "finished": "2026-09-27T17:21:23.782Z",
+  "verified": [
+   "all Node tests pass; new asserts: both banks plan exactly two modes, an octave that finishes first, no startFrequency sweep; far bank stays quieter+higher than the near fold",
+   "61 JS files pass syntax",
+   "instrumented loopback Chromium 390x844: a near-bank tap honestly earned a shore lap (dataset.shoreLaps 1>0) and the collision pool returned to 0; no page/console errors"
+  ]
+ },
+ "iteration_65": {
+  "started": "2026-09-27T18:20:00+03:00",
+  "finished": "2026-09-27T18:47:00+03:00",
+  "phase": "done",
+  "plan": [
+   "rewrite pure gatheringPearlTone and depthDiveTone to bounded two-mode plans (seated pitch + fast octave), removing startFrequency/endFrequency sweeps",
+   "render both through the shared renderBoundedModes helper in playGatheringPearl/playDepthDive; keep the collision voice pool and rate limits",
+   "update unit asserts; widen the flaky unlock-tail wait in the gather/dive smokes; bump eyebrow 65 and shell cache v62; README sentence",
+   "journal/state, one commit and push main"
+  ],
+  "verified": [
+   "85 Node tests; asserts confirm exactly two modes, an exact octave finishing first, and no startFrequency/endFrequency in either plan",
+   "61 JS files pass syntax; git diff --check clean",
+   "instrumented loopback Chromium 390x844: one gather pearl (pool back to 0, no child ripple/score) and one low dive answer (pool drained, sustain alive); no page/console errors; screenshots inspected"
+  ]
+ },
+ "iteration_66": {
+  "started": "2026-09-27T22:20:00+03:00",
+  "finished": "2026-09-27T22:55:00+03:00",
+  "phase": "done",
+  "plan": [
+   "pure keyboardGather() in pond-gesture.js: the held bowl is the meeting point, the second current opens a safe span beside it on the roomier side, both currents close, and the touch gesture still validates the pair",
+   "pond.js: hold G beside a held bowl opens the second voice and an honest ripple; after GATHER_MIN_HOLD_MS the fold runs the touch gesture and the shared pearl pool; releasing G closes it early",
+   "unit asserts for the keyboard pair, the shared hold, the edge with no room, and the moved meeting point; instrumented Chromium keyboard smoke",
+   "eyebrow 66, shell v63, README sentence, one commit and push"
+  ],
+  "verified": [
+   "node tests: 85 pass; new asserts confirm two currents inside the water, the same 240ms hold, one pearl at the held bowl, the edge refusing a second current",
+   "syntax: 61 JS files clean",
+   "instrumented production-loopback Chromium 390x844 + real keyboard: one pearl, peak pool 1, both pools drained to 0, second current sounded its own bowl",
+   "screenshot output/pond-piano/keyboard-gather-66.png inspected directly: one bead with two folding arms on calm water, no clipping, no dashboard artifact"
+  ],
+  "next_step": "done; the device-pass backlog now includes the keyboard route and the still keyboard-unreachable three-voice chord bloom"
+ },
+ "iteration_67": {
+  "started": "2026-09-27T23:17:00+03:00",
+  "finished": "2026-09-27T23:45:00+03:00",
+  "phase": "done",
+  "plan": [
+   "pure keyboardChord() in pond-gesture.js: the held bowl is one of three voices, two companions open on either side (roomier side at an edge) at their own water bowls, calm hold set honestly, refusal when no trio fits, and chordBloom still validates the trio",
+   "pond.js: hold H beside a held bowl opens two companion voices with their own ripples and coronas; the frame feeds them into chordContacts and the live currents; the shared single chordVoices pool opens the flower; releasing H, the note or focus closes them",
+   "unit asserts for the trio, each companion sounding its own bowl, the honest hold, symmetric/edge placement and safe refusal; instrumented Chromium keyboard smoke",
+   "eyebrow 67, shell v64, README sentence, one commit and push"
+  ],
+  "verified": [
+   "node tests: 85 pass; new asserts confirm three voices, each companion sounding its own bowl of water, a newborn trio not blooming early, the shared hold opening the flower, and the edge refusing a trio with no room",
+   "syntax: 62 JS files clean",
+   "instrumented production-loopback Chromium 390x844 + real keyboard: two companions opened (three voices), one flower (events 1, pool 1), pools drained to 0, no browser errors",
+   "screenshot output/pond-piano/keyboard-chord-67.png inspected directly: three converging ring currents with a shared bright flower, no clipping, no dashboard artifact"
+  ],
+  "next_step": "done; the device-pass backlog now covers the whole gesture set on keyboard and one-finger routes"
+ },
+ "iteration_68": {
+  "started": "2026-09-28T00:20:00+03:00",
+  "finished": "2026-09-28T01:05:00+03:00",
+  "phase": "done",
+  "plan": [
+   "pure keyboardLegend() in pond-a11y.js: seven frozen route records (keys + act), the same object each call",
+   "index.html: a quiet \"#legend-control\" slate in the title block with a dialog panel; rows born from the pure list at boot",
+   "pond.js: shore-panel dialog rules for the map (honest aria-expanded, focus inside, Tab trap, Escape to trigger, outside pointerdown closes), plus \"?\" toggling from anywhere the pond listens and never stolen from a real text field",
+   "pond.css: calm wet-slate styling, AA contrast, 44 px targets, reduced-motion off-switch, phone width that fits all seven rows without scrolling",
+   "unit asserts for the frozen honest list; instrumented Chromium keyboard-legend smoke; eyebrow 68, shell v65, README sentence",
+   "journal/state, one commit and push main"
+  ],
+  "verified": [
+   "node tests: 87 pass; new asserts confirm the legend is frozen, each route names both keys and act, keys are unique, all five gesture routes are covered, and the same object is returned",
+   "syntax: 64 JS files clean; JSON and git diff --check clean",
+   "instrumented production-loopback Chromium 390x844 + real keyboard: closed by default, seven honest rows, \"?\" opens, focus inside, 44 px targets, Tab trap, Escape returns focus, trigger reopens, outside pointerdown closes, \"?\" in a real input untouched, water still struck a bowl (voices 1 -> 0), no browser errors",
+   "screenshot output/pond-piano/keyboard-legend-68.png inspected directly (vision available this slot): all seven rows and Закрыть inside the panel with no scroll or clipping"
+  ],
+  "next_step": "done; the device-pass backlog now includes reading the map with TalkBack/VoiceOver and whether it should open on the first keyboard focus"
+ }
 }

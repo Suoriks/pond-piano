@@ -1243,6 +1243,72 @@
       reflectTuningFamily(true);
     });
   }
+  // The keyboard's own slate. The pond already answers arrows, a strike, the
+  // held dive, G and H, but a sighted keyboard player had nothing to discover
+  // that from and screen readers only heard one long sentence. The slate
+  // renders the same honest list for both, opens with "?" from anywhere the
+  // pond listens, and follows the shore panels' dialog rules: an honest
+  // aria-expanded, focus inside on open, a Tab trap, Escape back to the
+  // trigger, and no key stolen while a text field owns the keyboard.
+  const legendControl = document.querySelector('#legend-control');
+  const legendTrigger = document.querySelector('#legend-trigger');
+  const legendList = document.querySelector('#legend-list');
+  const legendClose = document.querySelector('#legend-close');
+  if (legendList instanceof HTMLElement) {
+    for (const route of a11y.keyboardLegend()) {
+      const term = document.createElement('dt');
+      term.className = 'legend-key';
+      term.textContent = route.keys;
+      const detail = document.createElement('dd');
+      detail.className = 'legend-text';
+      detail.textContent = route.text;
+      legendList.append(term, detail);
+    }
+  }
+  function legendOpen() { return legendControl?.classList.contains('is-open') === true; }
+  function legendPanelControls() { return legendClose instanceof HTMLButtonElement ? [legendClose] : []; }
+  function setLegendOpen(open) {
+    if (!legendControl || !legendTrigger) return;
+    const hadFocusInside = legendControl.contains(document.activeElement) || legendTrigger === document.activeElement;
+    legendControl.classList.toggle('is-open', open);
+    legendTrigger.setAttribute('aria-expanded', a11y.expandedState(open));
+    if (open && !legendControl.contains(document.activeElement)) {
+      const controls = legendPanelControls();
+      controls[a11y.openIndex(controls.length) ?? 0]?.focus();
+      status.textContent = 'Карта клавиш пруда открыта; Escape закрывает её';
+    } else if (!open && hadFocusInside) {
+      legendTrigger.focus();
+    }
+  }
+  legendTrigger?.addEventListener('click', () => setLegendOpen(!legendOpen()));
+  legendClose?.addEventListener('click', () => setLegendOpen(false));
+  legendControl?.addEventListener('focusout', () => {
+    requestAnimationFrame(() => {
+      if (!legendControl.contains(document.activeElement)) setLegendOpen(false);
+    });
+  });
+  document.addEventListener('pointerdown', event => {
+    if (!legendControl?.contains(event.target)) setLegendOpen(false);
+  });
+  legendControl?.addEventListener('keydown', event => {
+    if (event.key === 'Escape') { event.preventDefault(); setLegendOpen(false); return; }
+    if (event.key !== 'Tab' || !legendOpen()) return;
+    const controls = legendPanelControls();
+    if (!controls.length) return;
+    const current = controls.indexOf(document.activeElement);
+    const resolved = a11y.countIndex(current, controls.length, event.shiftKey ? 'backward' : 'forward');
+    event.preventDefault();
+    controls[resolved]?.focus();
+  });
+  document.addEventListener('keydown', event => {
+    if (event.defaultPrevented || event.repeat) return;
+    const typing = event.target instanceof HTMLElement
+      && (event.target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName));
+    if (typing || !(event.key === '?' || (event.code === 'Slash' && event.shiftKey))) return;
+    event.preventDefault();
+    setLegendOpen(!legendOpen());
+  });
+
   reflectMasterState(false);
   reflectTuningFamily(false);
   reflectDiaryCount();
