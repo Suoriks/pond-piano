@@ -921,7 +921,7 @@
     const pseudo = {
       ...line, startedAt: line.born,
       points: line.points.map((point, index) => ({
-        x: point.x, y: point.y, pitch: point.x,
+        x: point.x, y: point.y, pitch: line.pitch,
         pressure: Number.isFinite(point.pressure) ? point.pressure : line.pressure,
         at: line.born + index
       }))
@@ -960,7 +960,7 @@
     const pseudo = {
       ...line, startedAt: line.born,
       points: line.points.map((point, index) => ({
-        x: point.x, y: point.y, pitch: point.x,
+        x: point.x, y: point.y, pitch: line.pitch,
         pressure: Number.isFinite(point.pressure) ? point.pressure : line.pressure,
         at: line.born + index
       }))
@@ -2182,9 +2182,8 @@ function disconnectSkipVoice(engine, skip) {
 
   function captureScoreSample(contact, x, y, now, pressure, force = false) {
     if (!contact.sounding) return;
-    const mappedPitch = Number.isFinite(contact.mapping?.frequency)
-      ? music.normalizedAtFrequency(contact.mapping.frequency)
-      : Number.isFinite(contact.pitchX) ? contact.pitchX : x / Math.max(1, width);
+    // The score keeps the bowl that actually rang; x/y remain the moving hand.
+    const mappedPitch = music.normalizedAtFrequency(contact.struckFrequency ?? pitchAt(contact.originX ?? x));
     const sample = {
       x: Math.max(0, Math.min(1, x / Math.max(1, width))),
       y: Math.max(0, Math.min(1, y / Math.max(1, height))),
@@ -2230,12 +2229,12 @@ function disconnectSkipVoice(engine, skip) {
     pointers.set(event.pointerId, {
       ...p, pressure, pressureAvailable, attack, splashPlayed: false, sounding, born: now, lastMotion: now, movedAt: now, motionSpeed: 0,
       originX: p.x, originY: p.y, materialBias: null,
-      pitchX: p.x / Math.max(1, width), mapping: null, precisionActive: false, precisionAmount: 0, precisionOriginX: null,
+      pitchX: p.x / Math.max(1, width), struckFrequency: sounding ? pitchAt(p.x) : null, mapping: null, precisionActive: false, precisionAmount: 0, precisionOriginX: null,
       currentAnnounced: false, sampledX: p.x, sampledY: p.y, sampledAt: now,
       eddy: null, eddyVisual: null, eddyPitchX: null, eddyDepthY: null,
       dive: null, dived: false,
       distanceTraveled: 0, movedDuringHold: 0, resonanceX: p.x, resonanceY: p.y, resonatedMemories: new Set(),
-      scoreSamples: sounding ? [{ x: p.x / Math.max(1, width), y: p.y / Math.max(1, height), pitch: p.x / Math.max(1, width), at: now, pressure: attack }] : [],
+      scoreSamples: sounding ? [{ x: p.x / Math.max(1, width), y: p.y / Math.max(1, height), pitch: music.normalizedAtFrequency(pitchAt(p.x)), at: now, pressure: attack }] : [],
       glideWake: music.glideWake(0, 0)
     });
     addRipple(p.x, p.y, attack);
@@ -2544,10 +2543,10 @@ function disconnectSkipVoice(engine, skip) {
       keyboard.dive = null; keyboard.dived = false;
       const p = keyboardPoint();
       keyboard.distanceTraveled = 0; keyboard.resonanceX = p.x; keyboard.resonanceY = p.y; keyboard.resonatedMemories = new Set();
-      keyboard.scoreSamples = [{ x: keyboard.x, y: keyboard.y, pitch: keyboard.pitchX, at: now, pressure: .48 }];
+      keyboard.scoreSamples = [{ x: keyboard.x, y: keyboard.y, pitch: music.normalizedAtFrequency(pitchAt(p.x)), at: now, pressure: .48 }];
       const engine = audioLifecycle.activateFromGesture();
       keyboard.sounding = startVoice('keyboard', p.x, p.y, .48, pitchAt(p.x), .48, engine, phraseNoteIndex);
-      if (keyboard.sounding) { keyboard.struckX = keyboard.x; phraseNoteIndex += 1; }
+      if (keyboard.sounding) { keyboard.struckX = keyboard.x; keyboard.struckFrequency = pitchAt(p.x); phraseNoteIndex += 1; }
       if (!keyboard.sounding) keyboard.scoreSamples = [];
       addRipple(p.x, p.y, .48);
       spawnDropCorona(p.x, p.y, .48);

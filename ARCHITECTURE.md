@@ -27,6 +27,8 @@
 
 `bowl-audio-proof.js` записывает настоящий выход production Web Audio, включая compressor и вторичные ответы, через test-only ScriptProcessor. Фиксированные случайные координаты одинаковы у before/after; realtime scheduling имеет небольшой browser jitter. WAV не нормализован. `bowl-lifecycle-smoke.js` проверяет trusted CDP touch, шесть пальцев, повторное использование хвостов, отмену, клавиатуру, pagehide/resume и завершение узлов.
 
+С итерации 0060 `struckFrequency` хранится на контакте даже после естественного затухания AudioNode. `captureScoreSample` сохраняет `normalizedAtFrequency(struckFrequency)` в каждом сэмпле; X/Y остаются координатами движения руки. Начальный сэмпл pointer и клавиатуры использует ту же высоту. Дневниковая строка содержит один `line.pitch`; pour/loop кладут его в каждый мелодический якорь, а `predictInkRead` при отсутствии pitch у точек берёт `line.pitch` перед старым fallback по X. Старые сериализованные сэмплы не переписываются.
+
 `pond-a11y.bowlLocation` переводит нормализованные клавиатурные X/Y в имя фактической чаши и грубую глубину; округление чаши совпадает с `PondMusic.bowlFrequency`. Browser-слой произносит выбор через существующий live status лишь при смене чаши/категории глубины и отдельно хранит X уже звучащего удара. Canvas участвует в accessibility tree с коротким именем и описанием вне `aria-hidden` — без дополнительного интерактивного слоя поверх воды. `keyboard-water-smoke.js` проверяет production Electron allowlist, доступный application-node, смену выбранной чаши, постоянство звучащей частоты и чистое освобождение Web Audio голосов.
 
 ## Исторические прототипы до 0057

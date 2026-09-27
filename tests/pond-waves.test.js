@@ -255,6 +255,12 @@ test('predicts the first crossing of a ripple with a readable ink line', () => {
   assert.ok(read.nx >= 0 && read.nx <= 1 && read.ny >= 0 && read.ny <= 1, 'normalized inside the pond');
   assert.ok(read.energy > 0 && read.energy <= 1, 'energy stays bounded');
   assert.equal(read.parentFrequency, 330, 'keeps the ripple pitch');
+  // The path may cross three X cells, but its single struck bowl is the
+  // score: a ripple must reread the note, not infer a new one from geometry.
+  const fixedBowl = { ...line, pitch: .3, points: line.points.map(({ x, y }) => ({ x, y })) };
+  const bowlRead = waves.predictInkRead(wave, 0, fixedBowl, { width: 390, height: 844 });
+  assert.equal(bowlRead.pitch, .3);
+  assert.equal(read.pitch, .5, 'old ink without a pitch retains its positional fallback');
 });
 
 test('no prediction for standing, expired or misplaced ink', () => {

@@ -283,9 +283,12 @@
       const at = beginsAt + delayMs;
       if (at < lineBorn || at >= lineBorn + lineLife || !isAlive(a, at)) continue;
       if (!best || at < best.at) {
-        // Local pitch: blend the segment's endpoint pitch by the touch `t`.
-        const pa = Number.isFinite(points[index].pitch) ? points[index].pitch : points[index].x;
-        const pb = Number.isFinite(points[index + 1].pitch) ? points[index + 1].pitch : points[index + 1].x;
+        // The ink line keeps its sounding bowl even as its drawn path moves.
+        // Older imported lines without a pitch still use their endpoint X.
+        const pa = Number.isFinite(points[index].pitch) ? points[index].pitch
+          : Number.isFinite(line.pitch) ? line.pitch : points[index].x;
+        const pb = Number.isFinite(points[index + 1].pitch) ? points[index + 1].pitch
+          : Number.isFinite(line.pitch) ? line.pitch : points[index + 1].x;
         best = {
           at,
           delayMs,

@@ -1,5 +1,5 @@
-const CACHE = 'pond-piano-shell-v56';
-// Iteration 0059: keyboard bowl selection is visible to assistive technology.
+const CACHE = 'pond-piano-shell-v57';
+// Iteration 0060: the spatial score replays the bowl actually struck.
 const SHELL = [
   './',
   './index.html',

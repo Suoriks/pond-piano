@@ -1,12 +1,12 @@
 {
   "project": "pond-piano",
   "phase": "device-validation",
-  "iteration": 59,
-  "status": "keyboard-water-accessibility-local-verified",
-  "current_goal": "Iteration 0059: expose the actual playable pond in the accessibility tree and make keyboard placement/strikes speak the same fixed bowl position and water depth that production Web Audio plays, without changing sound or the visual landscape.",
-  "previous_goal": "Iteration 0058: each of the eleven struck bowls now carries its own alloy; shine is deterministic per register step and gesture-derived (rim offset, finger hardness, depth), folded into existing mode peaks and upper-mode lives. Random taps differ in timbre, not only pitch. No new gestures or visual ornaments.",
-  "last_verified": "2026-09-26: 85 Node tests pass, 58 JS syntax clean, JSON and git diff --check clean. Production loopback Chromium 390x844: exposed application AX node and instruction, shore radio still accessible; real Tab focus-visible outline, selected bowl 7 and struck Web Audio pitch 441.493 Hz; navigation to bowl 8 preserved struck pitch; release left next-bowl status and all voices decayed to 0; no page/console errors. Screenshot output/pond-piano/keyboard-water-59.png inspected: visible focus ring, intact water and shore.",
-  "next_step": "Real VoiceOver/TalkBack + Android/iPhone device-pass of keyboard location speech and touch; separately human listening of bowl-58/after.wav versus bowl-57/after.wav for timbre acceptance. Local commit must be pushed to main and verified.",
+  "iteration": 60,
+  "status": "score-bowl-pitch-verified",
+  "current_goal": "Iteration 0060: keep the visible score and diary spatial gestures, but make their replay remember the actually struck, fixed bowl note instead of inventing a moving pitch from the path.",
+  "previous_goal": "Iteration 0059: expose the actual playable pond in the accessibility tree and make keyboard placement/strikes speak the same fixed bowl position and water depth that production Web Audio plays, without changing sound or the visual landscape.",
+  "last_verified": "2026-09-27: 85 Node tests pass, 59 JS syntax and JSON/diff checks clean. Real loopback Chromium 390x844: moving mouse struck 245.274 Hz and kept 16 scored points + diary pitch constant, pour played a triangle anchor 296.700 Hz with expected depth contour; keyboard struck 392.438 Hz and kept 20 scored points constant across X. Screenshot inspected: visible ink, ripples and controls fit. Desktop shell 6/6, keyboard AX smoke, lifecycle 10/10, package 26 files clean; origin/main matched prior HEAD before this iteration.",
+  "next_step": "Real Android/iPhone device pass and human listening of bowled notes plus old short echo timbres; old saved continuous-pitch phrases remain untouched.",
   "alpha_feedback": {
     "captured_at": "2026-07-26T13:59:00+03:00",
     "observations": [
@@ -49,7 +49,7 @@
     ],
     "next_step": "done; real-device pass remains as the shared backlog, now with 0034 shell readiness folded in"
   },
-  "git_sync": "pending_push",
+  "git_sync": "synced",
   "git_remote": "https://github.com/Suoriks/pond-piano.git",
   "git_branch": "main",
   "iteration_40": {
@@ -340,7 +340,7 @@
     ],
     "next_step": "done; real-device pass should compare the warm near lap and cool far skim on phone speakers and bright screens"
   },
-  "current_iteration": 59,
+  "current_iteration": 60,
   "iteration_51": {
     "started": "2026-09-02T22:17:00+03:00",
     "phase": "done",
@@ -505,7 +505,7 @@
   },
   "iteration_59": {
     "started": "2026-09-26T16:18:24.549592+03:00",
-    "phase": "local-verified",
+    "phase": "done",
     "plan": [
       "unhide the playable canvas from the accessibility tree; retain decorative layers hidden",
       "add a pure bounded bowl-location narration for keyboard position/strike; announce a fixed struck bowl rather than an imaginary moving pitch",
@@ -519,6 +519,24 @@
       "Tab focus-visible solid outline; keyboard bowl 7 strike 441.493 Hz held through move to next bowl 8; after release live status describes next strike and voices return to 0",
       "screenshot output/pond-piano/keyboard-water-59.png inspected: focus ring inside viewport, intact ripples and shore, no clipping"
     ],
-    "next_step": "Real VoiceOver/TalkBack + Android/iPhone device-pass of keyboard location speech and touch; separately human listening of bowl-58/after.wav versus bowl-57/after.wav for timbre acceptance. Local commit must be pushed to main and verified."
+    "next_step": "Pushed to origin/main before 0060; real VoiceOver/TalkBack and mobile validation remain."
+  },
+  "iteration_60": {
+    "started": "2026-09-27T04:18:40+03:00",
+    "phase": "done",
+    "plan": [
+      "record struck bowl pitch independent of gesture path for pointer and keyboard",
+      "diary pour/loop and ripple-ink reading keep line pitch while retaining geometry",
+      "pure regression and production browser smoke: dragged bowl score/echo pitch, visual path and cleanup",
+      "update docs/KAIZEN/state, cache version; one commit and push main"
+    ],
+    "finished": "2026-09-27T04:24:25+03:00",
+    "verified": [
+      "85 Node tests; 59 JS syntax; JSON and git diff --check clean",
+      "production Chromium 390x844: pointer moves score across the pond with 16 points at one struck pitch, diary pour starts actual echo note; keyboard moves 20 points with same held pitch; no page/console errors",
+      "screenshot output/pond-piano/bowl-score-60.png inspected: ink, water and shore unclipped",
+      "desktop shell 6/6, keyboard AX regression, bowl lifecycle 10/10 including 49 peak oscillators and final cleanup; npm pack contains 26 files"
+    ],
+    "next_step": "Real mobile device pass; listen to legacy short echo timbre beside the new bowls. Old saved phrases keep their previous pitch data."
   }
 }
