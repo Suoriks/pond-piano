@@ -307,6 +307,56 @@ h1 { margin: 0; font: 400 clamp(24px, 4vw, 44px)/1.05 Georgia, serif; letter-spa
 .legend-close:hover { border-color: rgba(214, 234, 186, .58); filter: brightness(1.12); }
 .legend-close:focus-visible { outline: 3px solid #dae7b4; outline-offset: 2px; }
 .legend-close:active { filter: brightness(1.25); }
+.inspect-control {
+  position: fixed; inset: auto 0 0 0; z-index: 6; display: flex; justify-content: center;
+  padding: 0 12px max(12px, env(safe-area-inset-bottom)); pointer-events: none;
+}
+.inspect-control[hidden] { display: none; }
+.inspect-panel {
+  pointer-events: auto; width: min(420px, 100%); max-height: min(78vh, 620px); overflow-y: auto;
+  padding: 16px 18px 14px; color: #edf2de;
+  border: 1px solid rgba(190, 214, 180, .3);
+  border-radius: 26px 30px 24px 30px;
+  background: linear-gradient(155deg, rgba(30, 45, 35, .97), rgba(9, 22, 18, .98));
+  box-shadow: inset 0 1px rgba(232, 240, 210, .09), 0 18px 40px rgba(0, 7, 5, .6);
+  animation: inspect-rise .24s ease;
+}
+@keyframes inspect-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .inspect-panel { animation: none; } }
+.inspect-heading { margin: 0 0 6px; color: #cfe0bd; font: 600 15px/1.25 inherit; letter-spacing: .02em; }
+.inspect-intro { margin: 0 0 12px; color: #a9bfae; font-size: 12px; line-height: 1.45; }
+.inspect-facts { display: grid; gap: 7px; margin: 0 0 10px; }
+.inspect-fact { display: grid; grid-template-columns: 84px 1fr; gap: 10px; align-items: baseline; }
+.inspect-term { color: #93ac97; font: 600 10px/1.5 ui-monospace, monospace; letter-spacing: .12em; text-transform: uppercase; }
+.inspect-value { margin: 0; color: #e8f0dc; font-size: 13px; line-height: 1.4; }
+.inspect-fact[data-state="unknown"] .inspect-value { color: #9aab9c; font-style: italic; }
+.inspect-fingers {
+  margin: 0 0 12px; padding: 9px 12px; color: #dae8c8; font-size: 13px; line-height: 1.4;
+  border: 1px dashed rgba(190, 214, 180, .34); border-radius: 14px;
+}
+.inspect-listen { margin: 0 0 8px; color: #9fb7a5; font: 600 10px/1.4 ui-monospace, monospace; letter-spacing: .14em; text-transform: uppercase; }
+.inspect-scenarios { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.inspect-scene, .inspect-trigger, .inspect-close {
+  min-height: 44px; padding: 10px 12px; cursor: pointer; color: #dce6ce; font: 600 12px/1.25 inherit;
+  border: 1px solid rgba(198, 224, 182, .3); border-radius: 16px;
+  background: linear-gradient(150deg, hsla(96 38% 26% / .5), hsla(96 40% 12% / .66));
+  transition: border-color .18s ease, filter .18s ease, transform .18s ease;
+}
+.inspect-scene:hover, .inspect-trigger:hover, .inspect-close:hover { border-color: rgba(214, 234, 186, .58); filter: brightness(1.12); }
+.inspect-scene:focus-visible, .inspect-trigger:focus-visible, .inspect-close:focus-visible { outline: 3px solid #dae7b4; outline-offset: 2px; }
+.inspect-scene[aria-pressed="true"] { border-color: rgba(214, 234, 186, .82); box-shadow: 0 0 12px hsla(96 60% 70% / .3); }
+/* While the examination is open it is the only control surface: the shore
+   stones behind it must not read through it or answer a thumb. */
+body.inspect-open .shore-control,
+body.inspect-open .tuning-control,
+body.inspect-open .diary-control {
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity .2s ease, visibility 0s linear .2s;
+}
+.inspect-trigger { width: 100%; margin-top: 9px; border-radius: 46% 54% 52% 48% / 54% 46% 52% 48%; }
+.inspect-close { width: 100%; margin-top: 11px; border-radius: 46% 54% 52% 48% / 54% 46% 52% 48%; }
+@media (max-width: 380px) { .inspect-scenarios { grid-template-columns: 1fr; } }
+
 @media (max-width: 420px) {
   .tuning-control { left: max(12px, env(safe-area-inset-left)); bottom: max(11px, env(safe-area-inset-bottom)); }
   .shore-control { right: max(14px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); }

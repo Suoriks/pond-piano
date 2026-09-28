@@ -1,12 +1,12 @@
 {
  "project": "pond-piano",
  "phase": "device-validation",
- "iteration": 78,
- "status": "the-water-answers-the-hand-too",
- "current_goal": "Iteration 0078: там, где у платформы есть вибрация, вода отвечает не только уху, но и руке — настоящее касание получает один короткий толчок (9–24 мс), длину которого задаёт сила самого удара; reduced motion замирает полностью, мышь молчит, серия быстрее 90 мс не жужжит, а собственный разлив дневника руку не трогает, потому что это не жест игрока. Аудио-правила не тронуты.",
- "previous_goal": "Iteration 0077: то, что вода показывает огоньками, пруд теперь и произносит — во время разлива дневника живой регион один раз называет каждую новую звучащую фразу и честно говорит, сколько фраз ещё впереди, а остановленный разлив честно называет, сколько осталось непрозвучавшим.",
- "last_verified": "2026-09-28: 110 Node tests pass (was 108; two new suites cover one honest pulse sized by the strike and silence when the hand did not ask for it). 74 JS files pass syntax (was 73). scripts/haptics-smoke.js passes on a production-loopback Chromium: a real touch earns exactly one 9–24 ms pulse and the probe matches it, a mouse strike answers nothing, three strikes landing in the same instant answer only the first, the seeded diary replay never buzzes the hand, and under reduced motion the pond stays playable but stills the answer completely. No console or page errors. Screenshot output/pond-piano/haptics-78.png captured and inspected.",
- "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari): how the single pulse reads in the hand, whether Android really vibrates without an engaged-site gesture, and how the calm 90 ms gap feels during a real melodic series. Windows high-contrast check still open from 0073.",
+ "iteration": 79,
+ "status": "the-shore-examines-itself",
+ "current_goal": "Iteration 0079: пруд осматривает сам себя, не выдумывая ни одного показания. Клавиша I, ссылка «Осмотр берега» в карте клавиш или адрес ?inspect открывают спокойную береговую панель: она повторяет только то, что вода действительно измерила на этой платформе (состояние и частота воды, объявленный платформой отклик, наличие толчка, увиденные типы указателей, наибольшее число пальцев разом) и прямо пишет «вода ещё не знает» там, где её не спрашивали. Там же звучат четыре сцены, о которых ещё судит живое ухо — короткие касания, долгая вода, плотная ладонь, встреча волн. Осмотр не является игрой: сцены играют настоящими чашами, но не пишут в дневник, не отвечают руке толчком и не помечают пруд сыгранным, а настоящие пальцы считаются честно и остаются в дневнике как всякая игра.",
+ "previous_goal": "Iteration 0078: там, где у платформы есть вибрация, вода отвечает не только уху, но и руке — настоящее касание получает один короткий толчок (9–24 мс), длину которого задаёт сила самого удара; reduced motion замирает полностью, мышь молчит, серия быстрее 90 мс не жужжит, а собственный разлив дневника руку не трогает, потому что это не жест игрока. Аудио-правила не тронуты.",
+ "last_verified": "2026-09-28: 118 Node tests pass (was 110; eight new suites cover honest measured/unknown states, broken probes never becoming readings, pointer naming, real Russian finger counts and deterministic bounded scenes). 77 JS files pass syntax (was 74). scripts/inspect-smoke.js passes on a production-loopback Chromium 390x844 with a seeded chronicle: before the first touch the water admits it has not woken and that the response and pointers were never measured; the dense-hand scene really sounds five bowls and writes no diary phrase; the scene ends by itself and clears aria-pressed; I closes and reopens the examination honestly; three real trusted CDP fingers are counted as 'вода держала 3 пальца' and, being real play, leave three phrases behind (6 vs 3 - the difference is what proves the scenes write nothing); after waking, the water names a real sample rate and declared response. No console or page errors. Screenshot output/pond-piano/inspect-79.png inspected directly and the lower third enlarged: the panel covers the shore stones instead of letting them read through it, scene targets are >=44px, nothing is clipped.",
+ "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari) no longer needs blind measuring: open ?inspect, put two, three, five fingers on the water and read the honest count together with what the platform declares about its response and its actuator; then listen to the 'Короткие касания' and 'Долгая вода' scenes on phone speakers, where only a human ear decides. Windows high-contrast check still open from 0073.",
  "alpha_feedback": {
   "captured_at": "2026-07-26T13:59:00+03:00",
   "observations": [
@@ -49,7 +49,7 @@
   ],
   "next_step": "done; real-device pass remains as the shared backlog, now with 0034 shell readiness folded in"
  },
- "git_sync": "synced",
+ "git_sync": "pending-push",
  "git_remote": "https://github.com/Suoriks/pond-piano.git",
  "git_branch": "main",
  "iteration_40": {
@@ -340,7 +340,7 @@
   ],
   "next_step": "done; real-device pass should compare the warm near lap and cool far skim on phone speakers and bright screens"
  },
- "current_iteration": 78,
+ "current_iteration": 79,
  "iteration_51": {
   "started": "2026-09-02T22:17:00+03:00",
   "phase": "done",
@@ -874,6 +874,25 @@
    "screenshot output/pond-piano/haptics-78.png inspected: full organic water, three ink lines, ripples, shore stones and legend trigger intact, no cropping"
   ],
   "next_step": "done; shared device-pass backlog now includes the hand-feel of the single pulse and Android's real vibrate gesture rules",
+  "resumed_from_interrupted_slot": false
+ },
+ "iteration_79": {
+  "started": "2026-09-28T14:17:00+03:00",
+  "phase": "done",
+  "goal": "Iteration 0079: берег осматривает сам себя — честные измеренные факты платформы и четыре слуховые сцены, без выдуманных показаний и без записи в дневник.",
+  "plan": [
+   "pure pond-diagnostic.js: environmentReport measured/unknown, fingersHeld/fingerWord, deterministic acceptanceScenarios",
+   "pond.js: #inspect-control panel, I / map link / ?inspect routes, scene playback through the real bowl path, pointer-kind and max-finger counting, honest dataset probes",
+   "unit suites for honesty and scene determinism; scripts/inspect-smoke.js with trusted CDP multi-touch; screenshot",
+   "docs (README paragraph, ARCHITECTURE contract), KAIZEN 0079, eyebrow 79, shell v76, state, one commit"
+  ],
+  "finished": "2026-09-28T14:40:00+03:00",
+  "verified": [
+   "118 Node tests pass; 77 JS files syntax clean",
+   "inspect-smoke.js: honest unknown before measurement, five real voices in the dense-hand scene with zero diary growth, self-ending scene, I toggles, three trusted CDP fingers counted as 3 and recorded as real play, real sample rate and declared response after waking; no console or page errors",
+   "screenshot inspected directly plus an enlarged lower-third crop: shore stones no longer read through the panel, targets >=44px"
+  ],
+  "next_step": "Real device pass via ?inspect: the honest finger count plus the two listening scenes on phone speakers. Windows high-contrast check still open from 0073.",
   "resumed_from_interrupted_slot": false
  }
 }

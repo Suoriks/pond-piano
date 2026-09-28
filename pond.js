@@ -13,6 +13,7 @@
   const tide = window.PondTide;
   const budget = window.PondBudget;
   const a11y = window.PondA11y;
+  const diagnostic = window.PondDiagnostic;
   const repose = window.PondRepose;
   const masterModel = window.PondMaster;
   const audioLifecycleFactory = window.PondAudioLifecycle;
@@ -25,6 +26,7 @@
   if (!masterModel) throw new Error('Pond master control did not load');
   if (!budget) throw new Error('Pond budget mapping did not load');
   if (!a11y) throw new Error('Pond accessibility mapping did not load');
+  if (!diagnostic) throw new Error('Pond diagnostic mapping did not load');
   if (!audioLifecycleFactory) throw new Error('Pond audio lifecycle did not load');
   const volumeControl = document.querySelector('.shore-control');
   const volumeStone = document.querySelector('#volume-stone');
@@ -43,6 +45,12 @@
   const diaryLeaf = document.querySelector('#diary-leaf');
   const leafText = document.querySelector('#leaf-text');
   const tuningInputs = [...document.querySelectorAll('input[name="tuning-family"]')];
+  const inspectControl = document.querySelector('#inspect-control');
+  const inspectFactList = document.querySelector('#inspect-facts');
+  const inspectFingersLine = document.querySelector('#inspect-fingers');
+  const inspectScenarioBox = document.querySelector('#inspect-scenarios');
+  const inspectCloseButton = document.querySelector('#inspect-close');
+  const inspectTrigger = document.querySelector('#inspect-trigger');
   const tuningValue = document.querySelector('#tuning-value');
   const MASTER_STORAGE_KEY = 'pond-piano.master.v1';
   const TUNING_STORAGE_KEY = 'pond-piano.tuning.v1';
@@ -101,6 +109,14 @@
   // The phrase whose takeover has already been spoken aloud, so the live
   // region never repeats a milestone the water has moved past.
   let flushSpokenPhrase = -1;
+  // The shore examination keeps only what the water really saw: which kinds
+  // of pointer reached it, and the most fingers it ever held at once.
+  let inspectOpen = false;
+  const inspectPointerKinds = new Set();
+  let inspectBestFingers = 0;
+  const inspectTimers = new Set();
+  let inspectPlaying = null;
+  let inspectSerial = 0;
   // A lifted phrase rests on the shore leaf until the water takes it back.
   let heldLeafScroll = null;
   let loopPassesFired = 0;
@@ -339,6 +355,7 @@
     pourEchoes.length = 0;
     stopPourLoop();
     stopDiaryFlush();
+    stopInspectScene(false);
     hideDiaryLeaf();
     stoneFlights.length = 0;
     depthDives.length = 0;
@@ -1605,6 +1622,215 @@
     setLegendOpen(!legendOpen());
   });
 
+  // ---- The shore examines itself -------------------------------------------
+  // The one open question no unit test can answer is how the pond behaves on a
+  // real phone. This panel does not pretend to answer it: it repeats only what
+  // the water really measured, admits plainly when it was never asked, and
+  // plays the recorded listening material so a human ear can judge the rest on
+  // the actual device. It never touches the diary, and its strikes are not the
+  // player's hand: they earn no memory, no haptic answer and no played flag.
+  function inspectProbe() {
+    const engine = audio;
+    return {
+      reducedMotion: reduced.matches,
+      audioState: engine ? engine.context.state : 'uninitialized',
+      sampleRate: engine ? engine.context.sampleRate : undefined,
+      baseLatency: engine ? engine.context.baseLatency : undefined,
+      vibrate: typeof navigator.vibrate === 'function',
+      pointerTypes: [...inspectPointerKinds],
+      maxFingers: inspectBestFingers
+    };
+  }
+
+  function renderInspectFacts() {
+    const held = diagnostic.fingersHeld(inspectBestFingers);
+    if (inspectFingersLine) {
+      inspectFingersLine.textContent = held
+        ? `${held}. Положите на воду два, три, пять пальцев — счёт растёт сам.`
+        : 'Вода ждёт ваших пальцев';
+    }
+    if (!inspectFactList) return;
+    const report = diagnostic.environmentReport(inspectProbe());
+    const rows = report.map(entry => {
+      const row = document.createElement('div');
+      row.className = 'inspect-fact';
+      row.dataset.state = entry.state;
+      const term = document.createElement('dt');
+      term.className = 'inspect-term';
+      term.textContent = entry.label;
+      const value = document.createElement('dd');
+      value.className = 'inspect-value';
+      value.textContent = entry.value;
+      row.append(term, value);
+      return row;
+    });
+    inspectFactList.replaceChildren(...rows);
+    canvas.dataset.inspectFacts = report.map(entry => `${entry.id}:${entry.state}`).join(' ');
+  }
+
+  // Nothing here answers the hand: an examination is not play. The water
+  // records which kinds of pointer reached it and how many it ever held, and
+  // that count is the whole multi-touch question a real phone has to settle.
+  function noteInspectPointer(kind, concurrent) {
+    const name = typeof kind === 'string' && kind ? kind : null;
+    if (name) inspectPointerKinds.add(name);
+    const held = Number.isFinite(concurrent) ? Math.trunc(concurrent) : inspectBestFingers;
+    if (held > inspectBestFingers) inspectBestFingers = held;
+    canvas.dataset.inspectPointers = [...inspectPointerKinds].join(',');
+    canvas.dataset.inspectFingers = String(inspectBestFingers);
+    if (inspectOpen) renderInspectFacts();
+  }
+
+  function buildInspectScenes() {
+    if (!inspectScenarioBox) return;
+    const buttons = diagnostic.acceptanceScenarios().map(scene => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'inspect-scene';
+      button.dataset.scene = scene.id;
+      button.setAttribute('aria-pressed', 'false');
+      button.textContent = scene.title;
+      const note = document.createElement('span');
+      note.className = 'sr-only';
+      note.textContent = ` ${scene.sentence}`;
+      button.append(note);
+      button.addEventListener('click', () => playInspectScene(scene.id));
+      return button;
+    });
+    inspectScenarioBox.replaceChildren(...buttons);
+  }
+
+  function reflectInspectScenes() {
+    if (!inspectScenarioBox) return;
+    for (const button of inspectScenarioBox.querySelectorAll('.inspect-scene')) {
+      button.setAttribute('aria-pressed', button.dataset.scene === inspectPlaying ? 'true' : 'false');
+    }
+  }
+
+  function stopInspectScene(announce = false) {
+    for (const timer of inspectTimers) clearTimeout(timer);
+    inspectTimers.clear();
+    const engine = audio;
+    if (inspectPlaying) {
+      if (engine) {
+        for (const id of [...engine.voices.keys()]) {
+          if (String(id).startsWith('inspect:')) endVoice(id);
+        }
+      }
+      inspectPlaying = null;
+      if (announce) status.textContent = 'Вода отпустила сцену осмотра';
+    }
+    canvas.dataset.inspectScenario = '0';
+    canvas.dataset.inspectVoices = String(engine ? engine.voices.size : 0);
+    reflectInspectScenes();
+  }
+
+  function playInspectScene(id) {
+    const scene = diagnostic.scenarioById(id);
+    if (!scene) return false;
+    const wasPlaying = inspectPlaying === id;
+    stopInspectScene(false);
+    if (wasPlaying) { status.textContent = 'Сцена осмотра отпущена'; return false; }
+    const engine = audioLifecycle.activateFromGesture();
+    if (!engine || engine.context.state === 'closed') {
+      status.textContent = 'Сначала разбудите воду касанием — тогда берег сыграет сцену';
+      return false;
+    }
+    inspectPlaying = id;
+    inspectSerial += 1;
+    const serial = inspectSerial;
+    canvas.dataset.inspectScenario = id;
+    scene.strikes.forEach((hit, index) => {
+      const strikeTimer = setTimeout(() => {
+        inspectTimers.delete(strikeTimer);
+        if (inspectPlaying !== id || inspectSerial !== serial) return;
+        const px = hit.x * Math.max(1, width), py = hit.y * Math.max(1, height);
+        const voiceId = `inspect:${serial}:${index}`;
+        startVoice(voiceId, px, py, hit.pressure, pitchAt(px), hit.pressure, engine, hit.shade);
+        addRipple(px, py, hit.pressure);
+        canvas.dataset.inspectVoices = String(engine.voices.size);
+        if (hit.holdMs > 0) {
+          const releaseTimer = setTimeout(() => {
+            inspectTimers.delete(releaseTimer);
+            if (inspectPlaying !== id || inspectSerial !== serial) return;
+            endVoice(voiceId);
+            canvas.dataset.inspectVoices = String(engine.voices.size);
+          }, hit.holdMs);
+          inspectTimers.add(releaseTimer);
+        }
+      }, hit.at);
+      inspectTimers.add(strikeTimer);
+    });
+    // A scene that ends by itself must say so; an open panel must never hold a
+    // stale promise of sound.
+    const endTimer = setTimeout(() => {
+      inspectTimers.delete(endTimer);
+      if (inspectPlaying !== id || inspectSerial !== serial) return;
+      inspectPlaying = null;
+      canvas.dataset.inspectScenario = '0';
+      canvas.dataset.inspectVoices = String(engine.voices.size);
+      status.textContent = `Сцена осмотра отзвучала: ${scene.title}`;
+      reflectInspectScenes();
+    }, scene.spanMs);
+    inspectTimers.add(endTimer);
+    reflectInspectScenes();
+    status.textContent = `Берег играет сцену осмотра: ${scene.title}. ${scene.sentence}`;
+    return true;
+  }
+
+  function setInspectOpen(open) {
+    if (!inspectControl || !inspectTrigger) return;
+    const next = open === true;
+    if (next === inspectOpen) { if (next) renderInspectFacts(); return; }
+    inspectOpen = next;
+    inspectControl.hidden = !next;
+    document.body.classList.toggle('inspect-open', next);
+    inspectTrigger.setAttribute('aria-expanded', a11y.expandedState(next));
+    canvas.dataset.inspectOpen = next ? '1' : '0';
+    if (next) {
+      renderInspectFacts();
+      reflectInspectScenes();
+      inspectCloseButton?.focus();
+      status.textContent = 'Осмотр берега открыт: вода называет только то, что измерила сама; Escape закрывает';
+    } else {
+      stopInspectScene(false);
+      if (inspectControl.contains(document.activeElement)) inspectTrigger.focus();
+      status.textContent = 'Осмотр берега закрыт';
+    }
+  }
+
+  inspectTrigger?.addEventListener('click', () => { setLegendOpen(false); setInspectOpen(true); });
+  inspectCloseButton?.addEventListener('click', () => setInspectOpen(false));
+  inspectControl?.addEventListener('keydown', event => {
+    if (event.key === 'Escape') { event.preventDefault(); setInspectOpen(false); return; }
+    if (event.key !== 'Tab') return;
+    const controls = [...inspectControl.querySelectorAll('button:not([disabled])')];
+    if (!controls.length) return;
+    const current = controls.indexOf(document.activeElement);
+    const resolved = a11y.countIndex(current, controls.length, event.shiftKey ? 'backward' : 'forward');
+    event.preventDefault();
+    controls[resolved]?.focus();
+  });
+  document.addEventListener('keydown', event => {
+    if (event.defaultPrevented || event.repeat) return;
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    const typing = event.target instanceof HTMLElement
+      && (event.target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName));
+    if (typing) return;
+    if (!(event.code === 'KeyI' || event.key === 'i' || event.key === 'I')) return;
+    event.preventDefault();
+    setInspectOpen(!inspectOpen);
+  });
+  buildInspectScenes();
+  canvas.dataset.inspectOpen = '0';
+  canvas.dataset.inspectFingers = '0';
+  canvas.dataset.inspectPointers = '';
+  canvas.dataset.inspectScenario = '0';
+  if (typeof location !== 'undefined' && location &&
+      (new URLSearchParams(location.search).has('inspect') || location.hash === '#inspect')) {
+    setInspectOpen(true);
+  }
+
   reflectMasterState(false);
   reflectTuningFamily(false);
   reflectDiaryCount();
@@ -2604,6 +2830,7 @@ function disconnectSkipVoice(engine, skip) {
     const engine = audioLifecycle.activateFromGesture();
     const sounding = startVoice(event.pointerId, p.x, p.y, pressure, pitchAt(p.x), attack, engine, phraseNoteIndex);
     if (sounding) { phraseNoteIndex += 1; answerWithHaptic(event.pointerType, attack, now); }
+    noteInspectPointer(event.pointerType, pointers.has(event.pointerId) ? pointers.size : pointers.size + 1);
     pointers.set(event.pointerId, {
       ...p, pressure, pressureAvailable, attack, splashPlayed: false, sounding, born: now, lastMotion: now, movedAt: now, motionSpeed: 0,
       originX: p.x, originY: p.y, materialBias: null,

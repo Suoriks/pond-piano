@@ -1,5 +1,5 @@
-const CACHE = 'pond-piano-shell-v75';
-// Iteration 0078: where the platform has an actuator the pond answers the hand too - one short pulse per real strike, stilled by reduced motion, never during its own replay.
+const CACHE = 'pond-piano-shell-v76';
+// Iteration 0079: the shore examines itself - the pond repeats only what it really measured on this device and plays the recorded listening scenes for a human ear.
 const SHELL = [
   './',
   './index.html',
@@ -15,6 +15,7 @@ const SHELL = [
   './pond-budget.js',
   './pond-master.js',
   './pond-a11y.js',
+  './pond-diagnostic.js',
   './pond-audio-lifecycle.js',
   './pond.js',
   './manifest.webmanifest',

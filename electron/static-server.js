@@ -18,6 +18,7 @@ const APP_FILES = new Map([
   ['/pond-budget.js', 'pond-budget.js'],
   ['/pond-master.js', 'pond-master.js'],
   ['/pond-a11y.js', 'pond-a11y.js'],
+  ['/pond-diagnostic.js', 'pond-diagnostic.js'],
   ['/pond-audio-lifecycle.js', 'pond-audio-lifecycle.js'],
   ['/pond.js', 'pond.js'],
   ['/sw.js', 'sw.js'],

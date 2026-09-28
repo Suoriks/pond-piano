@@ -23,7 +23,7 @@
     <p id="pond-instructions" class="sr-only">Стрелками выбирайте одну из 11 чаш и глубину воды; пробел или Enter ударяет выбранную чашу. Удержание и движение не меняют уже звучащую высоту. Новое касание играет новую ноту. Вода поддерживает до шести голосов; береговые камни меняют строй и громкость, дневник хранит фразы. С зажатой нотой удерживайте G: рядом откроется второе течение, и вода сведёт их в жемчужину. Удерживайте H: с двух сторон откроются два соседних течения, и выдержанный аккорд раскроет общий цветок. Клавиша «?» открывает или закрывает карту клавиш. Клавиша R разливает весь дневник обратно на воду одним разливом.</p>
     <div class="shore" aria-hidden="true"></div>
     <header class="title-block">
-      <p class="eyebrow">Этюд воды · 78</p>
+      <p class="eyebrow">Этюд воды · 79</p>
       <h1>Пруд-пианино</h1>
       <p class="hint">Выдержка + нырок вниз — глубинный ответ</p>
       <p id="water-invitation" class="water-invitation" aria-hidden="true">Коснитесь воды</p>
@@ -32,6 +32,7 @@
         <div id="legend-panel" class="legend-panel" role="dialog" aria-modal="false" aria-label="Карта клавиш пруда">
           <p class="legend-heading">Карта клавиш</p>
           <dl id="legend-list" class="legend-list" tabindex="0"></dl>
+          <button id="inspect-trigger" class="inspect-trigger" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="inspect-panel">Осмотр берега</button>
           <button id="legend-close" class="legend-close" type="button">Закрыть</button>
         </div>
       </div>
@@ -89,6 +90,17 @@
         <button id="mute-water" class="mute-water" type="button">Приглушить</button>
       </div>
     </section>
+    <section id="inspect-control" class="inspect-control" hidden aria-label="Осмотр берега">
+      <div id="inspect-panel" class="inspect-panel" role="dialog" aria-modal="false" aria-labelledby="inspect-heading">
+        <p id="inspect-heading" class="inspect-heading">Осмотр берега</p>
+        <p class="inspect-intro">Пруд называет только то, что действительно измерил сам, и прямо говорит, чего ещё не видел.</p>
+        <dl id="inspect-facts" class="inspect-facts"></dl>
+        <p id="inspect-fingers" class="inspect-fingers" aria-live="polite">Вода ждёт ваших пальцев</p>
+        <p class="inspect-listen">Послушать на этих динамиках то, о чём ещё судит ухо</p>
+        <div id="inspect-scenarios" class="inspect-scenarios"></div>
+        <button id="inspect-close" class="inspect-close" type="button">Закрыть</button>
+      </div>
+    </section>
     <p id="water-silence" class="water-silence" aria-hidden="true"></p>
     <output id="status" class="sr-only" aria-live="polite">Пруд ждёт касания</output>
   </main>
@@ -103,6 +115,7 @@
   <script src="pond-budget.js"></script>
   <script src="pond-master.js"></script>
   <script src="pond-a11y.js"></script>
+  <script src="pond-diagnostic.js"></script>
   <script src="pond-audio-lifecycle.js"></script>
   <script src="pond.js"></script>
 </body>
