@@ -586,3 +586,66 @@ test('the whole-diary replay is deterministic and honest about its own length', 
   assert.ok(first[0].notes.every(note => note.at >= score.FLUSH_FIRST_DELAY_MS),
     'no note fires before the opening beat');
 });
+
+test('the replay tells the water how much of it is still to come', () => {
+  const now = 30000;
+  const ink = [
+    { born: now - 6000, durationMs: 1200, depth: .4, pressure: .5, pitch: .3,
+      points: [{ x: .2, y: .3, pressure: .5 }, { x: .5, y: .5, pressure: .5 }, { x: .8, y: .4, pressure: .5 }] },
+    { born: now - 3000, durationMs: 1200, depth: .6, pressure: .5, pitch: .5,
+      points: [{ x: .3, y: .6, pressure: .5 }, { x: .6, y: .7, pressure: .5 }, { x: .4, y: .2, pressure: .5 }] }
+  ];
+  const plan = score.pourAllPlan(ink, now, false);
+  assert.ok(plan.length >= 2, 'a two-phrase chronicle really replays two phrases');
+  const total = plan.reduce((sum, phrase) => sum + phrase.notes.length, 0);
+  const firstNote = plan[0].notes[0].at;
+
+  const before = score.flushProgress(plan, firstNote - 1);
+  assert.equal(before.state, 'waiting', 'before the opening note the water is only waiting');
+  assert.equal(before.played, 0, 'nothing has sounded yet');
+  assert.equal(before.remaining, total, 'the whole chronicle is still to come');
+  assert.equal(before.current, -1, 'no phrase is sounding yet');
+  assert.equal(before.fraction, 0, 'no progress before the first note');
+  assert.equal(before.notes, total, 'the plan counts its own notes');
+  assert.equal(before.phrases, plan.length, 'the plan counts its own phrases');
+
+  const span = score.pourAllSpan(plan);
+  const secondPhraseFirst = plan[1].notes[0].at;
+  const mid = score.flushProgress(plan, secondPhraseFirst);
+  assert.equal(mid.state, 'sounding', 'once the second phrase opens the replay is sounding');
+  assert.equal(mid.current, 1, 'the phrase now sounding is named honestly');
+  assert.ok(mid.played > 0 && mid.played < total, 'some notes have spoken, not all');
+  assert.equal(mid.remaining, total - mid.played, 'remaining is the honest complement of played');
+  assert.ok(Math.abs(mid.fraction - mid.played / total) < 1e-9, 'the fraction is played over total');
+
+  const done = score.flushProgress(plan, span);
+  assert.equal(done.state, 'done', 'after the last promised note the replay is done');
+  assert.equal(done.remaining, 0, 'nothing is left to come');
+  assert.equal(done.played, total, 'every scheduled note has spoken');
+  assert.equal(done.fraction, 1, 'the replay is complete');
+  assert.ok(done.current >= 0, 'the last phrase is remembered as the sounding one');
+
+  let last = -1;
+  for (let at = 0; at <= span + 500; at += 120) {
+    const step = score.flushProgress(plan, at);
+    assert.ok(step.played >= last, 'played notes never go backwards as the replay runs');
+    assert.ok(step.remaining <= total, 'the remaining count can never exceed the plan');
+    last = step.played;
+  }
+});
+
+test('the replay progress refuses to invent itself on broken input', () => {
+  const idle = { phrases: 0, notes: 0, played: 0, remaining: 0, current: -1, fraction: 0, state: 'idle' };
+  assert.deepEqual(score.flushProgress(null, 100), idle, 'no plan reads as idle');
+  assert.deepEqual(score.flushProgress([], 100), idle, 'an empty plan reads as idle');
+  assert.deepEqual(score.flushProgress(undefined, 0), idle, 'a missing plan reads as idle');
+  const plan = [{ at: 0, notes: [{ at: 500, anchor: { x: .5, y: .5 } }] }];
+  assert.deepEqual(score.flushProgress(plan, NaN), idle, 'a broken clock reads as idle');
+  assert.deepEqual(score.flushProgress(plan, Infinity), idle, 'an infinite clock reads as idle');
+  assert.deepEqual(score.flushProgress([{ notes: null }], 100), idle, 'a plan with no notes reads as idle');
+  assert.deepEqual(score.flushProgress([{ notes: [{ at: NaN }] }], 100), idle,
+    'notes without an honest time read as idle');
+  const negative = score.flushProgress(plan, -500);
+  assert.equal(negative.state, 'waiting', 'a negative clock is honestly clamped to the start');
+  assert.equal(negative.remaining, 1, 'nothing has sounded at the clamped start');
+});

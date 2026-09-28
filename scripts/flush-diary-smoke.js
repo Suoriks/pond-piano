@@ -58,6 +58,10 @@ const SEED_HARNESS = () => {
         phrases: Number(canvas.dataset.flushPhrases) || 0,
         notes: Number(canvas.dataset.flushNotes) || 0,
         skipped: Number(canvas.dataset.flushSkipped) || 0,
+        remaining: Number(canvas.dataset.flushRemaining) || 0,
+        fraction: Number(canvas.dataset.flushFraction) || 0,
+        current: Number(canvas.dataset.flushCurrent ?? -1),
+        embers: Number(canvas.dataset.flushEmber) || 0,
         echoVoices: Number(canvas.dataset.echoVoices) || 0,
         status: document.querySelector('#status').textContent || '',
         legend: (document.querySelector('#legend-list')?.textContent || '').replace(/\s+/g, ' '),
@@ -96,12 +100,26 @@ const SEED_HARNESS = () => {
     assert.ok(started.planned <= 14, `the replay stays inside its note bound (${started.planned})`);
     assert.ok(started.phrases === 0, 'the first phrase has not spoken yet when the replay opens');
     assert.match(started.status, /разливает дневник/, 'the water says what it is doing');
+    // The surface shows how much of the replay is still to come: at the very
+    // start the whole chronicle is waiting, and every planned phrase keeps a
+    // quiet ember while the replay has not reached it.
+    assert.equal(started.remaining, started.planned,
+      'before the first note the whole replay is still to come');
+    assert.equal(started.fraction, 0, 'nothing has sounded yet at the start');
+    assert.ok(started.embers >= 1, 'the water really shows where the replay is going');
     // The visible half of the feature: the water really answers while the
     // chronicle is being handed back, not only in a dataset counter.
     await page.waitForTimeout(1500);
     const midway = await read(page);
     assert.ok(midway.phrases >= 1, 'by mid-replay a phrase has really spoken on the water');
-    await page.screenshot({ path: path.join(root, 'output/pond-piano/diary-flush-75.png') });
+    assert.ok(midway.remaining < started.remaining, 'the water shows the replay is moving on');
+    assert.ok(midway.fraction > 0 && midway.fraction < 1, 'the honest fraction sits inside the replay');
+    assert.ok(midway.remaining >= 0 && midway.remaining <= started.planned,
+      'the remaining count stays inside the whole plan');
+    assert.ok(midway.remaining < started.remaining, 'the water shows the replay is moving on');
+    assert.ok(midway.current >= 0, 'the phrase now sounding is named on the water');
+    assert.ok(midway.embers >= 1, 'a phrase the replay has not reached still holds its ember');
+    await page.screenshot({ path: path.join(root, 'output/pond-piano/diary-flush-76.png') });
 
     // It ends by itself, with every phrase spoken and the pool given back.
     await page.waitForFunction(() => document.querySelector('#pond').dataset.flushing === '0', null, { timeout: 25000 });
@@ -114,6 +132,9 @@ const SEED_HARNESS = () => {
     assert.ok(done.notes >= done.phrases, 'every spoken phrase really carried at least one note');
     assert.ok(done.notes <= 14, `the whole replay stayed inside its note bound (${done.notes})`);
     assert.match(done.status, /разлил свой дневник/, 'the end is announced honestly');
+    assert.equal(done.remaining, 0, 'when the replay ends nothing is left to come');
+    assert.equal(done.embers, 0, 'no waiting ember outlives the replay it belonged to');
+    assert.equal(done.fraction, 0, 'a finished replay holds no progress of its own on the water');
     assert.equal(done.echoVoices, 0, 'the shared echo pool is given back when the replay ends');
 
     // The diary panel carries the same route as a real, honest control.
@@ -135,6 +156,8 @@ const SEED_HARNESS = () => {
     await page.waitForFunction(() => (Number(document.querySelector('#pond').dataset.echoVoices) || 0) === 0, null, { timeout: 8000 });
     const stopped = await read(page);
     assert.match(stopped.status, /перестал разливать дневник/, 'a stopped replay says so');
+    assert.equal(stopped.remaining, 0, 'a stopped replay leaves no half-promise on the water');
+    assert.equal(stopped.embers, 0, 'a stopped replay takes its waiting embers with it');
     assert.equal(stopped.echoVoices, 0, 'a stopped replay holds no voices hostage');
 
     assert.deepEqual(errors, [], `no console or page errors: ${errors.join(' | ')}`);

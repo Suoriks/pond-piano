@@ -93,6 +93,8 @@
   // The whole-diary replay: the pond handing its own remembered piece back.
   const flushTimers = new Set();
   let flushingDiary = false;
+  let flushPlan = null;
+  let flushStartedAt = 0;
   let flushPhrasesFired = 0;
   let flushNotesFired = 0;
   let flushNotesSkipped = 0;
@@ -685,6 +687,56 @@
     ctx.restore();
   }
 
+  // The surface shows how much of the replay is still to come without ever
+  // becoming a progress bar: every phrase the chronicle has not reached yet
+  // keeps one quiet, cool ember at the first point of its own contour, and
+  // the phrase now sounding carries the one warm ember. A phrase that has
+  // already answered goes back to being ordinary ink. Reduced motion keeps
+  // the embers still (feedback stays, breath goes), and the frame budget may
+  // soften them like any other light; the sound is never touched.
+  function drawFlushProgress(now) {
+    if (!flushingDiary || !flushPlan) {
+      canvas.dataset.flushRemaining = '0';
+      canvas.dataset.flushFraction = '0';
+      canvas.dataset.flushCurrent = '-1';
+      canvas.dataset.flushEmber = '0';
+      return;
+    }
+    const progress = score.flushProgress(flushPlan, now - flushStartedAt);
+    canvas.dataset.flushRemaining = String(progress.remaining);
+    canvas.dataset.flushFraction = progress.fraction.toFixed(3);
+    canvas.dataset.flushCurrent = String(progress.current);
+    const gate = budget.style(waterBudget, 'ink');
+    let embers = 0;
+    for (let index = 0; index < flushPlan.length; index += 1) {
+      if (index < progress.current) continue;
+      const phrase = flushPlan[index];
+      const anchor = phrase?.notes?.[0]?.anchor;
+      if (!anchor || !Number.isFinite(anchor.x) || !Number.isFinite(anchor.y)) continue;
+      const sounding = index === progress.current;
+      const breath = reduced.matches ? .5 : Math.sin(now * .0016 + index * 1.7) * .5 + .5;
+      const alpha = gate * (sounding ? .42 + breath * .3 : .14 + breath * .1);
+      const radius = sounding ? 7 : 4.2;
+      const hue = sounding ? 34 : 198;
+      const x = anchor.x * width, y = anchor.y * height;
+      ctx.save();
+      const glow = ctx.createRadialGradient(x, y, 0, x, y, radius * 4.6);
+      glow.addColorStop(0, `hsla(${hue + 8} ${sounding ? 84 : 62}% ${sounding ? 88 : 76}% / ${alpha})`);
+      glow.addColorStop(.3, `hsla(${hue} ${sounding ? 70 : 50}% ${sounding ? 72 : 64}% / ${alpha * .34})`);
+      glow.addColorStop(1, 'transparent');
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(x, y, radius * 4.6, 0, Math.PI * 2); ctx.fill();
+      if (sounding) {
+        ctx.beginPath(); ctx.arc(x, y, radius * 1.7, 0, Math.PI * 2);
+        ctx.strokeStyle = `hsla(${hue + 10} 78% 84% / ${alpha * .62})`;
+        ctx.lineWidth = 1.4; ctx.stroke();
+      }
+      ctx.restore();
+      embers += 1;
+    }
+    canvas.dataset.flushEmber = String(embers);
+  }
+
   // A poured phrase sweeps back across the surface as a gentle echo.
   function drawPourEcho(echo, now) {
     const life = reduced.matches ? 560 : 1240;
@@ -1100,7 +1152,14 @@
     for (const timer of flushTimers) clearTimeout(timer);
     flushTimers.clear();
     flushingDiary = false;
-    if (reflect) canvas.dataset.flushing = '0';
+    flushPlan = null;
+    if (reflect) {
+      canvas.dataset.flushing = '0';
+      canvas.dataset.flushRemaining = '0';
+      canvas.dataset.flushFraction = '0';
+      canvas.dataset.flushCurrent = '-1';
+      canvas.dataset.flushEmber = '0';
+    }
   }
 
   function startDiaryFlush() {
@@ -1130,6 +1189,8 @@
     }
     stopPourLoop();
     flushingDiary = true;
+    flushPlan = plan;
+    flushStartedAt = performance.now();
     flushPhrasesFired = 0;
     flushNotesFired = 0;
     flushNotesSkipped = 0;
@@ -1138,6 +1199,12 @@
     canvas.dataset.flushNotes = '0';
     canvas.dataset.flushSkipped = '0';
     canvas.dataset.flushPlanned = String(plan.reduce((total, phrase) => total + phrase.notes.length, 0));
+    // The progress readout is honest from the first moment, not only after a
+    // frame: the whole chronicle is still to come the instant the replay opens.
+    canvas.dataset.flushRemaining = canvas.dataset.flushPlanned;
+    canvas.dataset.flushFraction = '0';
+    canvas.dataset.flushCurrent = '-1';
+    canvas.dataset.flushEmber = String(plan.length);
     let scheduled = 0;
     for (const phrase of plan) {
       const phraseTimer = setTimeout(() => {
@@ -1162,9 +1229,14 @@
             flushNotesFired += 1;
             canvas.dataset.flushNotes = String(flushNotesFired);
           }
+    // The replay ends by itself: the last timer flips the flag and clears the
+    // progress readout with it, so no stale promise is left on the water.
           if (!flushTimers.size) {
             flushingDiary = false;
+            flushPlan = null;
             canvas.dataset.flushing = '0';
+            canvas.dataset.flushRemaining = '0';
+            canvas.dataset.flushEmber = '0';
             status.textContent = `Пруд разлил свой дневник обратно на воду: ${flushPhrasesFired} ${flushPhrasesFired === 1 ? 'фраза' : flushPhrasesFired >= 2 && flushPhrasesFired <= 4 ? 'фразы' : 'фраз'}`;
             pourAnnounced = true;
             if (diaryOpen) syncDiaryPanel();
@@ -3795,6 +3867,7 @@ function disconnectSkipVoice(engine, skip) {
     for (const motif of score.groupMotifs(memories)) drawMotifUndercurrent(motif, now);
     for (const memory of memories) drawScoreMemory(memory, now);
     for (const line of pourEchoes) if (!drawPourEcho(line, now)) pourEchoes.splice(pourEchoes.indexOf(line), 1);
+    drawFlushProgress(now);
     for (let i = scoreEchoes.length - 1; i >= 0; i--) if (!drawScoreEcho(scoreEchoes[i], now)) scoreEchoes.splice(i, 1);
     canvas.dataset.glideWakeTrails = String(trails.filter(mark => (mark.wake?.amount ?? 0) > .08).length);
     for (let i = trails.length - 1; i >= 0; i--) if (!drawTrail(trails[i], now)) trails.splice(i, 1);

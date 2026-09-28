@@ -401,6 +401,40 @@
     return Math.max(0, Math.round(last));
   }
 
+  // How much of that replay is still to come. The water can show the player
+  // where the chronicle has got to without turning into a dashboard: the
+  // phrase now sounding, the notes already spoken and the honest remaining
+  // count, all read from the same immutable plan. Pure timing only; broken
+  // plans and broken clocks read as idle rather than inventing progress.
+  function flushProgress(plan, elapsedMs) {
+    const idle = Object.freeze({
+      phrases: 0, notes: 0, played: 0, remaining: 0,
+      current: -1, fraction: 0, state: 'idle'
+    });
+    if (!Array.isArray(plan) || !plan.length || !Number.isFinite(elapsedMs)) return idle;
+    const at = Math.max(0, elapsedMs);
+    let notes = 0, played = 0;
+    let current = -1;
+    for (let index = 0; index < plan.length; index += 1) {
+      const phrase = plan[index];
+      if (!phrase || !Array.isArray(phrase.notes)) continue;
+      for (const note of phrase.notes) {
+        if (!note || !Number.isFinite(note.at)) continue;
+        notes += 1;
+        if (note.at <= at) played += 1;
+      }
+      const first = phrase.notes.find(note => note && Number.isFinite(note.at));
+      if (first && first.at <= at) current = index;
+    }
+    if (!notes) return idle;
+    const remaining = notes - played;
+    const state = played === 0 ? 'waiting' : remaining > 0 ? 'sounding' : 'done';
+    return Object.freeze({
+      phrases: plan.length, notes, played, remaining,
+      current, fraction: played / notes, state
+    });
+  }
+
   // A finished phrase can leave the pond as a compact self-contained scroll:
   // its real path, sounding pitch and depth, duration, pressure and chosen
   // current remain transportable without the audio engine or the DOM. Pure
@@ -651,7 +685,7 @@
     MAX_INK, INK_LIFE_MS, phraseInk, appendPhraseInk, inkLifeMs, inkVisibility, pourableInk,
     LOOP_FIRST_DELAY_MS, LOOP_PASS_GAP_MS, MAX_LOOP_PASSES, loopSchedule, loopProbe,
     FLUSH_FIRST_DELAY_MS, FLUSH_PHRASE_GAP_MS, FLUSH_MAX_PHRASES, FLUSH_MAX_NOTES,
-    FLUSH_NOTES_PER_PHRASE, FLUSH_MAX_SPAN_MS, pourAllPlan, pourAllSpan,
+    FLUSH_NOTES_PER_PHRASE, FLUSH_MAX_SPAN_MS, pourAllPlan, pourAllSpan, flushProgress,
     rehearsalDecision, REHEARSAL_TAP_HOLD_MS, REHEARSAL_TAP_MOVE, REHEARSAL_WINDOW_MS, REHEARSAL_MAX_TAPS,
     INVITE_BREATH_MS, INVITE_RING_MS, invitation,
     phraseScroll, phraseScrollText, parseScrollText, inkFromScroll, scrollSummary,
