@@ -1,12 +1,12 @@
 {
  "project": "pond-piano",
  "phase": "device-validation",
- "iteration": 79,
- "status": "the-shore-writes-and-carries-a-note",
- "current_goal": "Iteration 0080: ухо записывается на берегу. В осмотре «Осмотр берега» у каждой сцены появляется камень суда: «не слушал» → «звучит» → «мимо», честно названный для чтения с экрана и переживающий перезагрузку. Один камень «Унести записку» собирает короткую береговую записку: шесть честных показаний платформы (неизмеренное остаётся «вода ещё не знает»), суд уха по всем четырём сценам и итог; записка уходит в буфер как есть, а при отказе платформы честно остаётся на берегу. Суд не является игрой: ни звука, ни ряби, ни записи в дневник.",
- "previous_goal": "Iteration 0079: пруд осматривает сам себя, не выдумывая ни одного показания. Клавиша I, ссылка «Осмотр берега» в карте клавиш или адрес ?inspect открывают спокойную береговую панель: она повторяет только то, что вода действительно измерила на этой платформе (состояние и частота воды, объявленный платформой отклик, наличие толчка, увиденные типы указателей, наибольшее число пальцев разом) и прямо пишет «вода ещё не знает» там, где её не спрашивали. Там же звучат четыре сцены, о которых ещё судит живое ухо — короткие касания, долгая вода, плотная ладонь, встреча волн. Осмотр не является игрой: сцены играют настоящими чашами, но не пишут в дневник, не отвечают руке толчком и не помечают пруд сыгранным, а настоящие пальцы считаются честно и остаются в дневнике как всякая игра.",
- "last_verified": "2026-09-28: 124 Node tests pass (was 118; six new suites cover the three-word verdict cycle, refusal of an invented judgement, an honest note from unasked water, measured water with the ear's own words, the deterministic shore-clock stamp and broken inputs). 78 JS files pass syntax. scripts/shore-note-smoke.js passes on a production-loopback Chromium 390x844: the four verdict stones sit beside their scenes at >=44px and name their own next step; judging woke no water, sounded no voice and wrote no diary phrase; the note carried before any gesture held all four verdicts, the honest summary, 'отклик: вода ещё не знает' and no invented Гц/мс; verdicts survived a reload; three real trusted fingers woke the water and left exactly three phrases, after which the note named the real rate, response and 'пальцы: вода держала 3 пальца' with nothing unknown left; Tab reaches the verdict and note stones; a clipboard refusal stayed honest and asleep; no console or page errors. inspect-smoke and high-contrast-smoke regressions green. Screenshot output/pond-piano/shore-note-80.png inspected directly.",
- "next_step": "Реальный проход на Android Chrome/PWA и iPhone Safari: открыть ?inspect, прочитать честные показания, послушать четыре сцены, отметить суд уха и унести записку в буфер, чтобы отдать её Евгению; проверить, различается ли камень суда под пальцем от камня сцены. Проверка Windows high-contrast всё ещё открыта с 0073.",
+ "iteration": 81,
+ "status": "the-water-takes-the-course",
+ "current_goal": "Iteration 0081: вода принимает цвет течения. Поверхность пруда перестаёт выглядеть одинаково на всех трёх течениях: у «Рассвета» вода остаётся прежней минеральной зеленью, у «Сумерек» уходит в глубокую тёплую синь, у «Тумана» светлеет и теряет цвет. Чистая палитра `courseWater` в `pond-tide.js` держит пигмент каждого течения (три остановки самой воды, две черты рябых полос, тон каустик и тон приливного поля), неизвестное течение честно читается как «Рассвет», а `blendWaterPalette` ведёт между палитрами спокойный кроссфейд за 1,8 с; при reduced motion вода меняется мгновенно, без мерцания. Камень течения теперь меняет не только строй следующего удара, но и сам пруд.",
+ "previous_goal": "Iteration 0080: ухо записывается на берегу (суд трёх слов у каждой сцены и одна береговая записка, уносящая честные показания платформы вместе с судом уха).",
+ "last_verified": "2026-09-28: 129 Node tests pass (was 124; five new suites cover the honest course palette, three distinct waters, bounded pigment, a crossfade with untouched ends and clamped clocks, and hues travelling the short arc including the seam). 78 JS files pass syntax; state.json valid. scripts/course-water-smoke.js passes on a production-loopback Chromium 390x844: the pond opens on dawn with the probe at 180.0,65.0,5.0 and the darkest lower-band pixel rgb(7,30,29) hue 177 - the same water the committed build paints (68ab1be measured rgb(7,29,28) on six frames); choosing dusk really walks the water (at least five frames in flight, monotone tone, a true in-between pigment, 1.2-2.6s), ends at 214.0,60.0,4.5 with pixel rgb(7,16,26) hue 212; mist ends at 162.0,24.0,8.0 with pixel rgb(20,34,29) hue 159 and light 10.6, paler and poorer in colour than dusk at 6.5; choosing a course wakes no sound and writes no phrase; a reload wears the remembered course at once without a shift; asking for the course already worn starts nothing; under reduced motion the water takes dusk in one frame and no sampled frame was ever in flight; no console or page errors. inspect-smoke and high-contrast-smoke regressions green. Screenshots course-dawn-81.png, course-dusk-81.png, course-mist-81.png inspected directly.",
+ "next_step": "Реальный проход на Android Chrome/PWA и iPhone Safari: читается ли разница трёх течений на настоящем экране при дневном свете, не спорят ли светлые черты ряби «Тумана» с береговыми панелями и не стоит ли отдавать течению ещё и тон чернил дневника. Открытая проверка Windows high-contrast с 0073 остаётся. Отдельно найдена унаследованная долговечная поломка проверок (воспроизводится и на HEAD 68ab1be, не связана с 0081): scripts/budget-smoke.js указывает на отсутствующий Chromium chromium-1223 вместо рабочего chromium-1234, а scripts/landscape-map-smoke.js всё ещё ждёт семь маршрутов карты, тогда как честных маршрутов уже восемь.",
  "alpha_feedback": {
   "captured_at": "2026-07-26T13:59:00+03:00",
   "observations": [
@@ -915,5 +915,26 @@
    "regressions green: inspect-smoke and high-contrast-smoke",
    "screenshot output/pond-piano/shore-note-80.png inspected directly: verdict stones sit beside their scenes, 'звучит' reads warm, 'мимо' reads as a quiet italic, the note and close stones are fully visible, nothing clipped"
   ]
+ },
+ "iteration_81": {
+  "started": "2026-09-28T16:20:00+03:00",
+  "finished": "2026-09-28T17:05:00+03:00",
+  "phase": "done",
+  "plan": [
+   "pond-tide.js: COURSE_WATER, courseWater(family), blendWaterPalette(from, to, t) — чистые, без DOM",
+   "pond.js: waterLook/waterShift, updateWaterLook(now), setWaterCourse(family); вода, каустики и приливное поле читают текущий пигмент",
+   "юнит-наборы палитры: детерминизм, три разных течения, честный откат на «Рассвет», границы пигмента, кроссфейд с коротким путём по тону",
+   "scripts/course-water-smoke.js на production-loopback Chromium 390x844: пробы воды и настоящий пиксель, кроссфейд в пути, reduced motion меняет мгновенно, снимки трёх течений",
+   "eyebrow 81, offline shell v78, README и ARCHITECTURE одним абзацем; KAIZEN 0081; один commit и push в main"
+  ],
+  "verified": [
+   "node tests: 129 pass across 16 suites (12 in pond-tide, five new palette suites)",
+   "syntax: 78 JS files clean; state.json valid",
+   "course-water-smoke: dawn pixel rgb(7,30,29) hue 177 matches the committed build rgb(7,29,28); dusk walked over 1.2-2.6s to 214.0,60.0,4.5 and painted rgb(7,16,26) hue 212; mist 162.0,24.0,8.0 and rgb(20,34,29) hue 159 light 10.6; no sound, no phrase, remembered across reload, one frame under reduced motion; no console errors",
+   "inspect-smoke, high-contrast-smoke green",
+   "screenshots course-dawn-81.png / course-dusk-81.png / course-mist-81.png inspected directly",
+   "pre-existing smoke debt found and reproduced on HEAD: budget-smoke chromium-1223 path, landscape-map-smoke seven-route expectation"
+  ],
+  "next_step": "device-pass on a real phone; plus the two stale smoke scripts recorded in state.next_step"
  }
 }

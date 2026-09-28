@@ -141,6 +141,13 @@
   let audioLifecycle = null;
   let masterState = loadMasterState();
   let tuningFamily = loadTuningFamily();
+  // The surface is the instrument: the water carries the pigment of the chosen
+  // course. A change of course is walked calmly over WATER_SHIFT_MS, and under
+  // reduced motion the water simply takes the new colour at once.
+  const WATER_SHIFT_MS = 1800;
+  let waterLook = tide.courseWater(tuningFamily);
+  let waterShift = null;
+  const waterColor = (stop, alpha = 1) => `hsla(${stop.h}, ${stop.s}%, ${stop.l}%, ${alpha})`;
   let echoSerial = 0;
   let rippleSerial = 0;
   let earnedEddyHint = false;
@@ -1374,12 +1381,50 @@
     pourAnnounced = true;
   }
 
+  // The pond walks from the pigment it is wearing right now to the pigment of
+  // the course just chosen, so a stone under a finger never snaps the whole
+  // surface. Asking for the course already heading in changes nothing.
+  function setWaterCourse(family, now = performance.now()) {
+    const next = tide.courseWater(family);
+    const target = waterShift ? waterShift.to : waterLook;
+    if (target.id === next.id) return;
+    const from = waterLook;
+    if (reduced.matches || from.id === next.id) { waterLook = next; waterShift = null; return; }
+    waterShift = { from, to: next, started: now, duration: WATER_SHIFT_MS };
+  }
+
+  // One honest pigment per frame for the whole surface: the water, the caustics
+  // and the tidal field all read the same in-between palette while the shift is
+  // in flight, and the probes name what the frame really painted.
+  function updateWaterLook(now) {
+    const shift = waterShift;
+    if (!shift) {
+      canvas.dataset.waterCourse = waterLook.id;
+      canvas.dataset.waterMoving = '0';
+    } else {
+      const progress = (now - shift.started) / shift.duration;
+      if (progress >= 1) {
+        waterLook = shift.to;
+        waterShift = null;
+        canvas.dataset.waterCourse = waterLook.id;
+        canvas.dataset.waterMoving = '0';
+      } else {
+        waterLook = tide.blendWaterPalette(shift.from, shift.to, Math.max(0, progress));
+        canvas.dataset.waterCourse = shift.to.id;
+        canvas.dataset.waterMoving = '1';
+      }
+    }
+    canvas.dataset.waterDeep = `${waterLook.outer.h.toFixed(1)},${waterLook.outer.s.toFixed(1)},${waterLook.outer.l.toFixed(1)}`;
+    canvas.dataset.waterPigment = `${waterLook.inner.h.toFixed(1)},${waterLook.mid.h.toFixed(1)},${waterLook.outer.h.toFixed(1)}`;
+  }
+
   function reflectTuningFamily(announce = false) {
     const family = music.SCALE_FAMILIES[tuningFamily];
     for (const input of tuningInputs) input.checked = input.value === tuningFamily;
     tuningValue.value = family.name;
     tuningValue.textContent = family.name;
     canvas.dataset.scaleFamily = tuningFamily;
+    setWaterCourse(tuningFamily);
     if (!announce) return;
     for (const pointer of pointers.values()) pointer.currentAnnounced = false;
     keyboard.currentAnnounced = false;
@@ -3390,20 +3435,24 @@ function disconnectSkipVoice(engine, skip) {
       const x = visual.x * width, y = visual.y * height;
       const radius = Math.max(.7, visual.size * Math.max(1.2, Math.min(width, height) * .0032));
       const glow = ctx.createRadialGradient(x, y, 0, x, y, radius * 3.2);
-      glow.addColorStop(0, `hsla(${150 + visual.y * 18} 70% 92% / ${visual.alpha * .5})`);
+      const moteHue = waterLook.moteHue + visual.y * waterLook.moteRange;
+      glow.addColorStop(0, `hsla(${moteHue} 70% 92% / ${visual.alpha * .5})`);
       glow.addColorStop(1, 'transparent');
       ctx.fillStyle = glow;
       ctx.beginPath(); ctx.arc(x, y, radius * 3.2, 0, Math.PI * 2); ctx.fill();
       if (visual.alpha > .05) {
-        ctx.fillStyle = `hsla(${150 + visual.y * 18} 72% 94% / ${Math.min(.8, visual.alpha)})`;
+        ctx.fillStyle = `hsla(${moteHue} 72% 94% / ${Math.min(.8, visual.alpha)})`;
         ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.fill();
       }
     }
     ctx.restore();
   }  function water(now) {
     const t = now * .0001;
+    const palette = waterLook;
     const gradient = ctx.createRadialGradient(width * .55, height * .38, 10, width * .52, height * .48, Math.max(width, height) * .78);
-    gradient.addColorStop(0, '#163b38'); gradient.addColorStop(.38, '#0b2928'); gradient.addColorStop(1, '#041313');
+    gradient.addColorStop(0, waterColor(palette.inner));
+    gradient.addColorStop(.38, waterColor(palette.mid));
+    gradient.addColorStop(1, waterColor(palette.outer));
     ctx.fillStyle = gradient; ctx.fillRect(0, 0, width, height);
     ctx.globalAlpha = .11;
     for (let i = 0; i < 7; i++) {
@@ -3413,7 +3462,7 @@ function disconnectSkipVoice(engine, skip) {
         const yy = y + Math.sin(x * .012 + t * (17 + i * 2)) * (3 + i * .45);
         x === -20 ? ctx.moveTo(x, yy) : ctx.lineTo(x, yy);
       }
-      ctx.strokeStyle = i % 2 ? '#8cc6b4' : '#d8c88f'; ctx.lineWidth = .7; ctx.stroke();
+      ctx.strokeStyle = i % 2 ? waterColor(palette.cool) : waterColor(palette.warm); ctx.lineWidth = .7; ctx.stroke();
     }
     ctx.globalAlpha = 1;
   }
@@ -3437,7 +3486,7 @@ function disconnectSkipVoice(engine, skip) {
       const ry = radius * glow.spread;
       const cx = glow.x * width, cy = glow.y * height;
       const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(radius, ry));
-      const hue = Number.isFinite(glow.hue) ? glow.hue : 148 + glow.tint * 26;
+      const hue = Number.isFinite(glow.hue) ? glow.hue : waterLook.tideHue + glow.tint * waterLook.tideSpread;
       gradient.addColorStop(0, `hsla(${hue} 44% 74% / ${glow.alpha * .5})`);
       gradient.addColorStop(.4, `hsla(${hue + 8} 40% 62% / ${glow.alpha * .2})`);
       gradient.addColorStop(1, 'transparent');
@@ -4220,6 +4269,7 @@ function disconnectSkipVoice(engine, skip) {
   function frame(now) {
     const started = performance.now();
     const dt = Math.min((now - last) / 1000, .05); last = now;
+    updateWaterLook(now);
     water(now + dt);
     drawTide(now);
     drawMotes(now);

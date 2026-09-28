@@ -1,5 +1,7 @@
-const CACHE = 'pond-piano-shell-v77';
-// Iteration 0080: the shore writes and carries a note - the ear's own verdict per scene and one compact note of honest readings, kept and carried off the bank as it is.
+const CACHE = 'pond-piano-shell-v78';
+// Iteration 0081: the water takes the colour of the chosen course - dawn keeps
+// the mineral green, dusk turns it into a deep warm blue, mist pales and gives
+// colour up, and the walk between them is calm (one frame under reduced motion).
 const SHELL = [
   './',
   './index.html',

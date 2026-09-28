@@ -118,10 +118,112 @@
     return glow;
   }
 
+  // The surface is the instrument, so the water itself takes the colour of the
+  // chosen course instead of looking the same everywhere. Each palette is a few
+  // honest numbers (three stops of the water, the two ripple streaks, the tone
+  // of the caustics and of the tidal field) so a change of course can be walked
+  // calmly instead of snapped. Dawn is the water the pond has always had.
+  const COURSE_WATER = Object.freeze({
+    dawn: Object.freeze({
+      id: 'dawn',
+      inner: Object.freeze({ h: 175, s: 46, l: 16 }),
+      mid: Object.freeze({ h: 178, s: 58, l: 10 }),
+      outer: Object.freeze({ h: 180, s: 65, l: 5 }),
+      cool: Object.freeze({ h: 161, s: 34, l: 66 }),
+      warm: Object.freeze({ h: 47, s: 48, l: 70 }),
+      moteHue: 150, moteRange: 18,
+      tideHue: 148, tideSpread: 26
+    }),
+    dusk: Object.freeze({
+      id: 'dusk',
+      inner: Object.freeze({ h: 205, s: 42, l: 15 }),
+      mid: Object.freeze({ h: 209, s: 54, l: 9 }),
+      outer: Object.freeze({ h: 214, s: 60, l: 4.5 }),
+      cool: Object.freeze({ h: 192, s: 30, l: 62 }),
+      warm: Object.freeze({ h: 30, s: 52, l: 68 }),
+      moteHue: 198, moteRange: 16,
+      tideHue: 202, tideSpread: 24
+    }),
+    mist: Object.freeze({
+      id: 'mist',
+      inner: Object.freeze({ h: 156, s: 26, l: 20 }),
+      mid: Object.freeze({ h: 159, s: 26, l: 14 }),
+      outer: Object.freeze({ h: 162, s: 24, l: 8 }),
+      cool: Object.freeze({ h: 158, s: 20, l: 72 }),
+      warm: Object.freeze({ h: 62, s: 20, l: 76 }),
+      moteHue: 150, moteRange: 10,
+      tideHue: 152, tideSpread: 18
+    })
+  });
+  const COURSE_WATER_DEFAULT = 'dawn';
+  const PALETTE_STOPS = Object.freeze(['inner', 'mid', 'outer', 'cool', 'warm']);
+
+  function isPalette(value) {
+    return Boolean(value) && typeof value === 'object'
+      && typeof value.id === 'string' && Boolean(COURSE_WATER[value.id])
+      && PALETTE_STOPS.every(key => value[key] && Number.isFinite(value[key].h));
+  }
+
+  // An unknown course never invents its own water: it honestly reads as dawn,
+  // exactly like PondMusic.normalizeScaleFamily falls back to the same family.
+  function courseWater(family) {
+    return Object.prototype.hasOwnProperty.call(COURSE_WATER, family)
+      ? COURSE_WATER[family]
+      : COURSE_WATER[COURSE_WATER_DEFAULT];
+  }
+
+  // Hues travel the short way round the wheel, everything else straight, so a
+  // crossfade between two courses never sweeps through a colour nobody chose.
+  const isHueKey = key => key === 'h' || /Hue$/.test(key);
+  const shortestHue = (from, to) => from + ((((to - from) % 360) + 540) % 360) - 180;
+
+  function blendStop(from, to, progress) {
+    const out = {};
+    for (const key of Object.keys(to)) {
+      const start = from ? from[key] : undefined;
+      const end = to[key];
+      if (Number.isFinite(start) && Number.isFinite(end)) {
+        const target = isHueKey(key) ? shortestHue(start, end) : end;
+        out[key] = start + (target - start) * progress;
+      } else out[key] = end;
+    }
+    return Object.freeze(out);
+  }
+
+  // Deterministic in-between pigment for a calm crossfade. Both endpoints come
+  // back untouched, a broken endpoint is ignored rather than invented, and an
+  // out-of-range clock is clamped instead of extrapolated.
+  function blendWaterPalette(from, to, progress) {
+    const start = isPalette(from) ? from : null;
+    const end = isPalette(to) ? to : null;
+    if (!start) return end || courseWater(COURSE_WATER_DEFAULT);
+    if (!end) return start;
+    const t = Number.isFinite(progress) ? clamp(progress) : 1;
+    if (t <= 0) return start;
+    if (t >= 1) return end;
+    const out = { id: end.id };
+    for (const key of Object.keys(end)) {
+      if (key === 'id') continue;
+      const startValue = start[key];
+      const endValue = end[key];
+      if (startValue && typeof startValue === 'object' && endValue && typeof endValue === 'object') {
+        out[key] = blendStop(startValue, endValue, t);
+      } else if (Number.isFinite(startValue) && Number.isFinite(endValue)) {
+        const target = isHueKey(key) ? shortestHue(startValue, endValue) : endValue;
+        out[key] = startValue + (target - startValue) * t;
+      } else out[key] = endValue;
+    }
+    return Object.freeze(out);
+  }
+
   return Object.freeze({
     DEFAULT_SWELLS,
     MAX_STIRS,
     STIR_LIFE_MS,
+    COURSE_WATER,
+    COURSE_WATER_DEFAULT,
+    courseWater,
+    blendWaterPalette,
     createSwells,
     stir,
     updateTide,
