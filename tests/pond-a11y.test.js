@@ -73,6 +73,7 @@ test('keyboard legend names the routes the pond really answers', () => {
   assert.match(spoken, /Выдержка \+ ↓/);
   assert.match(spoken, /G с зажатой чашей/);
   assert.match(spoken, /H с зажатой чашей/);
+  assert.match(spoken, /R — разлить весь дневник/);
   assert.match(spoken, /\?/);
 });
 

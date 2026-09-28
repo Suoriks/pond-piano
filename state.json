@@ -1,12 +1,12 @@
 {
  "project": "pond-piano",
  "phase": "device-validation",
- "iteration": 74,
- "status": "return-tells-the-truth",
- "current_goal": "Iteration 0074: на возвращении из фона вода говорит о себе правду. Уходя в другое окно, пруд сам усыпляет звук, и это не новость - возвращение к спящей воде молчит и не пристаёт к игроку, пока настоящий жест не откажет. Но если браузер закрыл звук пруда, пока игрок был в другом окне, вернувшийся видит сразу жёсткую правду - перезагрузите страницу - а не мягкое 'коснитесь воды, чтобы разбудить'; закрытая вода остаётся закрытой независимо от того, какое событие о ней сообщило. Слова глаза и живого региона совпадают, линия уходит только с вернувшимся звуком, и всё это не создаёт и не запускает аудиосистему.",
- "previous_goal": "Iteration 0073: the shore instruments stay real controls when the reader asks for more contrast or the system forces its own palette - the chosen current is told by the weight and shape of the stone rather than by colour alone, stones, panels and the keyboard map keep a hard honest edge instead of a stripped gradient, the focus ring survives, and nothing here starts the pond's audio.",
- "last_verified": "2026-09-28: 98 Node tests pass; 72 JS files pass syntax; state/package JSON and git diff --check clean. A production-loopback Chromium diagnosis (visibility driven through a real visibilityState override) found the lie: after the browser closed the AudioContext while the player was away, the return showed the soft line \"Звук пруда уснул — коснитесь воды…\" over a context whose state was already 'closed'. After the fix, scripts/return-silence-smoke.js passes three pages at 390x844: an ordinary return leaves water asleep and silent (no line, no audioTrouble, the honest next-strike status survives, one context, and a real Space wakes that same context); a return to water the browser closed shows the hard reload truth at once, the live region speaks the same words, a following gesture cannot soften it, and the water stays playable (contact patch +6); a return before the first gesture says nothing, creates no context and keeps 'Пруд ждёт касания'. No console or page errors. Regressions silence-notice (0072), bowl-lifecycle 10/10 and collision-bowl green. Screenshots return-quiet-74.png and return-closed-74.png inspected directly: calm full-bleed water, the honest line reads entirely above the shore stones without covering them, title and controls intact, no clipping or rectangular dashboard artifact. scripts/a11y-smoke.js fails on the base revision too (it looks for a stale Chromium chromium-1223), unrelated to this iteration.",
- "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari): how does the hard reload line read on a live screen after a genuine close following a long background, does it ever cover the shore controls under a thumb, and is one touch enough to bring sound back after an ordinary sleep? Windows high-contrast check still open from 0073.",
+ "iteration": 75,
+ "status": "the-diary-comes-home",
+ "current_goal": "Iteration 0075: пруд сам играет свой дневник. Один жест — клавиша R или тёплый камень в панели дневника — отдаёт воде всю ещё читаемую хронику одним непрерывным разливом: фразы звучат по порядку со своих контуров, между ними одна спокойная пауза, разлив ограничен по числу фраз, нот и общему времени, заканчивается сам, когда прозвучала последняя обещанная нота, честно объявляет итог, а повторный жест останавливает его. Новых файлов воды нет, звук по-прежнему начинается только явным жестом, разлив не создаёт sustain-голосов и не пишет в партитуру.",
+ "previous_goal": "Iteration 0074: на возвращении из фона вода говорит о себе правду. Уходя в другое окно, пруд сам усыпляет звук, и это не новость - возвращение к спящей воде молчит и не пристаёт к игроку, пока настоящий жест не откажет. Но если браузер закрыл звук пруда, пока игрок был в другом окне, вернувшийся видит сразу жёсткую правду - перезагрузите страницу - а не мягкое 'коснитесь воды, чтобы разбудить'; закрытая вода остаётся закрытой независимо от того, какое событие о ней сообщило. Слова глаза и живого региона совпадают, линия уходит только с вернувшимся звуком, и всё это не создаёт и не запускает аудиосистему.",
+ "last_verified": "2026-09-28: 102 Node tests pass (was 98; four new suites cover the chronicle order and breath, the phrase/note/span bounds with honest truncation, refusal on dissolved ink and broken input, and determinism plus pourAllSpan). 73 JS files pass syntax; state/package/manifest JSON and git diff --check clean. scripts/flush-diary-smoke.js passes on a production-loopback Chromium at 390x844 with a real seeded chronicle of three phrases: nothing replays before a gesture (audioState uninitialized, three lines readable), a real strike wakes the water, R starts the replay (flushing=1, plan<=14 notes, honest status), by mid-replay a phrase really sounds and draws on the water, the replay ends by itself (flushing=0, flushPhrases 3, flushNotes>=phrases and <=14, honest end line) and the shared echo pool returns to zero after the last tail; the diary panel carries the same route as a real enabled stone with an honest label, its click replays again, and R on the focused water stops the replay with honest words holding no voices; the in-browser keyboard map names the R route; no console or page errors. Screenshot output/pond-piano/diary-flush-75.png inspected directly: full-bleed organic water with three ink lines and live echo rings from the replaying phrases, title, eyebrow 75, map slate and shore stones intact, no clipping or rectangular dashboard artifact.",
+ "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari): how does \"Разлить весь дневник\" read under a thumb in the narrow diary panel, does a whole-diary replay feel too long on phone speakers, and should the water show how much of the replay is left. Windows high-contrast check still open from 0073.",
  "alpha_feedback": {
   "captured_at": "2026-07-26T13:59:00+03:00",
   "observations": [
@@ -340,7 +340,7 @@
   ],
   "next_step": "done; real-device pass should compare the warm near lap and cool far skim on phone speakers and bright screens"
  },
- "current_iteration": 74,
+ "current_iteration": 75,
  "iteration_51": {
   "started": "2026-09-02T22:17:00+03:00",
   "phase": "done",
@@ -801,5 +801,25 @@
    "a11y-smoke.js failure is a pre-existing stale Chromium path (chromium-1223), also failing on the base revision"
   ],
   "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari): how does the hard reload line read on a live screen after a genuine close following a long background, does it ever cover the shore controls under a thumb, and is one touch enough to bring sound back after an ordinary sleep? Windows high-contrast check still open from 0073."
+ },
+ "iteration_75": {
+  "started": "2026-09-28T10:17:00+03:00",
+  "finished": "2026-09-28T10:30:00+03:00",
+  "phase": "done",
+  "plan": [
+   "pure pourAllPlan/pourAllSpan in pond-score.js: phrases in the order they were played, one calm breath between them, bounded by phrases, notes and span, honest truncation, refusal on dissolved ink and broken input",
+   "pond.js: startDiaryFlush/stopDiaryFlush schedule the whole plan through the shared finite echo pool and playPourNote, draw honest water echoes, count flushPhrases/flushNotes/flushSkipped/flushPlanned, end by themselves with an honest summary, release the pool on lifecycle cleanup",
+   "keyboard route R plus a real #diary-flush stone in the diary panel (Tab trap order, honest disabled state and label), the R route added to the keyboard map, eyebrow 75, shell cache v72, instructions and README sentences",
+   "unit suites for order, breath, bounds, truncation, refusal and determinism; scripts/flush-diary-smoke.js production-loopback Chromium with a seeded chronicle and a mid-replay screenshot",
+   "run all node tests + syntax + JSON + git diff --check, inspect the screenshot, write KAIZEN 0075, update state, one commit and push main"
+  ],
+  "verified": [
+   "102 Node tests pass (was 98); 73 JS files pass syntax; JSON and git diff --check clean",
+   "production Chromium 390x844: R hands the seeded three-phrase chronicle back in one bounded replay; it ends by itself, honestly announces the total, and gives the shared echo pool back (0 after the last tail)",
+   "the diary panel stone is a real enabled control with an honest label and aria description; its click replays again; R on the focused water stops the replay with honest words and no held voices",
+   "the in-browser keyboard map itself lists the R route; no console or page errors",
+   "screenshot output/pond-piano/diary-flush-75.png inspected: organic water with live echo rings from the replaying phrases, title/eyebrow/map/shore intact"
+  ],
+  "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari) for the narrow-panel stone, the replay length on phone speakers, and whether the water should show the replay remaining. Windows high-contrast check open from 0073."
  }
 }

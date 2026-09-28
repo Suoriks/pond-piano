@@ -39,6 +39,7 @@
   const diaryList = document.querySelector('#diary-list');
   const diaryEmpty = document.querySelector('#diary-empty');
   const diaryCount = document.querySelector('#diary-count');
+  const diaryFlushButton = document.querySelector('#diary-flush');
   const diaryLeaf = document.querySelector('#diary-leaf');
   const leafText = document.querySelector('#leaf-text');
   const tuningInputs = [...document.querySelectorAll('input[name="tuning-family"]')];
@@ -89,6 +90,12 @@
   const pourTimers = new Set();
   const loopPassTimers = new Set();
   let loopingLine = null;
+  // The whole-diary replay: the pond handing its own remembered piece back.
+  const flushTimers = new Set();
+  let flushingDiary = false;
+  let flushPhrasesFired = 0;
+  let flushNotesFired = 0;
+  let flushNotesSkipped = 0;
   // A lifted phrase rests on the shore leaf until the water takes it back.
   let heldLeafScroll = null;
   let loopPassesFired = 0;
@@ -326,6 +333,7 @@
     pourTimers.clear();
     pourEchoes.length = 0;
     stopPourLoop();
+    stopDiaryFlush();
     hideDiaryLeaf();
     stoneFlights.length = 0;
     depthDives.length = 0;
@@ -340,6 +348,9 @@
     canvas.dataset.pendingPours = '0';
     canvas.dataset.loopingLine = '0';
     canvas.dataset.loopPasses = '0';
+    canvas.dataset.flushPhrases = '0';
+    canvas.dataset.flushNotes = '0';
+    canvas.dataset.flushSkipped = '0';
     balanceVoices(engine);
     for (const pointerId of pointers.keys()) {
       try { canvas.releasePointerCapture?.(pointerId); } catch {}
@@ -809,6 +820,15 @@
     // away - only the water taking the phrase back does.
     if (!heldLeafScroll || !score.scrollSummary(heldLeafScroll)) hideDiaryLeaf();
     diaryStone.setAttribute('aria-label', `Дневник пруда: ${lines.length} ${lines.length === 1 ? 'строка' : lines.length >= 2 && lines.length <= 4 ? 'строки' : 'строк'} на воде`);
+    if (diaryFlushButton instanceof HTMLButtonElement) {
+      const plural = lines.length === 1 ? 'фраза' : lines.length >= 2 && lines.length <= 4 ? 'фразы' : 'фраз';
+      diaryFlushButton.disabled = lines.length === 0;
+      diaryFlushButton.classList.toggle('is-flushing', flushingDiary);
+      diaryFlushButton.textContent = flushingDiary ? 'Остановить разлив' : 'Разлить весь дневник';
+      diaryFlushButton.setAttribute('aria-label', lines.length
+        ? `Разлить весь дневник обратно на воду: ${lines.length} ${plural} прозвучат подряд, одна за другой`
+        : 'Разлить весь дневник: сейчас на воде нет ни одной читаемой строки');
+    }
     diaryControl.classList.toggle('has-lines', lines.length > 0);
     // Restore the keyboard player after a live re-render: same row, same
     // action. A vanished row (expired ink) returns focus to the stone so
@@ -880,6 +900,10 @@
     }
     const returned = document.querySelector('#diary-return');
     if (returned instanceof HTMLButtonElement) controls.push(returned);
+    // The whole-diary stone closes the panel's travel: the last honest control
+    // a keyboard player reaches after the rows, the leaf and the return stone.
+    const flush = diaryFlushButton;
+    if (flush instanceof HTMLButtonElement && !flush.disabled) controls.push(flush);
     return controls;
   }
 
@@ -1065,6 +1089,97 @@
     }
   }
 
+  // ---- The pond plays its own diary back (browser side) ------------------
+  // One gesture hands the whole still-readable chronicle back to the water as
+  // one continuous replay. The pure layer decides what is heard and when; the
+  // shell only schedules those notes into the shared, finite echo pool, draws
+  // the honest echoes, and says what the water is doing. It ends by itself
+  // when the last promised note has spoken, never outlives its own plan, and
+  // gives up the echo pool the moment the water is retired.
+  function stopDiaryFlush(reflect = true) {
+    for (const timer of flushTimers) clearTimeout(timer);
+    flushTimers.clear();
+    flushingDiary = false;
+    if (reflect) canvas.dataset.flushing = '0';
+  }
+
+  function startDiaryFlush() {
+    if (flushingDiary) {
+      stopDiaryFlush();
+      status.textContent = 'Пруд перестал разливать дневник';
+      pourAnnounced = true;
+      if (diaryOpen) syncDiaryPanel();
+      return;
+    }
+    const now = performance.now();
+    const plan = score.pourAllPlan(phraseInk, now, reduced.matches);
+    if (!plan.length) {
+      status.textContent = 'Дневник пуст или уже растворился — разливать нечего';
+      pourAnnounced = true;
+      canvas.dataset.flushing = '0';
+      canvas.dataset.flushPhrases = '0';
+      canvas.dataset.flushNotes = '0';
+      if (diaryOpen) syncDiaryPanel();
+      return;
+    }
+    const engine = audio;
+    if (!engine || engine.context.state !== 'running') {
+      status.textContent = 'Сначала разбудите воду касанием — тогда пруд разольёт весь дневник';
+      pourAnnounced = true;
+      return;
+    }
+    stopPourLoop();
+    flushingDiary = true;
+    flushPhrasesFired = 0;
+    flushNotesFired = 0;
+    flushNotesSkipped = 0;
+    canvas.dataset.flushing = '1';
+    canvas.dataset.flushPhrases = '0';
+    canvas.dataset.flushNotes = '0';
+    canvas.dataset.flushSkipped = '0';
+    canvas.dataset.flushPlanned = String(plan.reduce((total, phrase) => total + phrase.notes.length, 0));
+    let scheduled = 0;
+    for (const phrase of plan) {
+      const phraseTimer = setTimeout(() => {
+        flushTimers.delete(phraseTimer);
+        if (!flushingDiary) return;
+        startPourEcho(phrase.line);
+        flushPhrasesFired += 1;
+        canvas.dataset.flushPhrases = String(flushPhrasesFired);
+      }, Math.max(0, phrase.at));
+      flushTimers.add(phraseTimer);
+      for (const note of phrase.notes) {
+        const response = music.echoNote(note.anchor.pitch ?? phrase.line.pitch, note.anchor.y,
+          .1 + phrase.line.pressure * .16, note.index, note.count);
+        const timer = setTimeout(() => {
+          flushTimers.delete(timer);
+          if (!flushingDiary) return;
+          if (engineEchoBusy(MAX_ECHO_VOICES)) {
+            flushNotesSkipped += 1;
+            canvas.dataset.flushSkipped = String(flushNotesSkipped);
+          } else {
+            playPourNote(phrase.line, note.anchor, note.index, response);
+            flushNotesFired += 1;
+            canvas.dataset.flushNotes = String(flushNotesFired);
+          }
+          if (!flushTimers.size) {
+            flushingDiary = false;
+            canvas.dataset.flushing = '0';
+            status.textContent = `Пруд разлил свой дневник обратно на воду: ${flushPhrasesFired} ${flushPhrasesFired === 1 ? 'фраза' : flushPhrasesFired >= 2 && flushPhrasesFired <= 4 ? 'фразы' : 'фраз'}`;
+            pourAnnounced = true;
+            if (diaryOpen) syncDiaryPanel();
+          }
+        }, Math.max(0, note.at));
+        flushTimers.add(timer);
+        scheduled += 1;
+      }
+    }
+    if (!scheduled) { stopDiaryFlush(); return; }
+    status.textContent = `Пруд разливает дневник: ${plan.length} ${plan.length === 1 ? 'фраза' : plan.length >= 2 && plan.length <= 4 ? 'фразы' : 'фраз'} сами возвращаются на воду`;
+    pourAnnounced = true;
+    setDiaryPanelOpen(false);
+  }
+
   // Carry a finished phrase off the pond: one compact self-contained scroll
   // (path, sounding pitch, depth, duration, chosen current) lifted into the
   // clipboard. No network, no audio engine, no score memory — just the phrase
@@ -1206,7 +1321,10 @@
   if (leafReturn instanceof HTMLButtonElement) {
     leafReturn.addEventListener('click', () => seatReturnedText(heldLeafScroll));
   }
-  diaryControl.addEventListener('focusout', () => {
+  const diaryFlush = document.querySelector('#diary-flush');
+  if (diaryFlush instanceof HTMLButtonElement) {
+    diaryFlush.addEventListener('click', () => startDiaryFlush());
+  }  diaryControl.addEventListener('focusout', () => {
     requestAnimationFrame(() => {
       if (!diaryControl.contains(document.activeElement)) setDiaryPanelOpen(false);
     });
@@ -2728,6 +2846,14 @@ function disconnectSkipVoice(engine, skip) {
     if ((event.code === 'KeyH' || event.key === 'h' || event.key === 'H') && !event.repeat && keyboard.sounding && !keyboard.chord && !keyboard.gather) {
       event.preventDefault();
       openKeyboardChord(performance.now());
+    }
+    // The diary has a keyboard route too: R hands the whole remembered piece
+    // back to the water at once, whatever bowl the player happens to hold.
+    if ((event.code === 'KeyR' || event.key === 'r' || event.key === 'R') && !event.repeat &&
+        !event.ctrlKey && !event.metaKey && !event.altKey) {
+      event.preventDefault();
+      startDiaryFlush();
+      return;
     }
     if ((event.code === 'Space' || event.key === 'Enter') && !event.repeat && !keyboard.sounding) {
       event.preventDefault();

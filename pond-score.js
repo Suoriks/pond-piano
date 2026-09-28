@@ -329,6 +329,78 @@
     return Object.freeze({ progress: travelPhase, breath, visible });
   }
 
+  // ---- The pond plays its own diary back -----------------------------------
+  // The surface is also the score, and the diary is its remembered piece. A
+  // single gesture can hand the whole still-readable chronicle back to the
+  // water as one continuous replay: phrases in the order they were played,
+  // each answering from its own contour, separated by one calm breath, and
+  // bounded in phrases, notes and total span so a crowded diary can never
+  // turn into a machine-gun. Pure timing only - the shell schedules the notes
+  // and draws the echoes it is given.
+  const FLUSH_FIRST_DELAY_MS = 560;
+  const FLUSH_PHRASE_GAP_MS = 840;
+  const FLUSH_PHRASE_SPREAD_MAX_MS = 2200;
+  const FLUSH_MAX_PHRASES = 6;
+  const FLUSH_NOTES_PER_PHRASE = 3;
+  const FLUSH_MAX_NOTES = 14;
+  const FLUSH_MAX_SPAN_MS = 26000;
+
+  function pourAllPlan(lines, now = 0, reducedMotion = false, options = {}) {
+    if (!Array.isArray(lines) || !Number.isFinite(now)) return [];
+    const bound = (value, fallback, low, high) =>
+      Math.max(low, Math.min(high, Number.isFinite(value) ? Math.trunc(value) : fallback));
+    const maxPhrases = bound(options.maxPhrases, FLUSH_MAX_PHRASES, 1, 8);
+    const perPhrase = bound(options.notesPerPhrase, FLUSH_NOTES_PER_PHRASE, 1, 4);
+    const maxNotes = bound(options.maxNotes, FLUSH_MAX_NOTES, 1, 32);
+    const maxSpan = Math.max(1000, Math.min(120000,
+      Number.isFinite(options.maxSpanMs) ? options.maxSpanMs : FLUSH_MAX_SPAN_MS));
+    const chronicle = pourableInk(lines, now, reducedMotion)
+      .filter(line => line && Array.isArray(line.points) && line.points.length >= 2 &&
+        Number.isFinite(line.born));
+    const plan = [];
+    let cursor = FLUSH_FIRST_DELAY_MS, used = 0;
+    for (const line of chronicle) {
+      if (plan.length >= maxPhrases || used >= maxNotes || cursor > maxSpan) break;
+      const pseudo = {
+        ...line, startedAt: line.born,
+        points: line.points.map((point, index) => ({
+          x: point.x, y: point.y, pitch: line.pitch,
+          pressure: Number.isFinite(point.pressure) ? point.pressure : line.pressure,
+          at: line.born + index
+        }))
+      };
+      const anchors = melodyAnchors(pseudo, perPhrase);
+      if (!anchors.length) continue;
+      const room = Math.max(0, maxNotes - used);
+      const chosen = anchors.slice(0, room);
+      if (!chosen.length) break;
+      const spread = Math.max(0, Math.min(FLUSH_PHRASE_SPREAD_MAX_MS,
+        Number.isFinite(line.durationMs) ? line.durationMs : 1200));
+      const notes = chosen.map((anchor, index) => Object.freeze({
+        at: cursor + (chosen.length <= 1 ? 0 : Math.round(index * spread / (chosen.length - 1))),
+        anchor, index, count: chosen.length
+      }));
+      plan.push(Object.freeze({ line, at: cursor, notes: Object.freeze(notes) }));
+      used += notes.length;
+      cursor = notes[notes.length - 1].at + FLUSH_PHRASE_GAP_MS;
+    }
+    return plan;
+  }
+
+  // How long the whole replay lasts, measured to its last note: the shell
+  // keeps its timers exactly that long and nothing longer.
+  function pourAllSpan(plan) {
+    if (!Array.isArray(plan) || !plan.length) return 0;
+    let last = 0;
+    for (const phrase of plan) {
+      if (!phrase || !Array.isArray(phrase.notes)) continue;
+      for (const note of phrase.notes) {
+        if (note && Number.isFinite(note.at)) last = Math.max(last, note.at);
+      }
+    }
+    return Math.max(0, Math.round(last));
+  }
+
   // A finished phrase can leave the pond as a compact self-contained scroll:
   // its real path, sounding pitch and depth, duration, pressure and chosen
   // current remain transportable without the audio engine or the DOM. Pure
@@ -578,6 +650,8 @@
     melodyAnchors, serializePhrase, restorePhrase,
     MAX_INK, INK_LIFE_MS, phraseInk, appendPhraseInk, inkLifeMs, inkVisibility, pourableInk,
     LOOP_FIRST_DELAY_MS, LOOP_PASS_GAP_MS, MAX_LOOP_PASSES, loopSchedule, loopProbe,
+    FLUSH_FIRST_DELAY_MS, FLUSH_PHRASE_GAP_MS, FLUSH_MAX_PHRASES, FLUSH_MAX_NOTES,
+    FLUSH_NOTES_PER_PHRASE, FLUSH_MAX_SPAN_MS, pourAllPlan, pourAllSpan,
     rehearsalDecision, REHEARSAL_TAP_HOLD_MS, REHEARSAL_TAP_MOVE, REHEARSAL_WINDOW_MS, REHEARSAL_MAX_TAPS,
     INVITE_BREATH_MS, INVITE_RING_MS, invitation,
     phraseScroll, phraseScrollText, parseScrollText, inkFromScroll, scrollSummary,

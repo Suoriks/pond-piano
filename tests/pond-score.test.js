@@ -499,3 +499,90 @@ test('the golden-path queue lets settle, chord and gather each earn their turn',
   assert.equal(score.whisperHint(state, [{ kind: 'chord', happened: true }], hintedGather.born + score.WHISPER_PAUSE_MS), null,
     'the bloom lesson stays one per session');
 });
+
+test('the whole diary replays as one continuous piece, oldest phrase first', () => {
+  const now = 10000;
+  const ink = [
+    { born: now - 5000, durationMs: 1200, depth: .3, pressure: .5, pitch: .2,
+      points: [{ x: .1, y: .2, pressure: .5 }, { x: .3, y: .4, pressure: .5 }, { x: .5, y: .6, pressure: .5 }] },
+    { born: now - 3000, durationMs: 800, depth: .6, pressure: .4, pitch: .7,
+      points: [{ x: .7, y: .3, pressure: .4 }, { x: .8, y: .5, pressure: .4 }] }
+  ];
+  const plan = score.pourAllPlan(ink, now, false);
+  assert.equal(plan.length, 2, 'every still-readable phrase is handed back once');
+  assert.equal(plan[0].line.born, ink[0].born, 'the chronicle keeps the order it was played in');
+  assert.equal(plan[1].line.born, ink[1].born);
+  assert.equal(plan[0].at, score.FLUSH_FIRST_DELAY_MS, 'the replay waits one calm beat before starting');
+  assert.ok(plan[0].notes.length >= 2, 'a contour answers from more than one anchor');
+  assert.ok(plan[1].at > plan[0].notes.at(-1).at,
+    'the next phrase waits until the previous one has spoken');
+  assert.equal(plan[1].at - plan[0].notes.at(-1).at, score.FLUSH_PHRASE_GAP_MS,
+    'phrases are separated by exactly one breath');
+  for (const phrase of plan) {
+    const notes = phrase.notes;
+    for (let index = 1; index < notes.length; index += 1) {
+      assert.ok(notes[index].at >= notes[index - 1].at, 'a phrase speaks forward in time');
+      assert.equal(notes[index].index, index);
+      assert.equal(notes[index].count, notes.length);
+      assert.ok(Number.isFinite(notes[index].anchor.x) && Number.isFinite(notes[index].anchor.y));
+    }
+  }
+  assert.ok(plan[0].notes.at(-1).at - plan[0].at <= 1200,
+    'the phrase spreads inside its own recorded duration, not longer');
+});
+
+test('the whole-diary replay stays bounded however crowded the diary is', () => {
+  const now = 20000;
+  const crowded = Array.from({ length: 12 }, (_, index) => ({
+    born: now - 9000 + index * 400, durationMs: 3000, depth: .5, pressure: .5, pitch: .5,
+    points: [{ x: .2, y: .3, pressure: .5 }, { x: .4, y: .4, pressure: .5 }, { x: .6, y: .5, pressure: .5 }]
+  }));
+  const plan = score.pourAllPlan(crowded, now, false);
+  assert.ok(plan.length <= score.FLUSH_MAX_PHRASES, `at most ${score.FLUSH_MAX_PHRASES} phrases`);
+  const notes = plan.reduce((total, phrase) => total + phrase.notes.length, 0);
+  assert.ok(notes <= score.FLUSH_MAX_NOTES, `at most ${score.FLUSH_MAX_NOTES} notes`);
+  const span = score.pourAllSpan(plan);
+  assert.ok(span <= score.FLUSH_MAX_SPAN_MS, 'the whole replay stays inside its own bound');
+  assert.ok(span > 0, 'a real chronicle really lasts some time');
+  const tight = score.pourAllPlan(crowded, now, false, { maxPhrases: 2, maxNotes: 6 });
+  assert.equal(tight.length, 2, 'the caller can tighten the phrase bound');
+  assert.equal(tight.reduce((total, phrase) => total + phrase.notes.length, 0), 6,
+    'the caller can tighten the note bound');
+  const starved = score.pourAllPlan(crowded, now, false, { maxPhrases: 3, maxNotes: 4 });
+  assert.equal(starved.reduce((total, phrase) => total + phrase.notes.length, 0), 4,
+    'a note-starved bound still schedules only what it has room for');
+  assert.equal(starved[1].notes.length, 1, 'the truncated phrase says so truthfully in its own count');
+  assert.equal(starved[1].notes[0].count, 1,
+    'a phrase cut short counts only the anchors it really plays');
+});
+
+test('the whole-diary replay refuses silence: nothing readable, nothing played', () => {
+  const now = 50000;
+  assert.deepEqual(score.pourAllPlan([], now, false), [], 'an empty diary plays nothing');
+  assert.deepEqual(score.pourAllPlan(null, now, false), [], 'broken input plays nothing');
+  assert.deepEqual(score.pourAllPlan([{ born: now }], now, false), [], 'a line without a contour plays nothing');
+  const expired = [{ born: now - score.INK_LIFE_MS - 1, durationMs: 900, depth: .5, pressure: .5, pitch: .5,
+    points: [{ x: .2, y: .2, pressure: .5 }, { x: .4, y: .4, pressure: .5 }] }];
+  assert.deepEqual(score.pourAllPlan(expired, now, false), [], 'dissolved ink is not replayed');
+  assert.equal(score.pourAllPlan(expired, expired[0].born + 5000, false).length, 1,
+    'the same line was still readable when it was fresh');
+  assert.equal(score.pourAllSpan([]), 0, 'an empty plan lasts no time');
+  assert.equal(score.pourAllSpan(null), 0, 'broken plans last no time');
+});
+
+test('the whole-diary replay is deterministic and honest about its own length', () => {
+  const now = 7000;
+  const ink = [
+    { born: now - 2000, durationMs: 1000, depth: .4, pressure: .5, pitch: .3,
+      points: [{ x: .2, y: .3, pressure: .5 }, { x: .5, y: .5, pressure: .5 }, { x: .8, y: .4, pressure: .5 }] }
+  ];
+  const first = score.pourAllPlan(ink, now, false);
+  const second = score.pourAllPlan(ink, now, false);
+  assert.deepEqual(JSON.parse(JSON.stringify(first)), JSON.parse(JSON.stringify(second)),
+    'the same chronicle always replays the same way');
+  assert.equal(score.pourAllSpan(first), first[0].notes.at(-1).at,
+    'the span ends on the last note actually scheduled');
+  assert.ok(score.pourAllSpan(first) < score.FLUSH_MAX_SPAN_MS);
+  assert.ok(first[0].notes.every(note => note.at >= score.FLUSH_FIRST_DELAY_MS),
+    'no note fires before the opening beat');
+});

@@ -1,5 +1,5 @@
-const CACHE = 'pond-piano-shell-v71';
-// Iteration 0073: the shore instruments stay real controls under high contrast - the chosen current is told by edge weight, not colour.
+const CACHE = 'pond-piano-shell-v72';
+// Iteration 0075: the pond plays its own diary back - one gesture hands the whole still-readable chronicle to the water as one bounded continuous replay.
 const SHELL = [
   './',
   './index.html',

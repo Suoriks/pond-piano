@@ -240,6 +240,21 @@ h1 { margin: 0; font: 400 clamp(24px, 4vw, 44px)/1.05 Georgia, serif; letter-spa
 .diary-return:hover { border-color: rgba(214, 234, 186, .58); filter: brightness(1.12); transform: translateY(-1px); }
 .diary-return:focus-visible { outline: 3px solid #dae7b4; outline-offset: 2px; }
 .diary-return:active { filter: brightness(1.25); }
+/* The whole diary can come home at once: the same chronicle the water kept is
+   handed back as one continuous replay. A warmer stone than the single phrase,
+   with the same 44 px reach and the same dialog rules. */
+.diary-flush {
+  width: 100%; min-height: 44px; margin-top: 8px; padding: 8px 12px;
+  color: #f0e2c4; font: 600 12px/1.2 inherit; cursor: pointer;
+  border: 1px solid rgba(228, 202, 150, .34);
+  border-radius: 46% 54% 52% 48% / 54% 46% 52% 48%;
+  background: linear-gradient(150deg, hsla(36 44% 28% / .58), hsla(36 46% 12% / .72));
+  transition: border-color .18s ease, filter .18s ease, transform .18s ease;
+}
+.diary-flush:hover:not(:disabled) { border-color: rgba(240, 216, 168, .62); filter: brightness(1.12); transform: translateY(-1px); }
+.diary-flush:focus-visible { outline: 3px solid #dae7b4; outline-offset: 2px; }
+.diary-flush:active { filter: brightness(1.25); }
+.diary-flush:disabled { opacity: .38; cursor: default; }
 /* The keyboard's own slate. The pond answers arrows, a strike, the held dive,
    G and H, but a sighted keyboard player had nothing to discover that from.
    A quiet corner slate opens the honest map with "?" and closes with Escape,
@@ -320,7 +335,7 @@ h1 { margin: 0; font: 400 clamp(24px, 4vw, 44px)/1.05 Georgia, serif; letter-spa
   #tuning-value { color: #f1f6ea; }
   .tuning-pebble { border-color: rgba(226, 240, 204, .64); }
   .volume-stone, .diary-stone, .legend-trigger, .legend-close, .mute-water,
-  .diary-return, .leaf-return, .diary-entry { border-color: rgba(224, 238, 202, .6); }
+  .diary-return, .leaf-return, .diary-entry, .diary-flush { border-color: rgba(224, 238, 202, .6); }
   .volume-panel, .diary-panel, .legend-panel { border-color: rgba(228, 242, 208, .58); }
   .legend-key { border-color: rgba(226, 242, 205, .62); background: rgba(96, 132, 104, .34); }
   .legend-text { color: #eaf1e0; }
@@ -330,7 +345,7 @@ h1 { margin: 0; font: 400 clamp(24px, 4vw, 44px)/1.05 Georgia, serif; letter-spa
      by edge weight: the chosen current stone is doubled and heavier than its
      calm neighbours. */
   .tuning-pebble, .volume-stone, .diary-stone, .legend-trigger, .legend-close,
-  .mute-water, .diary-return, .leaf-return, .diary-entry { border-width: 2px; border-style: solid; }
+  .mute-water, .diary-return, .leaf-return, .diary-entry, .diary-flush { border-width: 2px; border-style: solid; }
   .tuning-choice input:checked + .tuning-pebble { border-width: 3px; border-style: double; }
   .tuning-choice:hover .tuning-pebble { border-width: 3px; }
   .tuning-choice input:focus-visible + .tuning-pebble { outline: 3px solid; outline-offset: 3px; }
