@@ -1,5 +1,5 @@
-const CACHE = 'pond-piano-shell-v76';
-// Iteration 0079: the shore examines itself - the pond repeats only what it really measured on this device and plays the recorded listening scenes for a human ear.
+const CACHE = 'pond-piano-shell-v77';
+// Iteration 0080: the shore writes and carries a note - the ear's own verdict per scene and one compact note of honest readings, kept and carried off the bank as it is.
 const SHELL = [
   './',
   './index.html',

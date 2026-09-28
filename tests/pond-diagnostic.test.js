@@ -133,3 +133,112 @@ test('a scene is found by name and an unknown name invents nothing', () => {
   assert.equal(diagnostic.scenarioById('nope'), null);
   assert.equal(diagnostic.scenarioById(undefined), null);
 });
+
+test('the ear verdict cycles through three honest words and never invents a fourth', () => {
+  assert.deepEqual([...diagnostic.VERDICTS], ['unheard', 'sounds', 'off']);
+  assert.equal(diagnostic.verdictLabel('sounds'), 'звучит');
+  assert.equal(diagnostic.verdictLabel('off'), 'мимо');
+  assert.equal(diagnostic.verdictLabel('unheard'), 'не слушал');
+  assert.equal(diagnostic.verdictLabel('СЛУШАЛ'), null);
+  assert.equal(diagnostic.verdictLabel(undefined), null);
+
+  assert.equal(diagnostic.nextVerdict('unheard'), 'sounds');
+  assert.equal(diagnostic.nextVerdict('sounds'), 'off');
+  assert.equal(diagnostic.nextVerdict('off'), 'unheard', 'the cycle closes, it does not grow a fourth word');
+  assert.equal(diagnostic.nextVerdict('junk'), 'sounds', 'junk is not a judgement: it starts from unheard');
+  assert.equal(diagnostic.nextVerdict(undefined), 'sounds');
+  assert.equal(diagnostic.normalizeVerdict('off'), 'off');
+  assert.equal(diagnostic.normalizeVerdict(7), 'unheard');
+});
+
+test('only the four real scenes are judged, and silence is not an approval', () => {
+  const judged = diagnostic.normalizeVerdicts({ taps: 'sounds', chord: 'off', bogus: 'sounds' });
+  assert.deepEqual(Object.keys(judged).sort(), ['chord', 'hold', 'pearls', 'taps']);
+  assert.equal(judged.taps, 'sounds');
+  assert.equal(judged.chord, 'off');
+  assert.equal(judged.hold, 'unheard', 'a scene nobody judged is recorded as unheard, not as approval');
+  assert.equal(judged.pearls, 'unheard');
+  assert.ok(!('bogus' in judged), 'an invented scene has no place on the shore');
+  assert.equal(judged.taps, diagnostic.normalizeVerdicts({ taps: 'sounds' }).taps);
+
+  for (const broken of [null, undefined, 7, 'sounds', ['sounds']]) {
+    const each = diagnostic.normalizeVerdicts(broken);
+    assert.deepEqual(Object.values(each), ['unheard', 'unheard', 'unheard', 'unheard']);
+  }
+  assert.equal(diagnostic.normalizeVerdicts({ taps: 'maybe' }).taps, 'unheard', 'an unknown word is no judgement');
+});
+
+test('a verdict line names the scene it belongs to, or says nothing', () => {
+  assert.equal(diagnostic.verdictLine('hold', 'sounds'), 'Сцена «Долгая вода»: звучит');
+  assert.equal(diagnostic.verdictLine('chord', 'off'), 'Сцена «Плотная ладонь»: мимо');
+  assert.equal(diagnostic.verdictLine('taps', undefined), 'Сцена «Короткие касания»: не слушал');
+  assert.equal(diagnostic.verdictLine('nope', 'sounds'), null);
+  assert.equal(diagnostic.verdictLine(undefined, 'sounds'), null);
+
+  const summary = diagnostic.verdictSummary({ taps: 'sounds', chord: 'off' });
+  assert.equal(summary.sounds, 1);
+  assert.equal(summary.off, 1);
+  assert.equal(summary.unheard, 2);
+  assert.equal(summary.judged, 2, 'only real judgements count as the ear having spoken');
+  assert.equal(diagnostic.verdictSummary().judged, 0);
+});
+
+test('the note is stamped in the shore clock, and a missing clock drops the stamp', () => {
+  assert.equal(diagnostic.momentStamp(Date.UTC(2026, 8, 28, 12, 17), 180), '28.09.2026, 15:17 UTC+03:00');
+  assert.equal(diagnostic.momentStamp(Date.UTC(2026, 8, 28, 23, 30), 180), '29.09.2026, 02:30 UTC+03:00');
+  assert.equal(diagnostic.momentStamp(Date.UTC(2026, 8, 28, 12, 17), -300), '28.09.2026, 07:17 UTC−05:00');
+  assert.equal(diagnostic.momentStamp(Date.UTC(2026, 8, 28, 12, 17), 0), '28.09.2026, 12:17 UTC+00:00');
+  assert.equal(diagnostic.momentStamp(undefined, 180), null);
+  assert.equal(diagnostic.momentStamp(NaN, 180), null);
+  assert.equal(diagnostic.momentStamp(Date.UTC(2026, 8, 28, 12, 17), NaN), '28.09.2026, 12:17 UTC+00:00');
+});
+
+test('an unasked water writes an honest note instead of a plausible one', () => {
+  const note = diagnostic.shoreNote({ at: Date.UTC(2026, 8, 28, 12, 17), offsetMinutes: 180 });
+  assert.equal(note.title, diagnostic.NOTE_TITLE);
+  assert.ok(note.text.startsWith(diagnostic.NOTE_TITLE));
+  assert.ok(note.text.includes('28.09.2026, 15:17 UTC+03:00'), 'the note carries its own moment');
+  assert.equal(note.measured, 0, 'nothing was measured here, and the note says so six times');
+  assert.equal(note.unknown, 6);
+  assert.equal(note.text.split('\n').length, 14, 'title, stamp, six facts, a heading, four scenes, a summary');
+  for (const entry of diagnostic.environmentReport()) {
+    assert.ok(note.text.includes(`${entry.label}: ${entry.value}`), `${entry.id} is carried as it was measured`);
+  }
+  assert.ok(note.text.includes('суд уха:'));
+  for (const scene of diagnostic.acceptanceScenarios()) {
+    assert.ok(note.text.includes(`— Сцена «${scene.title}»: не слушал`), `${scene.id} is honestly unheard`);
+  }
+  assert.ok(note.text.endsWith('Итог: 0 звучит, 0 мимо, 4 не слушал'));
+  assert.ok(!/Гц|\d+ мс/.test(note.text), 'no rate and no response time may appear before they were measured');
+  assert.ok(Object.isFrozen(note) && Object.isFrozen(note.lines));
+  assert.ok(note.text.length < 900, 'the note stays a note, not a journal');
+});
+
+test('a measured water, with the ear s own words, writes the same truth it shows', () => {
+  const note = diagnostic.shoreNote({
+    probe: { reducedMotion: false, audioState: 'running', sampleRate: 48000, baseLatency: .005, vibrate: true, pointerTypes: ['touch'], maxFingers: 3 },
+    verdicts: { taps: 'sounds', hold: 'sounds', chord: 'off' },
+    at: Date.UTC(2026, 8, 28, 12, 17),
+    offsetMinutes: 180
+  });
+  assert.equal(note.measured, 6, 'every fact was really measured this time');
+  assert.equal(note.unknown, 0);
+  assert.ok(note.text.includes('вода: проснулась, 48000 Гц'));
+  assert.ok(note.text.includes('отклик: 5 мс объявлено платформой'));
+  assert.ok(note.text.includes('пальцы: вода держала 3 пальца'));
+  assert.ok(note.text.includes('Сцена «Короткие касания»: звучит'));
+  assert.ok(note.text.includes('Сцена «Плотная ладонь»: мимо'));
+  assert.ok(note.text.includes('Сцена «Встреча волн»: не слушал'));
+  assert.ok(note.text.endsWith('Итог: 2 звучит, 1 мимо, 1 не слушал'));
+  assert.equal(note.summary.judged, 3);
+  assert.deepEqual(Object.keys(note.verdicts).sort(), ['chord', 'hold', 'pearls', 'taps']);
+
+  // Broken material never becomes a reading, and never grows the note.
+  const broken = diagnostic.shoreNote({ probe: 'touch', verdicts: 7, at: 'now', offsetMinutes: 'east' });
+  assert.equal(broken.lines.length, 13, 'a missing clock drops the stamp rather than inventing one');
+  assert.equal(broken.measured, 0);
+  assert.equal(broken.unknown, 6);
+  assert.ok(!broken.text.includes('UTC'));
+  assert.equal(diagnostic.shoreNote().lines.length, 13);
+  assert.equal(diagnostic.shoreNote(null).text.split('\n').length, 13);
+});

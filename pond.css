@@ -335,15 +335,31 @@ h1 { margin: 0; font: 400 clamp(24px, 4vw, 44px)/1.05 Georgia, serif; letter-spa
   border: 1px dashed rgba(190, 214, 180, .34); border-radius: 14px;
 }
 .inspect-listen { margin: 0 0 8px; color: #9fb7a5; font: 600 10px/1.4 ui-monospace, monospace; letter-spacing: .14em; text-transform: uppercase; }
-.inspect-scenarios { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.inspect-scene, .inspect-trigger, .inspect-close {
+.inspect-scenarios { display: grid; grid-template-columns: 1fr; gap: 7px; }
+.inspect-scene-row { display: flex; gap: 8px; align-items: stretch; }
+.inspect-scene { flex: 1 1 auto; }
+/* The verdict stone sits beside the scene it judges: compact, calm, and never
+   mistaken for the play stone, which keeps the wider shape. */
+.inspect-verdict {
+  flex: 0 0 auto; min-width: 112px; min-height: 44px; padding: 10px 12px; cursor: pointer;
+  color: #cfe0bd; font: 600 12px/1.25 inherit; text-align: center;
+  border: 1px solid rgba(198, 224, 182, .26); border-radius: 16px;
+  background: linear-gradient(150deg, hsla(96 30% 22% / .42), hsla(96 34% 11% / .6));
+  transition: border-color .18s ease, filter .18s ease;
+}
+.inspect-verdict:hover { border-color: rgba(214, 234, 186, .58); filter: brightness(1.12); }
+.inspect-verdict:focus-visible { outline: 3px solid #dae7b4; outline-offset: 2px; }
+.inspect-verdict[data-verdict="sounds"] { color: #f4e7bb; border-color: rgba(233, 209, 146, .58); }
+.inspect-verdict[data-verdict="off"] { color: #c2cfc2; border-color: rgba(174, 196, 178, .42); font-style: italic; }
+.inspect-judge { margin: 12px 0 0; color: #9fb7a5; font: 600 10px/1.4 ui-monospace, monospace; letter-spacing: .14em; text-transform: uppercase; }
+.inspect-scene, .inspect-trigger, .inspect-close, .inspect-note {
   min-height: 44px; padding: 10px 12px; cursor: pointer; color: #dce6ce; font: 600 12px/1.25 inherit;
   border: 1px solid rgba(198, 224, 182, .3); border-radius: 16px;
   background: linear-gradient(150deg, hsla(96 38% 26% / .5), hsla(96 40% 12% / .66));
   transition: border-color .18s ease, filter .18s ease, transform .18s ease;
 }
-.inspect-scene:hover, .inspect-trigger:hover, .inspect-close:hover { border-color: rgba(214, 234, 186, .58); filter: brightness(1.12); }
-.inspect-scene:focus-visible, .inspect-trigger:focus-visible, .inspect-close:focus-visible { outline: 3px solid #dae7b4; outline-offset: 2px; }
+.inspect-scene:hover, .inspect-trigger:hover, .inspect-close:hover, .inspect-note:hover { border-color: rgba(214, 234, 186, .58); filter: brightness(1.12); }
+.inspect-scene:focus-visible, .inspect-trigger:focus-visible, .inspect-close:focus-visible, .inspect-note:focus-visible { outline: 3px solid #dae7b4; outline-offset: 2px; }
 .inspect-scene[aria-pressed="true"] { border-color: rgba(214, 234, 186, .82); box-shadow: 0 0 12px hsla(96 60% 70% / .3); }
 /* While the examination is open it is the only control surface: the shore
    stones behind it must not read through it or answer a thumb. */
@@ -354,8 +370,12 @@ body.inspect-open .diary-control {
   transition: opacity .2s ease, visibility 0s linear .2s;
 }
 .inspect-trigger { width: 100%; margin-top: 9px; border-radius: 46% 54% 52% 48% / 54% 46% 52% 48%; }
+.inspect-note { width: 100%; margin-top: 9px; border-radius: 46% 54% 52% 48% / 54% 46% 52% 48%; }
 .inspect-close { width: 100%; margin-top: 11px; border-radius: 46% 54% 52% 48% / 54% 46% 52% 48%; }
-@media (max-width: 380px) { .inspect-scenarios { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) {
+  .inspect-verdict, .inspect-note { transition: none; }
+}
+@media (max-width: 380px) { .inspect-verdict { min-width: 92px; padding: 10px 8px; } }
 
 @media (max-width: 420px) {
   .tuning-control { left: max(12px, env(safe-area-inset-left)); bottom: max(11px, env(safe-area-inset-bottom)); }
@@ -395,13 +415,17 @@ body.inspect-open .diary-control {
      by edge weight: the chosen current stone is doubled and heavier than its
      calm neighbours. */
   .tuning-pebble, .volume-stone, .diary-stone, .legend-trigger, .legend-close,
-  .mute-water, .diary-return, .leaf-return, .diary-entry, .diary-flush { border-width: 2px; border-style: solid; }
+  .mute-water, .diary-return, .leaf-return, .diary-entry, .diary-flush,
+  .inspect-scene, .inspect-verdict, .inspect-trigger, .inspect-note, .inspect-close { border-width: 2px; border-style: solid; }
+  /* The ear's verdict carries its own weight once spoken: a judged scene is
+     doubled, an unheard one stays a plain edge. */
+  .inspect-verdict[data-verdict="sounds"], .inspect-verdict[data-verdict="off"] { border-width: 3px; border-style: double; }
   .tuning-choice input:checked + .tuning-pebble { border-width: 3px; border-style: double; }
   .tuning-choice:hover .tuning-pebble { border-width: 3px; }
   .tuning-choice input:focus-visible + .tuning-pebble { outline: 3px solid; outline-offset: 3px; }
   /* Opaque panels and map keys: the forced Canvas behind canvas-text keeps
      every word readable above the water. */
-  .volume-panel, .diary-panel, .legend-panel { border-width: 2px; border-style: solid; background: Canvas; }
+  .volume-panel, .diary-panel, .legend-panel, .inspect-panel { border-width: 2px; border-style: solid; background: Canvas; }
   .legend-key { border-width: 2px; border-style: solid; background: Canvas; }
   #pond:focus-visible { outline: 3px solid; outline-offset: -5px; }
 }

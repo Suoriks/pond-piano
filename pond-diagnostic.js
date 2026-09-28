@@ -169,9 +169,96 @@
     return acceptanceScenarios().find(item => item.id === id) || null;
   }
 
+  // ---- What only a human ear can decide -----------------------------------
+  // The platform can be measured; how the water sounds cannot. These verdicts
+  // are the listener's own words, kept on this shore and carried off it
+  // unchanged. A scene nobody listened to is recorded as unheard, because a
+  // silence is not an approval, and judging starts no sound of its own.
+
+  const VERDICTS = Object.freeze(['unheard', 'sounds', 'off']);
+  const VERDICT_LABELS = Object.freeze({ unheard: 'не слушал', sounds: 'звучит', off: 'мимо' });
+  const NOTE_TITLE = 'Береговая записка пруда-пианино';
+
+  function verdictLabel(value) {
+    return typeof value === 'string' && VERDICT_LABELS[value] ? VERDICT_LABELS[value] : null;
+  }
+
+  function normalizeVerdict(value) {
+    return verdictLabel(value) ? value : 'unheard';
+  }
+
+  function nextVerdict(current) {
+    const here = normalizeVerdict(current);
+    return VERDICTS[(VERDICTS.indexOf(here) + 1) % VERDICTS.length];
+  }
+
+  // Only the four real scenes are remembered; junk keys and junk values are
+  // dropped instead of becoming a judgement nobody made.
+  function normalizeVerdicts(raw) {
+    const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+    const kept = {};
+    for (const scene of acceptanceScenarios()) kept[scene.id] = normalizeVerdict(source[scene.id]);
+    return Object.freeze(kept);
+  }
+
+  function verdictLine(sceneId, value) {
+    const scene = typeof sceneId === 'string' ? scenarioById(sceneId) : null;
+    if (!scene) return null;
+    return `Сцена «${scene.title}»: ${verdictLabel(normalizeVerdict(value))}`;
+  }
+
+  function verdictSummary(raw) {
+    const judged = normalizeVerdicts(raw);
+    const counts = { sounds: 0, off: 0, unheard: 0 };
+    for (const scene of acceptanceScenarios()) counts[judged[scene.id]] += 1;
+    return Object.freeze({ ...counts, judged: counts.sounds + counts.off });
+  }
+
+  // The shore keeps a fixed UTC+3 with no daylight shift, so the stamp is
+  // written in that zone rather than in whatever the device happens to think.
+  function momentStamp(at, offsetMinutes) {
+    const ms = number(at);
+    if (ms === null) return null;
+    const offset = Number.isFinite(offsetMinutes) ? Math.trunc(offsetMinutes) : 0;
+    const pad = value => String(value).padStart(2, '0');
+    const clock = new Date(ms + offset * 60000);
+    const zone = `UTC${offset < 0 ? '−' : '+'}${pad(Math.trunc(Math.abs(offset) / 60))}:${pad(Math.abs(offset) % 60)}`;
+    return `${pad(clock.getUTCDate())}.${pad(clock.getUTCMonth() + 1)}.${clock.getUTCFullYear()}, ` +
+      `${pad(clock.getUTCHours())}:${pad(clock.getUTCMinutes())} ${zone}`;
+  }
+
+  // One compact note, built only from what was really measured and from the
+  // listener's own verdicts. Unknown readings are carried as unknown, never as
+  // zero, and a missing clock drops the stamp instead of inventing a time.
+  function shoreNote(source) {
+    const input = source && typeof source === 'object' ? source : {};
+    const report = environmentReport(input.probe);
+    const judged = normalizeVerdicts(input.verdicts);
+    const lines = [NOTE_TITLE];
+    const stamp = momentStamp(input.at, input.offsetMinutes);
+    if (stamp) lines.push(stamp);
+    for (const entry of report) lines.push(`${entry.label}: ${entry.value}`);
+    lines.push('суд уха:');
+    for (const scene of acceptanceScenarios()) lines.push(`— ${verdictLine(scene.id, judged[scene.id])}`);
+    const summary = verdictSummary(judged);
+    lines.push(`Итог: ${summary.sounds} звучит, ${summary.off} мимо, ${summary.unheard} не слушал`);
+    return Object.freeze({
+      title: NOTE_TITLE,
+      text: lines.join('\n'),
+      lines: Object.freeze(lines),
+      verdicts: judged,
+      summary,
+      measured: report.filter(entry => entry.state === 'measured').length,
+      unknown: report.filter(entry => entry.state === 'unknown').length
+    });
+  }
+
   return Object.freeze({
     UNKNOWN_VALUE, FINGER_CAP, TAIL_MS,
     fingerWord, fingersHeld, environmentReport,
-    acceptanceScenarios, scenarioById
+    acceptanceScenarios, scenarioById,
+    VERDICTS, VERDICT_LABELS, NOTE_TITLE,
+    verdictLabel, normalizeVerdict, nextVerdict, normalizeVerdicts,
+    verdictLine, verdictSummary, momentStamp, shoreNote
   });
 });

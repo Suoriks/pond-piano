@@ -2,11 +2,11 @@
  "project": "pond-piano",
  "phase": "device-validation",
  "iteration": 79,
- "status": "the-shore-examines-itself",
- "current_goal": "Iteration 0079: пруд осматривает сам себя, не выдумывая ни одного показания. Клавиша I, ссылка «Осмотр берега» в карте клавиш или адрес ?inspect открывают спокойную береговую панель: она повторяет только то, что вода действительно измерила на этой платформе (состояние и частота воды, объявленный платформой отклик, наличие толчка, увиденные типы указателей, наибольшее число пальцев разом) и прямо пишет «вода ещё не знает» там, где её не спрашивали. Там же звучат четыре сцены, о которых ещё судит живое ухо — короткие касания, долгая вода, плотная ладонь, встреча волн. Осмотр не является игрой: сцены играют настоящими чашами, но не пишут в дневник, не отвечают руке толчком и не помечают пруд сыгранным, а настоящие пальцы считаются честно и остаются в дневнике как всякая игра.",
- "previous_goal": "Iteration 0078: там, где у платформы есть вибрация, вода отвечает не только уху, но и руке — настоящее касание получает один короткий толчок (9–24 мс), длину которого задаёт сила самого удара; reduced motion замирает полностью, мышь молчит, серия быстрее 90 мс не жужжит, а собственный разлив дневника руку не трогает, потому что это не жест игрока. Аудио-правила не тронуты.",
- "last_verified": "2026-09-28: 118 Node tests pass (was 110; eight new suites cover honest measured/unknown states, broken probes never becoming readings, pointer naming, real Russian finger counts and deterministic bounded scenes). 77 JS files pass syntax (was 74). scripts/inspect-smoke.js passes on a production-loopback Chromium 390x844 with a seeded chronicle: before the first touch the water admits it has not woken and that the response and pointers were never measured; the dense-hand scene really sounds five bowls and writes no diary phrase; the scene ends by itself and clears aria-pressed; I closes and reopens the examination honestly; three real trusted CDP fingers are counted as 'вода держала 3 пальца' and, being real play, leave three phrases behind (6 vs 3 - the difference is what proves the scenes write nothing); after waking, the water names a real sample rate and declared response. No console or page errors. Screenshot output/pond-piano/inspect-79.png inspected directly and the lower third enlarged: the panel covers the shore stones instead of letting them read through it, scene targets are >=44px, nothing is clipped.",
- "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari) no longer needs blind measuring: open ?inspect, put two, three, five fingers on the water and read the honest count together with what the platform declares about its response and its actuator; then listen to the 'Короткие касания' and 'Долгая вода' scenes on phone speakers, where only a human ear decides. Windows high-contrast check still open from 0073.",
+ "status": "the-shore-writes-and-carries-a-note",
+ "current_goal": "Iteration 0080: ухо записывается на берегу. В осмотре «Осмотр берега» у каждой сцены появляется камень суда: «не слушал» → «звучит» → «мимо», честно названный для чтения с экрана и переживающий перезагрузку. Один камень «Унести записку» собирает короткую береговую записку: шесть честных показаний платформы (неизмеренное остаётся «вода ещё не знает»), суд уха по всем четырём сценам и итог; записка уходит в буфер как есть, а при отказе платформы честно остаётся на берегу. Суд не является игрой: ни звука, ни ряби, ни записи в дневник.",
+ "previous_goal": "Iteration 0079: пруд осматривает сам себя, не выдумывая ни одного показания. Клавиша I, ссылка «Осмотр берега» в карте клавиш или адрес ?inspect открывают спокойную береговую панель: она повторяет только то, что вода действительно измерила на этой платформе (состояние и частота воды, объявленный платформой отклик, наличие толчка, увиденные типы указателей, наибольшее число пальцев разом) и прямо пишет «вода ещё не знает» там, где её не спрашивали. Там же звучат четыре сцены, о которых ещё судит живое ухо — короткие касания, долгая вода, плотная ладонь, встреча волн. Осмотр не является игрой: сцены играют настоящими чашами, но не пишут в дневник, не отвечают руке толчком и не помечают пруд сыгранным, а настоящие пальцы считаются честно и остаются в дневнике как всякая игра.",
+ "last_verified": "2026-09-28: 124 Node tests pass (was 118; six new suites cover the three-word verdict cycle, refusal of an invented judgement, an honest note from unasked water, measured water with the ear's own words, the deterministic shore-clock stamp and broken inputs). 78 JS files pass syntax. scripts/shore-note-smoke.js passes on a production-loopback Chromium 390x844: the four verdict stones sit beside their scenes at >=44px and name their own next step; judging woke no water, sounded no voice and wrote no diary phrase; the note carried before any gesture held all four verdicts, the honest summary, 'отклик: вода ещё не знает' and no invented Гц/мс; verdicts survived a reload; three real trusted fingers woke the water and left exactly three phrases, after which the note named the real rate, response and 'пальцы: вода держала 3 пальца' with nothing unknown left; Tab reaches the verdict and note stones; a clipboard refusal stayed honest and asleep; no console or page errors. inspect-smoke and high-contrast-smoke regressions green. Screenshot output/pond-piano/shore-note-80.png inspected directly.",
+ "next_step": "Реальный проход на Android Chrome/PWA и iPhone Safari: открыть ?inspect, прочитать честные показания, послушать четыре сцены, отметить суд уха и унести записку в буфер, чтобы отдать её Евгению; проверить, различается ли камень суда под пальцем от камня сцены. Проверка Windows high-contrast всё ещё открыта с 0073.",
  "alpha_feedback": {
   "captured_at": "2026-07-26T13:59:00+03:00",
   "observations": [
@@ -340,7 +340,7 @@
   ],
   "next_step": "done; real-device pass should compare the warm near lap and cool far skim on phone speakers and bright screens"
  },
- "current_iteration": 79,
+ "current_iteration": 80,
  "iteration_51": {
   "started": "2026-09-02T22:17:00+03:00",
   "phase": "done",
@@ -894,5 +894,26 @@
   ],
   "next_step": "Real device pass via ?inspect: the honest finger count plus the two listening scenes on phone speakers. Windows high-contrast check still open from 0073.",
   "resumed_from_interrupted_slot": false
+ },
+ "iteration_80": {
+  "started": "2026-09-28T15:20:00+03:00",
+  "phase": "done",
+  "status": "the-shore-writes-and-carries-a-note",
+  "plan": [
+   "чистый слой pond-diagnostic.js: VERDICTS/verdictLabel/normalizeVerdict/nextVerdict/normalizeVerdicts/verdictLine/verdictSummary/momentStamp/shoreNote",
+   "юнит-наборы: цикл суда, ярлыки, отказ от выдуманного суда, честная записка (неизмеренное остаётся неизвестным), детерминированная метка времени, битые входы",
+   "pond.js: камень суда на каждую сцену (aria-label + dataset + localStorage pond-piano.scene-verdicts.v1), камень «Унести записку» через navigator.clipboard с честным исходом copied/refused/unsupported, dataset-пробы",
+   "index.html/CSS: строка суда, камень записки, устойчивые размеры 44px, forced-colors и reduced-motion",
+   "scripts/shore-note-smoke.js на production-loopback Chromium 390x844 + снимок",
+   "документы, KAIZEN 0080, eyebrow 80, shell v77, состояние, один коммит и push main"
+  ],
+  "finished": "2026-09-28T15:52:00+03:00",
+  "verified": [
+   "124 Node tests pass (was 118; six new suites: the three-word verdict cycle, refusal of an invented judgement, an honest note from unasked water, measured water with the ear's words, the shore-clock stamp, and broken inputs)",
+   "78 JS files pass syntax (was 77); state JSON valid and git diff --check clean",
+   "shore-note-smoke.js production-loopback Chromium 390x844: four verdict stones beside their scenes, each >=44px and naming its own next step; the first judgement woke no water, sounded no voice and wrote no phrase; the carried note before any gesture held all four verdicts, the honest summary '1 sounds, 1 off, 2 unheard', 'отклик: вода ещё не знает' and not one invented Гц/мс; verdicts survived a reload; three real trusted CDP fingers woke the water, left exactly three phrases, and the note then named the real rate, response, and 'пальцы: вода держала 3 пальца' with nothing left unknown; Tab really reaches the verdict and note stones; a platform that refused the clipboard got the honest 'записка осталась на берегу' and the water stayed asleep; no console or page errors",
+   "regressions green: inspect-smoke and high-contrast-smoke",
+   "screenshot output/pond-piano/shore-note-80.png inspected directly: verdict stones sit beside their scenes, 'звучит' reads warm, 'мимо' reads as a quiet italic, the note and close stones are fully visible, nothing clipped"
+  ]
  }
 }

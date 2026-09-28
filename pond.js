@@ -51,12 +51,17 @@
   const inspectScenarioBox = document.querySelector('#inspect-scenarios');
   const inspectCloseButton = document.querySelector('#inspect-close');
   const inspectTrigger = document.querySelector('#inspect-trigger');
+  const inspectNoteButton = document.querySelector('#inspect-note');
   const tuningValue = document.querySelector('#tuning-value');
   const MASTER_STORAGE_KEY = 'pond-piano.master.v1';
   const TUNING_STORAGE_KEY = 'pond-piano.tuning.v1';
   const SCORE_STORAGE_KEY = 'pond-piano.score.v1';
   const DIARY_STORAGE_KEY = 'pond-piano.diary.v1';
   const INVITATION_STORAGE_KEY = 'pond-piano.invitation.v1';
+  const INSPECT_VERDICT_KEY = 'pond-piano.scene-verdicts.v1';
+  // The shore keeps a fixed UTC+3 with no daylight shift, so a carried note is
+  // stamped in the shore clock rather than in whatever the device believes.
+  const SHORE_OFFSET_MINUTES = 180;
   const SCORE_HYDRATE_MAX_AGE_MS = 3600000;
   const epochNow = () => Date.now();
   const bootAt = performance.now();
@@ -117,6 +122,8 @@
   const inspectTimers = new Set();
   let inspectPlaying = null;
   let inspectSerial = 0;
+  // The ear's own verdicts: kept on this shore, never confused with a reading.
+  let inspectVerdicts = diagnostic.normalizeVerdicts(loadInspectVerdicts());
   // A lifted phrase rests on the shore leaf until the water takes it back.
   let heldLeafScroll = null;
   let loopPassesFired = 0;
@@ -1683,7 +1690,9 @@
 
   function buildInspectScenes() {
     if (!inspectScenarioBox) return;
-    const buttons = diagnostic.acceptanceScenarios().map(scene => {
+    const rows = diagnostic.acceptanceScenarios().map(scene => {
+      const row = document.createElement('div');
+      row.className = 'inspect-scene-row';
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'inspect-scene';
@@ -1695,9 +1704,97 @@
       note.textContent = ` ${scene.sentence}`;
       button.append(note);
       button.addEventListener('click', () => playInspectScene(scene.id));
-      return button;
+      // The ear's own verdict, kept beside the scene it judges. It starts no
+      // sound and leaves no phrase: saying "звучит" is not playing the water.
+      const judge = document.createElement('button');
+      judge.type = 'button';
+      judge.className = 'inspect-verdict';
+      judge.dataset.scene = scene.id;
+      judge.addEventListener('click', () => judgeInspectScene(scene.id));
+      row.append(button, judge);
+      return row;
     });
-    inspectScenarioBox.replaceChildren(...buttons);
+    inspectScenarioBox.replaceChildren(...rows);
+    renderInspectVerdicts();
+  }
+
+  function loadInspectVerdicts() {
+    try {
+      const raw = localStorage.getItem(INSPECT_VERDICT_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  }
+
+  function persistInspectVerdicts() {
+    try { localStorage.setItem(INSPECT_VERDICT_KEY, JSON.stringify(inspectVerdicts)); } catch {}
+    canvas.dataset.inspectVerdicts = diagnostic.acceptanceScenarios()
+      .map(scene => `${scene.id}:${inspectVerdicts[scene.id]}`).join(' ');
+  }
+
+  // The verdict stone names its own scene and its own next step, so a screen
+  // reader hears which scene is being judged and what the next press records.
+  function renderInspectVerdicts() {
+    if (inspectScenarioBox) {
+      for (const button of inspectScenarioBox.querySelectorAll('.inspect-verdict')) {
+        const scene = diagnostic.scenarioById(button.dataset.scene);
+        if (!scene) continue;
+        const verdict = inspectVerdicts[scene.id];
+        const label = diagnostic.verdictLabel(verdict);
+        button.dataset.verdict = verdict;
+        button.textContent = `Суд: ${label}`;
+        button.setAttribute('aria-label',
+          `Сцена «${scene.title}»: ухо сказало «${label}». Нажмите, чтобы отметить «${diagnostic.verdictLabel(diagnostic.nextVerdict(verdict))}».`);
+      }
+    }
+    persistInspectVerdicts();
+  }
+
+  function judgeInspectScene(id) {
+    const scene = diagnostic.scenarioById(id);
+    if (!scene) return false;
+    const next = diagnostic.nextVerdict(inspectVerdicts[id]);
+    inspectVerdicts = diagnostic.normalizeVerdicts({ ...inspectVerdicts, [id]: next });
+    renderInspectVerdicts();
+    canvas.dataset.inspectVerdict = `${id}:${next}`;
+    const summary = diagnostic.verdictSummary(inspectVerdicts);
+    status.textContent = `Сцена «${scene.title}»: ухо сказало «${diagnostic.verdictLabel(next)}». ` +
+      `Отмечено: ${summary.sounds} звучит, ${summary.off} мимо, ${summary.unheard} не слушал`;
+    return true;
+  }
+
+  // One compact note, built from the same honest readings the panel shows plus
+  // the listener's own words. Nothing is measured here that the water was not
+  // asked; a refusal from the platform leaves the note on the shore rather than
+  // pretending it was carried away.
+  function buildShoreNote() {
+    return diagnostic.shoreNote({
+      probe: inspectProbe(),
+      verdicts: inspectVerdicts,
+      at: Date.now(),
+      offsetMinutes: SHORE_OFFSET_MINUTES
+    });
+  }
+
+  async function copyShoreNote() {
+    const note = buildShoreNote();
+    canvas.dataset.inspectNoteLength = String(note.text.length);
+    const clip = typeof navigator !== 'undefined' && navigator && navigator.clipboard ? navigator.clipboard : null;
+    if (!clip || typeof clip.writeText !== 'function') {
+      canvas.dataset.inspectNote = 'unsupported';
+      status.textContent = 'Этот берег не умеет унести записку: слова остались на воде';
+      return false;
+    }
+    try {
+      await clip.writeText(note.text);
+      canvas.dataset.inspectNote = 'copied';
+      status.textContent = `Записка ушла с берега: ${note.measured} измерено, ${note.unknown} вода ещё не знает, ` +
+        `${note.summary.sounds} звучит, ${note.summary.off} мимо, ${note.summary.unheard} не слушал`;
+      return true;
+    } catch {
+      canvas.dataset.inspectNote = 'refused';
+      status.textContent = 'Платформа не отдала буфер: записка осталась на берегу';
+      return false;
+    }
   }
 
   function reflectInspectScenes() {
@@ -1790,6 +1887,7 @@
     if (next) {
       renderInspectFacts();
       reflectInspectScenes();
+      renderInspectVerdicts();
       inspectCloseButton?.focus();
       status.textContent = 'Осмотр берега открыт: вода называет только то, что измерила сама; Escape закрывает';
     } else {
@@ -1801,6 +1899,7 @@
 
   inspectTrigger?.addEventListener('click', () => { setLegendOpen(false); setInspectOpen(true); });
   inspectCloseButton?.addEventListener('click', () => setInspectOpen(false));
+  inspectNoteButton?.addEventListener('click', () => { copyShoreNote(); });
   inspectControl?.addEventListener('keydown', event => {
     if (event.key === 'Escape') { event.preventDefault(); setInspectOpen(false); return; }
     if (event.key !== 'Tab') return;
@@ -1826,6 +1925,7 @@
   canvas.dataset.inspectFingers = '0';
   canvas.dataset.inspectPointers = '';
   canvas.dataset.inspectScenario = '0';
+  canvas.dataset.inspectNote = '0';
   if (typeof location !== 'undefined' && location &&
       (new URLSearchParams(location.search).has('inspect') || location.hash === '#inspect')) {
     setInspectOpen(true);
