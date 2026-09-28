@@ -1,12 +1,12 @@
 {
  "project": "pond-piano",
  "phase": "device-validation",
- "iteration": 82,
- "status": "the-checks-find-their-own-browser",
- "current_goal": "Iteration 0082: проверки сами находят свой браузер. Один честный слой `scripts/chrome-path.js` убирает рукописный путь к сборке Chromium из всех смоуков: сначала явное переопределение `POND_CHROME`, затем сборка, которую называет сам Playwright, затем новейшая действительно установленная сборка, а иначе — честный отказ, который говорит, где искали, вместо запуска того, чего нет. Замороженное «семь маршрутов» в landscape-map-smoke заменено числом, которое объявляет сам чистый слой карты, чтобы карта и проверка не расходились. Регрессионный набор больше не даёт зашить версию сборки в смоук.",
- "previous_goal": "Iteration 0081: вода принимает цвет течения. Поверхность пруда перестаёт выглядеть одинаково на всех трёх течениях: у «Рассвета» вода остаётся прежней минеральной зеленью, у «Сумерек» уходит в глубокую тёплую синь, у «Тумана» светлеет и теряет цвет. Чистая палитра `courseWater` в `pond-tide.js` держит пигмент каждого течения (три остановки самой воды, две черты рябых полос, тон каустик и тон приливного поля), неизвестное течение честно читается как «Рассвет», а `blendWaterPalette` ведёт между палитрами спокойный кроссфейд за 1,8 с; при reduced motion вода меняется мгновенно, без мерцания. Камень течения теперь меняет не только строй следующего удара, но и сам пруд.",
- "last_verified": "2026-09-28 (0082): 135 Node tests pass (was 129; six new suites hold the honest resolver — override wins, newest installed build wins, the headless shell is not a candidate, an empty browsers dir is refused, no smoke freezes a build path again, and the landscape check reads its route count from the pure layer). 81 JS files pass syntax; state.json valid; git diff --check clean. The harness repair was proved by running the checks it revived: of the thirteen smokes that used to fire at the removed chromium-1223, eight now pass whole (budget, a11y, scroll, return, loop-probe, leaf, invitation, landscape-map) and five now at least launch and name their own stale expectations instead of a launch failure (shade, repose, release, departure-glint, shell-safe); smokes that already worked stayed green (inspect, high-contrast, course-water, keyboard-water, shore-lap, stone-skip). No shipped file changed: no eyebrow or shell-cache bump, because only the verification harness was wrong.",
- "next_step": "Реальный device-pass на Android Chrome/PWA и iPhone Safari (разница трёх течений при дневном свете, читаемость тона чернил дневника) — остаётся. Отдельно, по одной проверке за слот, пять смоуков с устаревшими ожиданиями: shade-smoke (eyebrow 40 и прежняя протяжка капли до чаш 0057+), repose-smoke (eyebrow 39), release-smoke (eyebrow 44 и смысл хвоста lastRelease), departure-glint-smoke (eyebrow 45 и жизнь блика отправления), shell-safe-smoke (освобождение голоса меряется раньше, чем догорает хвост). Проверка Windows high-contrast открыта с 0073. Продукт при этом не сломан.",
+ "iteration": 83,
+ "status": "the-ink-wears-the-course",
+ "current_goal": "Iteration 0083: чернила носят цвет течения. Дневник на воде перестаёт писаться одной рукой на любой воде: у каждого течения в `COURSE_WATER` есть свой чернильный тон, входящий в `PALETTE_STOPS`, а чистая `PondTide.inkTone(water, depth)` отдаёт замороженный тон (глубина растёт на неизменном `INK_DEPTH_SPAN = 26` внутри своего течения, неизвестная вода честно пишет рукой «Рассвета», «Рассвет» остаётся байт-в-байт прежними чернилами soft 46/60, fine 60/76). Оболочка читает `inkTone(waterLook, depth)` из того же пигмента кадра, поэтому чернила и вода идут одним кроссфейдом; проба `dataset.inkHue` называет тон кадра.",
+ "previous_goal": "Iteration 0082: проверки сами находят свой браузер. Один честный слой `scripts/chrome-path.js` убирает рукописный путь к сборке Chromium из всех смоуков: сначала явное переопределение `POND_CHROME`, затем сборка, которую называет сам Playwright, затем новейшая действительно установленная сборка, а иначе — честный отказ, который говорит, где искали, вместо запуска того, чего нет. Замороженное «семь маршрутов» в landscape-map-smoke заменено числом, которое объявляет сам чистый слой карты, чтобы карта и проверка не расходились. Регрессионный набор больше не даёт зашить версию сборки в смоук.",
+ "last_verified": "2026-09-28 (0083): 139 Node tests pass (was 135; four new suites hold the honest quill — Dawn byte-for-byte, each course its own hand, Mist the paler/thinner quill, unknown water reads as Dawn, broken depth stays inside its span). 81 JS files pass syntax; JSON and git diff --check clean. course-water-smoke on production-loopback Chromium 390×844 passed whole: Dawn still rgb(7,30,29) hue 177 with inkHue 158.0 (unchanged against the committed build), Dusk rgb(7,16,26) with inkHue 196.0, Mist rgb(20,34,29) with inkHue 156.0, and reduced motion still takes the new water in one frame with the ink following; no console or page errors. eyebrow -> 83, offline shell -> v79; README and ARCHITECTURE extended.",
+ "next_step": "Реальный device-pass на Android Chrome/PWA и iPhone Safari: читается ли синяя запись «Сумерек» и почти бесцветная «Тумана» на настоящем экране при дневном свете. Отдельно — по одной устаревшей проверке за слот из списка 0082 (shade, repose, release, departure-glint, shell-safe). Проверка Windows high-contrast открыта с 0073. Продукт не сломан.",
  "alpha_feedback": {
   "captured_at": "2026-07-26T13:59:00+03:00",
   "observations": [
@@ -959,5 +959,25 @@
    "regressions green: inspect-smoke, high-contrast-smoke, course-water-smoke, keyboard-water-smoke, shore-lap-smoke, stone-skip-smoke"
   ],
   "next_step": "device-pass; then one stale smoke expectation per slot (shade, repose, release, departure-glint, shell-safe); Windows high-contrast since 0073"
+ },
+ "iteration_83": {
+  "started": "2026-09-28T19:20:00+03:00",
+  "finished": "2026-09-28T19:55:00+03:00",
+  "phase": "done",
+  "plan": [
+   "add an ink stop per course in pond-tide.js, put it in PALETTE_STOPS and add pure inkTone(water, depth)",
+   "read inkTone(waterLook, depth) in drawInkLine, drawPourEcho and the diary panel row; add dataset.inkHue probe",
+   "four honest unit suites (Dawn unchanged, each course its own hand, unknown reads as Dawn, broken depth stays inside its span)",
+   "extend course-water-smoke with inkHue checks for dawn/dusk/mist; eyebrow 83, shell v79",
+   "verify node tests + syntax + JSON + git diff --check + smoke, update docs and state, one commit"
+  ],
+  "verified": [
+   "139 Node tests pass (was 135)",
+   "81 JS files pass syntax; JSON valid; git diff --check clean",
+   "course-water-smoke all checks passed: dawn inkHue 158.0 and water rgb(7,30,29) unchanged, dusk 196.0 at rgb(7,16,26), mist 156.0 at rgb(20,34,29)",
+   "reduced motion still takes the water in one frame; ink follows the same frame pigment",
+   "no console or page errors"
+  ],
+  "next_step": "done; device-pass remains the shared backlog, plus the five stale smokes listed in 0082"
  }
 }

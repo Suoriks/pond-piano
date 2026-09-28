@@ -197,3 +197,55 @@ test('hues travel the short way round the wheel', () => {
   assert.ok(Math.abs(normalize(blend.tideHue) - midpointOf(350, water.tideHue)) < 1e-9, 'the tide tone follows the same arc');
   assert.ok(Math.abs(normalize(blend.inner.h) - 266) > 100, 'it never dives the other way round');
 });
+
+test('the diary keeps its own quill on dawn', () => {
+  // Dawn must stay byte for byte the ink the pond has always written: the two
+  // strokes of the line were hsla(h 46% 60%) and hsla(h 60% 76%), with
+  // h = 158 + 26 * (1 - depth). Nothing about the reader's hand may change.
+  const water = tide.courseWater('dawn');
+  for (const depth of [0, .25, .5, .75, 1]) {
+    const tone = tide.inkTone(water, depth);
+    assert.equal(tone.hue, 158 + 26 * (1 - depth), `depth ${depth} keeps the ink hue the pond wrote`);
+    assert.equal(tone.soft.s, 46);
+    assert.equal(tone.soft.l, 60);
+    assert.equal(tone.fine.s, 60);
+    assert.equal(tone.fine.l, 76);
+  }
+  assert.ok(Object.isFrozen(tide.inkTone(water, .5)), 'a tone is frozen like any palette');
+  assert.ok(Object.isFrozen(tide.inkTone(water, .5).soft), 'its strokes are frozen too');
+});
+
+test('each course hands the diary its own quill', () => {
+  const tones = {};
+  for (const id of Object.keys(tide.COURSE_WATER)) {
+    tones[id] = tide.inkTone(tide.courseWater(id), .5);
+  }
+  assert.ok(Math.abs(tones.dusk.hue - tones.dawn.hue) > 25, 'dusk writes the diary in its own cool blue');
+  assert.ok(Math.abs(tones.mist.hue - tones.dawn.hue) > 1, 'mist is its own hand as well');
+  assert.ok(tones.mist.soft.s < tones.dawn.soft.s, 'mist writes with a thinner, paler quill');
+  assert.ok(tones.mist.fine.l > tones.dawn.fine.l, 'but it stays readable above the water');
+});
+
+test('the ink is honest about water it cannot read', () => {
+  const dawnInk = tide.inkTone(tide.courseWater('dawn'), .5);
+  for (const wrong of ['unknown', '', null, undefined, 42, {}, [], 'constructor']) {
+    assert.deepEqual(tide.inkTone(wrong, .5), dawnInk,
+      `water nobody chose must write in the pond's own ink: ${String(wrong)}`);
+  }
+});
+
+test('a deeper phrase still writes deeper, whatever the quill', () => {
+  for (const id of Object.keys(tide.COURSE_WATER)) {
+    const water = tide.courseWater(id);
+    const shallow = tide.inkTone(water, 0);
+    const deep = tide.inkTone(water, 1);
+    assert.equal(shallow.hue - deep.hue, tide.INK_DEPTH_SPAN, `${id} keeps the full depth span`);
+    for (const broken of [-3, 9, NaN, Infinity, 'deep', null, undefined]) {
+      const tone = tide.inkTone(water, broken);
+      assert.ok(tone.hue >= deep.hue - 1e-9 && tone.hue <= shallow.hue + 1e-9,
+        `${id} never leaves its own span on a broken depth: ${String(broken)}`);
+    }
+    // A missing depth is read as the middle of the pond, never as the loudest.
+    assert.equal(tide.inkTone(water, NaN).hue, tide.inkTone(water, .5).hue);
+  }
+});

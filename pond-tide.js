@@ -131,6 +131,7 @@
       outer: Object.freeze({ h: 180, s: 65, l: 5 }),
       cool: Object.freeze({ h: 161, s: 34, l: 66 }),
       warm: Object.freeze({ h: 47, s: 48, l: 70 }),
+      ink: Object.freeze({ h: 158, s: 46, l: 62 }),
       moteHue: 150, moteRange: 18,
       tideHue: 148, tideSpread: 26
     }),
@@ -141,6 +142,7 @@
       outer: Object.freeze({ h: 214, s: 60, l: 4.5 }),
       cool: Object.freeze({ h: 192, s: 30, l: 62 }),
       warm: Object.freeze({ h: 30, s: 52, l: 68 }),
+      ink: Object.freeze({ h: 196, s: 40, l: 64 }),
       moteHue: 198, moteRange: 16,
       tideHue: 202, tideSpread: 24
     }),
@@ -151,12 +153,17 @@
       outer: Object.freeze({ h: 162, s: 24, l: 8 }),
       cool: Object.freeze({ h: 158, s: 20, l: 72 }),
       warm: Object.freeze({ h: 62, s: 20, l: 76 }),
+      ink: Object.freeze({ h: 156, s: 22, l: 70 }),
       moteHue: 150, moteRange: 10,
       tideHue: 152, tideSpread: 18
     })
   });
   const COURSE_WATER_DEFAULT = 'dawn';
-  const PALETTE_STOPS = Object.freeze(['inner', 'mid', 'outer', 'cool', 'warm']);
+  const PALETTE_STOPS = Object.freeze(['inner', 'mid', 'outer', 'cool', 'warm', 'ink']);
+  // A deeper phrase writes its ink a shade cooler/lighter than a shallow one,
+  // exactly as the pond has always read depth; the span is the same for every
+  // course so depth still means depth after the surface changed colour.
+  const INK_DEPTH_SPAN = 26;
 
   function isPalette(value) {
     return Boolean(value) && typeof value === 'object'
@@ -216,13 +223,31 @@
     return Object.freeze(out);
   }
 
+  // The diary is written on the water, so its ink wears the course too. The two
+  // stroke tones are read off the course's own ink stop, which keeps Dawn byte
+  // for byte the ink the pond always wrote (soft 46/60, fine 60/76) while Dusk
+  // and Mist hand the hand a different quill. A course that cannot be read is
+  // honest: it falls back to Dawn, never invents a colour.
+  function inkTone(water, depth) {
+    const palette = isPalette(water) ? water : courseWater(COURSE_WATER_DEFAULT);
+    const ink = palette.ink;
+    const d = Number.isFinite(depth) ? clamp(depth) : .5;
+    return Object.freeze({
+      hue: ink.h + INK_DEPTH_SPAN * (1 - d),
+      soft: Object.freeze({ s: ink.s, l: clamp(ink.l - 2, 0, 100) }),
+      fine: Object.freeze({ s: clamp(ink.s + 14, 0, 100), l: clamp(ink.l + 14, 0, 100) })
+    });
+  }
+
   return Object.freeze({
     DEFAULT_SWELLS,
     MAX_STIRS,
     STIR_LIFE_MS,
     COURSE_WATER,
     COURSE_WATER_DEFAULT,
+    INK_DEPTH_SPAN,
     courseWater,
+    inkTone,
     blendWaterPalette,
     createSwells,
     stir,

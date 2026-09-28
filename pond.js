@@ -677,13 +677,17 @@
     const inkStyle = budget.style(waterBudget, 'ink');
     const inkDim = .82 + .18 * inkStyle;
     const drift = reduced.matches ? 0 : Math.sin(now * .0003 + line.born * .0009) * 1.6;
-    const hue = 158 + 26 * (1 - line.depth);
+    // The diary is written in the course's own quill: the ink wears the same
+    // pigment the surface is wearing this frame, so a change of course hands
+    // the reader a different colour of handwriting, not just different water.
+    const tone = tide.inkTone(waterLook, line.depth);
+    const hue = tone.hue;
     ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     traceMemoryPath(line.points, drift);
-    ctx.strokeStyle = `hsla(${hue} 46% 60% / ${visible * .13 * inkDim})`;
+    ctx.strokeStyle = `hsla(${hue} ${tone.soft.s}% ${tone.soft.l}% / ${visible * .13 * inkDim})`;
     ctx.lineWidth = 6; ctx.stroke();
     traceMemoryPath(line.points, drift);
-    ctx.strokeStyle = `hsla(${hue} 60% 76% / ${visible * .34 * inkDim})`;
+    ctx.strokeStyle = `hsla(${hue} ${tone.fine.s}% ${tone.fine.l}% / ${visible * .34 * inkDim})`;
     ctx.lineWidth = 1.1; ctx.stroke();
     const end = line.points.at(-1);
     ctx.beginPath(); ctx.arc(end.x * width, end.y * height + drift, 3.1, 0, Math.PI * 2);
@@ -782,7 +786,7 @@
     if (!points || points.length < 2) return false;
     const keep = Math.max(2, Math.ceil(points.length * Math.min(1, progress * 1.6)));
     const slice = points.slice(0, keep);
-    const hue = 158 + 26 * (1 - echo.line.depth);
+    const hue = tide.inkTone(waterLook, echo.line.depth).hue;
     const drift = reduced.matches ? 0 : Math.sin(now * .00034 + echo.born * .001) * 1.8;
     ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     traceMemoryPath(slice, drift);
@@ -848,7 +852,7 @@
       const item = document.createElement('button');
       item.type = 'button';
       item.className = 'diary-entry';
-      const hue = Math.round(158 + 26 * (1 - line.depth));
+      const hue = Math.round(tide.inkTone(waterLook, line.depth).hue);
       const x = Math.round(line.points.at(-1).x * 100);
       const y = Math.round(line.points.at(-1).y * 100);
       const visible = Math.round(score.inkVisibility(line, epoch, reduced.matches) * 100);
@@ -1416,6 +1420,7 @@
     }
     canvas.dataset.waterDeep = `${waterLook.outer.h.toFixed(1)},${waterLook.outer.s.toFixed(1)},${waterLook.outer.l.toFixed(1)}`;
     canvas.dataset.waterPigment = `${waterLook.inner.h.toFixed(1)},${waterLook.mid.h.toFixed(1)},${waterLook.outer.h.toFixed(1)}`;
+    canvas.dataset.inkHue = waterLook.ink.h.toFixed(1);
   }
 
   function reflectTuningFamily(announce = false) {

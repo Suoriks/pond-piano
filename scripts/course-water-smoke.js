@@ -21,6 +21,7 @@ const read = page => page.evaluate(() => {
     moving: canvas.dataset.waterMoving || '',
     deep: canvas.dataset.waterDeep || '',
     pigment: canvas.dataset.waterPigment || '',
+    ink: canvas.dataset.inkHue || '',
     family: canvas.dataset.scaleFamily || '',
     audioState: canvas.dataset.audioState || 'uninitialized',
     diaryLines,
@@ -107,6 +108,7 @@ const waterFrames = page => page.evaluate(() => window.__waterFrames);
     assert.equal(dawnRead.family, 'dawn');
     assert.equal(dawnRead.deep, '180.0,65.0,5.0', `dawn keeps the same depth it had: ${dawnRead.deep}`);
     assert.equal(dawnRead.pigment, '175.0,178.0,180.0');
+    assert.equal(dawnRead.ink, '158.0', 'dawn keeps the ink the pond always wrote');
     const dawnPixel = await darkestWater(page);
     console.log('dawn water:', JSON.stringify(dawnPixel));
     // The committed pond (68ab1be) paints this same probe as rgb(7,29,28) on
@@ -139,6 +141,7 @@ const waterFrames = page => page.evaluate(() => window.__waterFrames);
     const duskRead = await read(page);
     assert.equal(duskRead.deep, '214.0,60.0,4.5', `dusk ends on its own depth: ${duskRead.deep}`);
     assert.equal(duskRead.pigment, '205.0,209.0,214.0');
+    assert.equal(duskRead.ink, '196.0', `dusk writes the diary in its own cool blue: ${duskRead.ink}`);
     const duskPixel = await darkestWater(page);
     console.log('dusk water:', JSON.stringify(duskPixel));
     assert.ok(Math.abs(duskPixel.hue - 212) <= 9, `dusk really painted a warm blue, got hue ${duskPixel.hue}`);
@@ -152,6 +155,7 @@ const waterFrames = page => page.evaluate(() => window.__waterFrames);
     await settle(page, 'mist');
     const mistRead = await read(page);
     assert.equal(mistRead.deep, '162.0,24.0,8.0', `mist ends on its own depth: ${mistRead.deep}`);
+    assert.equal(mistRead.ink, '156.0', `mist writes with its own paler quill: ${mistRead.ink}`);
     const mistPixel = await darkestWater(page);
     console.log('mist water:', JSON.stringify(mistPixel));
     assert.ok(Math.abs(mistPixel.hue - 162) <= 9, `mist really painted its own hue, got ${mistPixel.hue}`);
