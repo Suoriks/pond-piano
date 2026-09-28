@@ -3,6 +3,7 @@
 // A ripple born below the upper edge must reach it as one cool, quiet skim:
 // real Web Audio transient, bounded shared voice pool, visible fold, clean end.
 const { chromium } = require('/usr/lib/node_modules/openclaw/node_modules/playwright-core');
+const chromePath = require('./chrome-path');
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -29,7 +30,7 @@ const server = http.createServer((req, res) => {
 (async () => {
   await new Promise(resolve => server.listen(PORT, '127.0.0.1', resolve));
   const browser = await chromium.launch({
-    executablePath: '/home/mfoadmin/.cache/ms-playwright/chromium-1234/chrome-linux64/chrome',
+    executablePath: chromePath(),
     headless: true,
     args: ['--no-sandbox', '--disable-gpu']
   });

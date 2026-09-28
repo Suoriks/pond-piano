@@ -2,6 +2,7 @@
 // Real production Web Audio capture, identical seeded input for both revisions.
 // ScriptProcessor is test-only: tap the destination without changing product DSP.
 const { chromium } = require('/usr/lib/node_modules/openclaw/node_modules/playwright-core');
+const chromePath = require('./chrome-path');
 const fs = require('node:fs');
 const path = require('node:path');
 const { createStaticServer, listenOnLoopback, closeServer } = require('../electron/static-server');
@@ -9,7 +10,7 @@ const { createStaticServer, listenOnLoopback, closeServer } = require('../electr
  const root = path.resolve(__dirname, '..'), label = process.argv[2] || 'after';
  const out = path.join(root, 'output/bowls-58'); fs.mkdirSync(out, {recursive:true});
  const server = createStaticServer(root), origin = await listenOnLoopback(server);
- const browser = await chromium.launch({executablePath:'/home/mfoadmin/.cache/ms-playwright/chromium-1234/chrome-linux64/chrome',headless:true,args:['--no-sandbox','--disable-gpu']});
+ const browser = await chromium.launch({executablePath:chromePath(),headless:true,args:['--no-sandbox','--disable-gpu']});
  try {
  const page = await browser.newPage({viewport:{width:800,height:800},reducedMotion:'reduce'});
  const errors=[]; page.on('pageerror',e=>errors.push(String(e)));

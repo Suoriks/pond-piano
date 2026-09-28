@@ -8,6 +8,7 @@
 // same-frame pixel probe (glint spot vs same-band control point) and a
 // screenshot add visual evidence.
 const { chromium } = require('/usr/lib/node_modules/openclaw/node_modules/playwright-core');
+const chromePath = require('./chrome-path');
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -39,7 +40,7 @@ const server = http.createServer((req, res) => {
 (async () => {
   server.listen(PORT, '127.0.0.1');
   const browser = await chromium.launch({
-    executablePath: '/home/mfoadmin/.cache/ms-playwright/chromium-1223/chrome-linux64/chrome',
+    executablePath: chromePath(),
     headless: true,
     args: ['--no-sandbox', '--disable-gpu']
   });

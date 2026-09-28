@@ -1,12 +1,12 @@
 {
  "project": "pond-piano",
  "phase": "device-validation",
- "iteration": 81,
- "status": "the-water-takes-the-course",
- "current_goal": "Iteration 0081: вода принимает цвет течения. Поверхность пруда перестаёт выглядеть одинаково на всех трёх течениях: у «Рассвета» вода остаётся прежней минеральной зеленью, у «Сумерек» уходит в глубокую тёплую синь, у «Тумана» светлеет и теряет цвет. Чистая палитра `courseWater` в `pond-tide.js` держит пигмент каждого течения (три остановки самой воды, две черты рябых полос, тон каустик и тон приливного поля), неизвестное течение честно читается как «Рассвет», а `blendWaterPalette` ведёт между палитрами спокойный кроссфейд за 1,8 с; при reduced motion вода меняется мгновенно, без мерцания. Камень течения теперь меняет не только строй следующего удара, но и сам пруд.",
- "previous_goal": "Iteration 0080: ухо записывается на берегу (суд трёх слов у каждой сцены и одна береговая записка, уносящая честные показания платформы вместе с судом уха).",
- "last_verified": "2026-09-28: 129 Node tests pass (was 124; five new suites cover the honest course palette, three distinct waters, bounded pigment, a crossfade with untouched ends and clamped clocks, and hues travelling the short arc including the seam). 78 JS files pass syntax; state.json valid. scripts/course-water-smoke.js passes on a production-loopback Chromium 390x844: the pond opens on dawn with the probe at 180.0,65.0,5.0 and the darkest lower-band pixel rgb(7,30,29) hue 177 - the same water the committed build paints (68ab1be measured rgb(7,29,28) on six frames); choosing dusk really walks the water (at least five frames in flight, monotone tone, a true in-between pigment, 1.2-2.6s), ends at 214.0,60.0,4.5 with pixel rgb(7,16,26) hue 212; mist ends at 162.0,24.0,8.0 with pixel rgb(20,34,29) hue 159 and light 10.6, paler and poorer in colour than dusk at 6.5; choosing a course wakes no sound and writes no phrase; a reload wears the remembered course at once without a shift; asking for the course already worn starts nothing; under reduced motion the water takes dusk in one frame and no sampled frame was ever in flight; no console or page errors. inspect-smoke and high-contrast-smoke regressions green. Screenshots course-dawn-81.png, course-dusk-81.png, course-mist-81.png inspected directly.",
- "next_step": "Реальный проход на Android Chrome/PWA и iPhone Safari: читается ли разница трёх течений на настоящем экране при дневном свете, не спорят ли светлые черты ряби «Тумана» с береговыми панелями и не стоит ли отдавать течению ещё и тон чернил дневника. Открытая проверка Windows high-contrast с 0073 остаётся. Отдельно найдена унаследованная долговечная поломка проверок (воспроизводится и на HEAD 68ab1be, не связана с 0081): scripts/budget-smoke.js указывает на отсутствующий Chromium chromium-1223 вместо рабочего chromium-1234, а scripts/landscape-map-smoke.js всё ещё ждёт семь маршрутов карты, тогда как честных маршрутов уже восемь.",
+ "iteration": 82,
+ "status": "the-checks-find-their-own-browser",
+ "current_goal": "Iteration 0082: проверки сами находят свой браузер. Один честный слой `scripts/chrome-path.js` убирает рукописный путь к сборке Chromium из всех смоуков: сначала явное переопределение `POND_CHROME`, затем сборка, которую называет сам Playwright, затем новейшая действительно установленная сборка, а иначе — честный отказ, который говорит, где искали, вместо запуска того, чего нет. Замороженное «семь маршрутов» в landscape-map-smoke заменено числом, которое объявляет сам чистый слой карты, чтобы карта и проверка не расходились. Регрессионный набор больше не даёт зашить версию сборки в смоук.",
+ "previous_goal": "Iteration 0081: вода принимает цвет течения. Поверхность пруда перестаёт выглядеть одинаково на всех трёх течениях: у «Рассвета» вода остаётся прежней минеральной зеленью, у «Сумерек» уходит в глубокую тёплую синь, у «Тумана» светлеет и теряет цвет. Чистая палитра `courseWater` в `pond-tide.js` держит пигмент каждого течения (три остановки самой воды, две черты рябых полос, тон каустик и тон приливного поля), неизвестное течение честно читается как «Рассвет», а `blendWaterPalette` ведёт между палитрами спокойный кроссфейд за 1,8 с; при reduced motion вода меняется мгновенно, без мерцания. Камень течения теперь меняет не только строй следующего удара, но и сам пруд.",
+ "last_verified": "2026-09-28 (0082): 135 Node tests pass (was 129; six new suites hold the honest resolver — override wins, newest installed build wins, the headless shell is not a candidate, an empty browsers dir is refused, no smoke freezes a build path again, and the landscape check reads its route count from the pure layer). 81 JS files pass syntax; state.json valid; git diff --check clean. The harness repair was proved by running the checks it revived: of the thirteen smokes that used to fire at the removed chromium-1223, eight now pass whole (budget, a11y, scroll, return, loop-probe, leaf, invitation, landscape-map) and five now at least launch and name their own stale expectations instead of a launch failure (shade, repose, release, departure-glint, shell-safe); smokes that already worked stayed green (inspect, high-contrast, course-water, keyboard-water, shore-lap, stone-skip). No shipped file changed: no eyebrow or shell-cache bump, because only the verification harness was wrong.",
+ "next_step": "Реальный device-pass на Android Chrome/PWA и iPhone Safari (разница трёх течений при дневном свете, читаемость тона чернил дневника) — остаётся. Отдельно, по одной проверке за слот, пять смоуков с устаревшими ожиданиями: shade-smoke (eyebrow 40 и прежняя протяжка капли до чаш 0057+), repose-smoke (eyebrow 39), release-smoke (eyebrow 44 и смысл хвоста lastRelease), departure-glint-smoke (eyebrow 45 и жизнь блика отправления), shell-safe-smoke (освобождение голоса меряется раньше, чем догорает хвост). Проверка Windows high-contrast открыта с 0073. Продукт при этом не сломан.",
  "alpha_feedback": {
   "captured_at": "2026-07-26T13:59:00+03:00",
   "observations": [
@@ -936,5 +936,28 @@
    "pre-existing smoke debt found and reproduced on HEAD: budget-smoke chromium-1223 path, landscape-map-smoke seven-route expectation"
   ],
   "next_step": "device-pass on a real phone; plus the two stale smoke scripts recorded in state.next_step"
+ },
+ "iteration_82": {
+  "started": "2026-09-28T17:20:00+03:00",
+  "phase": "done",
+  "plan": [
+   "scripts/chrome-path.js: честный резолвер сборки Chromium (POND_CHROME → сборка от Playwright → новейшая установленная), с понятным отказом",
+   "заменить рукописные пути во всех смоуках на общий резолвер",
+   "landscape-map-smoke: число маршрутов брать из чистого слоя pond-a11y, а не из замороженной семёрки",
+   "tests/smoke-harness.test.js: резолвер (переопределение, новейшая сборка, отказ, отсев headless_shell) + запрет зашитой версии сборки в scripts/",
+   "оживить и прогнать ранее мёртвые смоуки; юнит-наборы, синтаксис, JSON, git diff --check",
+   "KAIZEN 0082, состояние, один commit и push в main"
+  ],
+  "finished": "2026-09-28T17:52:00+03:00",
+  "verified": [
+   "node tests: 135 pass across 17 suites (was 129; six new smoke-harness suites)",
+   "syntax: 81 JS files clean; state/package JSON valid; git diff --check clean",
+   "scripts/chrome-path.js resolves POND_CHROME -> the build Playwright names -> the newest installed chromium-* build, never returns a missing path, ignores chromium_headless_shell-*, and refuses honestly with the places it looked",
+   "43 smokes rewritten to the shared resolver; no ms-playwright/chromium-<n> literal remains in scripts/",
+   "landscape-map-smoke takes its route count from keyboardLegend().length (8 routes today), so the map and its guard cannot drift apart",
+   "revived batch: budget, a11y, scroll, return, loop-probe, leaf, invitation, landscape-map pass; shade, repose, release, departure-glint, shell-safe launch and name stale expectations of their own (pre-existing debt, not the browser path)",
+   "regressions green: inspect-smoke, high-contrast-smoke, course-water-smoke, keyboard-water-smoke, shore-lap-smoke, stone-skip-smoke"
+  ],
+  "next_step": "device-pass; then one stale smoke expectation per slot (shade, repose, release, departure-glint, shell-safe); Windows high-contrast since 0073"
  }
 }

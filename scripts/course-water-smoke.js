@@ -10,7 +10,7 @@ const path = require('node:path');
 const { chromium } = require('/usr/lib/node_modules/openclaw/node_modules/playwright-core');
 const { createStaticServer, listenOnLoopback, closeServer } = require('../electron/static-server');
 
-const CHROME = '/home/mfoadmin/.cache/ms-playwright/chromium-1234/chrome-linux64/chrome';
+const CHROME = require('./chrome-path')();
 
 const read = page => page.evaluate(() => {
   const canvas = document.querySelector('#pond');

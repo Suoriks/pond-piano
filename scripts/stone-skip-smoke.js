@@ -7,6 +7,7 @@
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const { chromium } = require('/usr/lib/node_modules/openclaw/node_modules/playwright-core');
+const chromePath = require('./chrome-path');
 const { createStaticServer, listenOnLoopback, closeServer } = require('../electron/static-server');
 
 (async () => {
@@ -14,7 +15,7 @@ const { createStaticServer, listenOnLoopback, closeServer } = require('../electr
   const origin = await listenOnLoopback(server);
   let browser;
   try {
-    browser = await chromium.launch({ executablePath: '/home/mfoadmin/.cache/ms-playwright/chromium-1234/chrome-linux64/chrome', headless: true, args: ['--no-sandbox', '--disable-gpu'] });
+    browser = await chromium.launch({ executablePath: chromePath(), headless: true, args: ['--no-sandbox', '--disable-gpu'] });
     const page = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
     const errors = [];
     page.on('pageerror', error => errors.push(String(error)));

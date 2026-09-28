@@ -3,6 +3,7 @@
 // and visible bloom, stay latched while membership is unchanged, then rearm
 // only when the chord itself changes.
 const { chromium } = require('/usr/lib/node_modules/openclaw/node_modules/playwright-core');
+const chromePath = require('./chrome-path');
 const fs = require('node:fs');
 const path = require('node:path');
 const { closeServer, createStaticServer, listenOnLoopback } = require('../electron/static-server.js');
@@ -16,7 +17,7 @@ const OUT = path.join(ROOT, 'output', 'pond-piano', 'chord-bloom-52.png');
   let browser;
   try {
     browser = await chromium.launch({
-      executablePath: '/home/mfoadmin/.cache/ms-playwright/chromium-1234/chrome-linux64/chrome',
+      executablePath: chromePath(),
       headless: true,
       args: ['--no-sandbox', '--disable-gpu']
     });

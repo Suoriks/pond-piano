@@ -4,6 +4,7 @@
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const { chromium } = require('/usr/lib/node_modules/openclaw/node_modules/playwright-core');
+const chromePath = require('./chrome-path');
 const { createStaticServer, listenOnLoopback, closeServer } = require('../electron/static-server');
 const a11y = require('../pond-a11y.js');
 
@@ -11,7 +12,7 @@ const a11y = require('../pond-a11y.js');
   const root = path.resolve(__dirname, '..');
   const server = createStaticServer(root), url = await listenOnLoopback(server);
   const browser = await chromium.launch({
-    executablePath: '/home/mfoadmin/.cache/ms-playwright/chromium-1234/chrome-linux64/chrome',
+    executablePath: chromePath(),
     headless: true, args: ['--no-sandbox', '--disable-gpu']
   });
   try {

@@ -6,7 +6,14 @@
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const { chromium } = require('/usr/lib/node_modules/openclaw/node_modules/playwright-core');
+const chromePath = require('./chrome-path');
 const { createStaticServer, listenOnLoopback, closeServer } = require('../electron/static-server');
+const { keyboardLegend } = require('../pond-a11y.js');
+
+// The number of routes is not frozen here: the smoke asks the same pure layer
+// that fills the map how many routes it declares, so a new route can never
+// quietly drift away from the check that is meant to guard it.
+const LEGEND_ROUTES = keyboardLegend().length;
 
 const VIEWPORTS = [
   { name: 'phone-landscape', width: 844, height: 390 },
@@ -19,7 +26,7 @@ const VIEWPORTS = [
   const root = path.resolve(__dirname, '..');
   const server = createStaticServer(root), url = await listenOnLoopback(server);
   const browser = await chromium.launch({
-    executablePath: '/home/mfoadmin/.cache/ms-playwright/chromium-1234/chrome-linux64/chrome',
+    executablePath: chromePath(),
     headless: true, args: ['--no-sandbox', '--disable-gpu']
   });
   const report = [];
@@ -77,7 +84,8 @@ const VIEWPORTS = [
       assert.ok(shot.closeBottom <= shot.viewportH, `${vp.name}: the close button must be reachable without scrolling`);
       assert.ok(shot.panelTop >= 0, `${vp.name}: the map must not start above the water`);
       // Every route is still there; on a short screen it scrolls inside.
-      assert.equal(shot.rows, 7, `${vp.name}: all seven routes must exist`);
+      assert.equal(shot.rows, LEGEND_ROUTES,
+        `${vp.name}: all ${LEGEND_ROUTES} routes the layer declares must exist`);
       if (vp.name === 'phone-portrait') {
         assert.equal(shot.listClipped, false, 'a 390x844 phone must still show the whole map without scrolling');
       }
