@@ -150,8 +150,42 @@
     });
   }
 
+  // ---- An honest silence ---------------------------------------------------
+  // A pond that cannot make sound must not pretend it is merely asleep. Before
+  // the first gesture silence is expected (autoplay policy), so it is never a
+  // failure: the water simply has not been asked. Only a gesture that really
+  // could not wake the pond earns a calm line - the device gives the browser no
+  // audio at all, the browser closed the context, or a wake failed. A failed
+  // wake stays retryable and is stated softly; only after three in a row does
+  // the pond admit it is not answering. The words are the same for the eye and
+  // the live region, so neither can drift from the other.
+  const SILENCE_WAKE_ATTEMPTS = 3;
+
+  function silentNotice(state = {}) {
+    const reason = state.reason;
+    if (state.state === 'running') return null;
+    if (reason === 'unsupported') {
+      return Object.freeze({ tone: 'hard', text: 'Это устройство не открывает браузеру звук: вода играется молча.' });
+    }
+    if (reason === 'closed') {
+      return Object.freeze({ tone: 'hard', text: 'Браузер закрыл звук пруда: перезагрузите страницу, чтобы вода снова зазвучала.' });
+    }
+    if (reason === 'resume-failed') {
+      const attempts = Number.isFinite(state.attempts) ? Math.max(0, Math.trunc(state.attempts)) : 0;
+      if (attempts >= SILENCE_WAKE_ATTEMPTS) {
+        return Object.freeze({ tone: 'hard', text: 'Звук пруда не отвечает: попробуйте перезагрузить страницу или другое приложение.' });
+      }
+      return Object.freeze({ tone: 'soft', text: 'Браузер пока не вернул звук — коснитесь воды ещё раз.' });
+    }
+    if (reason === 'gesture-required') {
+      return Object.freeze({ tone: 'soft', text: 'Звук пруда уснул — коснитесь воды, чтобы мягко разбудить его.' });
+    }
+    return null;
+  }
+
   return Object.freeze({
     expandedState, countIndex: trapIndex, openIndex, bowlLocation, keyboardLegend,
-    legendIntroKey, shouldIntroduceLegend, legendIntroText, legendFitHeight, keyboardRest
+    legendIntroKey, shouldIntroduceLegend, legendIntroText, legendFitHeight, keyboardRest,
+    silentNotice
   });
 });

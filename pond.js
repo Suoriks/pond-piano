@@ -2,6 +2,7 @@
   const canvas = document.querySelector('#pond');
   const ctx = canvas.getContext('2d', { alpha: false });
   const status = document.querySelector('#status');
+  const silenceLine = document.querySelector('#water-silence');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const music = window.PondMusic;
   const gesture = window.PondGesture;
@@ -359,17 +360,40 @@
     }
   }
 
+  // An honest silence: how the pond says, calmly and once, that it really
+  // cannot sound here. `silenceText` also guards the ordinary "voices are full"
+  // fallbacks, so a failed wake is never overwritten by a cheerful lie.
+  let silenceText = '';
+  let failedWakes = 0;
+
   function reflectAudioState(event) {
     canvas.dataset.audioState = event.state;
     canvas.dataset.audioVoices = String(event.engine?.voices?.size ?? 0);
     scheduleWakeSync();
-    if (event.reason === 'gesture-required') {
-      status.textContent = 'Звук пруда уснул; коснитесь воды, чтобы мягко разбудить его';
-    } else if (event.reason === 'resume-failed') {
-      status.textContent = 'Браузер пока не вернул звук; коснитесь воды ещё раз';
-    } else if (event.reason === 'closed') {
-      status.textContent = 'Аудиосистема закрыта браузером; перезагрузите пруд, чтобы снова играть';
+    if (event.state === 'running') failedWakes = 0;
+    else if (event.reason === 'resume-failed') failedWakes += 1;
+    // Sound really returned: the honest line leaves and the live region says so.
+    if (event.state === 'running') {
+      canvas.dataset.audioTrouble = '';
+      if (silenceText) {
+        silenceText = '';
+        silenceLine.textContent = '';
+        silenceLine.classList.remove('is-shown', 'is-hard');
+        status.textContent = 'Звук пруда снова здесь';
+      }
+      return;
     }
+    const notice = a11y.silentNotice({ reason: event.reason, state: event.state, attempts: failedWakes });
+    // A neutral event (a wake settling, a plain state change) must never wipe a
+    // genuine silence: only real sound returning clears it.
+    if (!notice) return;
+    if (notice.text === silenceText) return;
+    silenceText = notice.text;
+    canvas.dataset.audioTrouble = notice.tone;
+    silenceLine.textContent = notice.text;
+    silenceLine.classList.add('is-shown');
+    silenceLine.classList.toggle('is-hard', notice.tone === 'hard');
+    status.textContent = notice.text;
   }
 
   // Wake lock: keep the screen awake only while the water is actually sounding
@@ -2366,7 +2390,7 @@ function disconnectSkipVoice(engine, skip) {
     document.body.classList.add('has-played');
     markPondPlayed();
     const chordSize = [...pointers.values()].filter(pointer => pointer.sounding).length;
-    if (!sounding) status.textContent = `Пруд удерживает до ${MAX_VOICES} голосов; отпустите касание для следующей ноты`;
+    if (!sounding && !silenceText) status.textContent = `Пруд удерживает до ${MAX_VOICES} голосов; отпустите касание для следующей ноты`;
     else if (chordSize > 1) status.textContent = `Аккорд: ${chordSize} независимых ${voiceWord(chordSize)}`;
     else if (!announced) { status.textContent = 'Вода зазвучала; движение ведёт чашу по пруду, новое касание выбирает новую высоту'; announced = true; }
     try { canvas.setPointerCapture?.(event.pointerId); } catch {}
@@ -2722,7 +2746,7 @@ function disconnectSkipVoice(engine, skip) {
       spawnDropCorona(p.x, p.y, .48);
       document.body.classList.add('has-played'); markPondPlayed();
       if (keyboard.sounding) announceKeyboardLocation(true);
-      else status.textContent = 'Пруд удерживает до шести голосов; отпустите касание для следующей чаши';
+      else if (!silenceText) status.textContent = 'Пруд удерживает до шести голосов; отпустите касание для следующей чаши';
     }
   });
   canvas.addEventListener('keyup', event => {

@@ -45,8 +45,15 @@
     function activateFromGesture() {
       backgrounded = false;
       if (!engine) {
-        engine = createEngine();
-        if (!engine?.context) return null;
+        // Creating the context may both return nothing and throw (some devices
+        // refuse another AudioContext). Either way the pond must be able to say
+        // honestly that it cannot sound, instead of a gesture vanishing.
+        let failure = null;
+        try { engine = createEngine(); } catch (error) { engine = null; failure = error; }
+        if (!engine?.context) {
+          report('unsupported', failure);
+          return null;
+        }
         attachContextListener(engine.context);
         report('created');
       }

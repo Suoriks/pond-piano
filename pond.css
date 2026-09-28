@@ -29,6 +29,11 @@ h1 { margin: 0; font: 400 clamp(24px, 4vw, 44px)/1.05 Georgia, serif; letter-spa
 .water-invitation.is-gone { display: none; }
 @keyframes invitation-breathe { 0%, 100% { opacity: .55; } 50% { opacity: .95; } }
 @media (prefers-reduced-motion: reduce) { .water-invitation { animation: none; opacity: .85; } }
+/* An honest silence: when the water truly cannot sound, one calm line above the
+   shore stones says so for the eye too. Light on dark (AA), never a panel. */
+.water-silence { position: absolute; z-index: 3; left: 50%; bottom: max(74px, calc(env(safe-area-inset-bottom) + 74px)); transform: translateX(-50%); margin: 0; max-width: min(330px, calc(100vw - 44px)); text-align: center; color: #ece0cc; font-size: 14px; line-height: 1.4; letter-spacing: .02em; text-shadow: 0 2px 18px #00100d; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .5s ease, visibility 0s linear .5s; }
+.water-silence.is-shown { opacity: .92; visibility: visible; transition-delay: 0s; }
+.water-silence.is-hard { color: #f3e6d2; opacity: 1; }
 .tuning-control {
   position: absolute; z-index: 4;
   left: max(18px, env(safe-area-inset-left)); bottom: max(14px, env(safe-area-inset-bottom));
@@ -299,4 +304,5 @@ h1 { margin: 0; font: 400 clamp(24px, 4vw, 44px)/1.05 Georgia, serif; letter-spa
   .hint, .tuning-pebble, .volume-stone, .volume-stone::after, .volume-panel,
   .diary-stone, .diary-stone::after, .diary-panel, .diary-entry, #diary-count,
   .legend-trigger, .legend-panel, .legend-close { transition: none; }
+  .water-silence { transition: none; }
 }

@@ -1,5 +1,5 @@
-const CACHE = 'pond-piano-shell-v68';
-// Iteration 0071: the water shows a keyboard player where they stand, before any strike.
+const CACHE = 'pond-piano-shell-v69';
+// Iteration 0072: the water never pretends about sound - one calm honest line when it truly cannot play.
 const SHELL = [
   './',
   './index.html',

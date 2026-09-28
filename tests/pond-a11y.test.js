@@ -182,3 +182,55 @@ test('the introduction storage key is versioned and never empty', () => {
   assert.match(a11y.legendIntroText(), /Карта клавиш/);
   assert.match(a11y.legendIntroText(), /Escape/);
 });
+
+test('the pond says nothing about sound before it has been asked', () => {
+  // No event yet, a healthy first gesture, a plain state change, a wake
+  // settling, a background return: none of these is a failure.
+  assert.equal(a11y.silentNotice(), null);
+  assert.equal(a11y.silentNotice({ reason: 'created', state: 'suspended' }), null);
+  assert.equal(a11y.silentNotice({ reason: 'gesture', state: 'running' }), null);
+  assert.equal(a11y.silentNotice({ reason: 'context-state', state: 'suspended' }), null);
+  assert.equal(a11y.silentNotice({ reason: 'resume-settled', state: 'running' }), null);
+  assert.equal(a11y.silentNotice({ reason: 'prime-failed', state: 'suspended' }), null);
+  assert.equal(a11y.silentNotice({ reason: 'foreground', state: 'running' }), null);
+  // Running water is never troubled, whatever the reason string claims.
+  assert.equal(a11y.silentNotice({ reason: 'unsupported', state: 'running' }), null);
+});
+
+test('a device without Web Audio is told plainly and never retried', () => {
+  const notice = a11y.silentNotice({ reason: 'unsupported', state: 'uninitialized' });
+  assert.ok(notice, 'a device that gives the browser no audio must be said out loud');
+  assert.equal(notice.tone, 'hard');
+  assert.ok(Object.isFrozen(notice), 'the notice is frozen so no layer can drift it');
+  assert.match(notice.text, /молча/);
+  const closed = a11y.silentNotice({ reason: 'closed', state: 'closed' });
+  assert.equal(closed.tone, 'hard');
+  assert.match(closed.text, /перезагрузите/i);
+});
+
+test('a failed wake stays soft and retryable until it truly keeps failing', () => {
+  const once = a11y.silentNotice({ reason: 'resume-failed', state: 'suspended', attempts: 1 });
+  assert.equal(once.tone, 'soft');
+  assert.match(once.text, /коснитесь воды ещё раз/);
+  const twice = a11y.silentNotice({ reason: 'resume-failed', state: 'suspended', attempts: 2 });
+  assert.equal(twice.tone, 'soft', 'two failures still invite another try');
+  const thrice = a11y.silentNotice({ reason: 'resume-failed', state: 'suspended', attempts: 3 });
+  assert.equal(thrice.tone, 'hard', 'a third failed wake admits the pond is not answering');
+  assert.match(thrice.text, /перезагрузить/);
+  // Broken attempt counts are a first failure, not a hard verdict.
+  assert.equal(a11y.silentNotice({ reason: 'resume-failed', state: 'suspended', attempts: NaN }).tone, 'soft');
+  assert.equal(a11y.silentNotice({ reason: 'resume-failed', state: 'suspended', attempts: -4 }).tone, 'soft');
+});
+
+test('sleeping water is spoken softly and the words match the live region', () => {
+  const asleep = a11y.silentNotice({ reason: 'gesture-required', state: 'suspended' });
+  assert.equal(asleep.tone, 'soft');
+  assert.match(asleep.text, /уснул/);
+  // Every notice is a non-empty line the eye and the live region can share.
+  for (const notice of [
+    a11y.silentNotice({ reason: 'unsupported', state: 'uninitialized' }),
+    a11y.silentNotice({ reason: 'closed', state: 'closed' }),
+    a11y.silentNotice({ reason: 'gesture-required', state: 'suspended' }),
+    a11y.silentNotice({ reason: 'resume-failed', state: 'suspended', attempts: 3 })
+  ]) assert.ok(typeof notice.text === 'string' && notice.text.length > 0);
+});

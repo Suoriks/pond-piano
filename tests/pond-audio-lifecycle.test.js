@@ -90,7 +90,26 @@ class FakeContext extends EventTarget {
   assert.equal(keep({ visible: false, soundingVoices: 0 }), false, 'hidden silent water stays unlocked');
   assert.equal(keep({ visible: true, soundingVoices: -1 }), false, 'a negative count is invalid and must not hold be a lock');
 
-  console.log('pond-audio-lifecycle: explicit unlock, one-context resume, background cleanup, interruption recovery, and keepScreenAwake verified');
+  // A device that gives the browser no audio at all (or a context that throws)
+  // must report honestly instead of letting the gesture vanish: the shell needs
+  // a reason to tell the player that this water is silent.
+  const blindEvents = [];
+  const noAudio = lifecycleFactory.create({
+    createEngine: () => null,
+    onState: event => blindEvents.push(event.reason)
+  });
+  assert.equal(noAudio.activateFromGesture(), null, 'no Web Audio yields no engine');
+  assert.deepEqual(blindEvents, ['unsupported'], 'a device without audio is reported, not swallowed');
+
+  const threwEvents = [];
+  const refused = lifecycleFactory.create({
+    createEngine: () => { throw new Error('no more contexts'); },
+    onState: event => threwEvents.push(event.reason)
+  });
+  assert.equal(refused.activateFromGesture(), null, 'a throwing createEngine must not break the gesture');
+  assert.deepEqual(threwEvents, ['unsupported'], 'a refused context is an honest silence too');
+
+  console.log('pond-audio-lifecycle: explicit unlock, one-context resume, background cleanup, interruption recovery, honest silence, and keepScreenAwake verified');
 })().catch(error => {
   console.error(error);
   process.exitCode = 1;
