@@ -1,12 +1,12 @@
 {
  "project": "pond-piano",
  "phase": "device-validation",
- "iteration": 83,
- "status": "the-ink-wears-the-course",
- "current_goal": "Iteration 0083: чернила носят цвет течения. Дневник на воде перестаёт писаться одной рукой на любой воде: у каждого течения в `COURSE_WATER` есть свой чернильный тон, входящий в `PALETTE_STOPS`, а чистая `PondTide.inkTone(water, depth)` отдаёт замороженный тон (глубина растёт на неизменном `INK_DEPTH_SPAN = 26` внутри своего течения, неизвестная вода честно пишет рукой «Рассвета», «Рассвет» остаётся байт-в-байт прежними чернилами soft 46/60, fine 60/76). Оболочка читает `inkTone(waterLook, depth)` из того же пигмента кадра, поэтому чернила и вода идут одним кроссфейдом; проба `dataset.inkHue` называет тон кадра.",
- "previous_goal": "Iteration 0082: проверки сами находят свой браузер. Один честный слой `scripts/chrome-path.js` убирает рукописный путь к сборке Chromium из всех смоуков: сначала явное переопределение `POND_CHROME`, затем сборка, которую называет сам Playwright, затем новейшая действительно установленная сборка, а иначе — честный отказ, который говорит, где искали, вместо запуска того, чего нет. Замороженное «семь маршрутов» в landscape-map-smoke заменено числом, которое объявляет сам чистый слой карты, чтобы карта и проверка не расходились. Регрессионный набор больше не даёт зашить версию сборки в смоук.",
- "last_verified": "2026-09-28 (0083): 139 Node tests pass (was 135; four new suites hold the honest quill — Dawn byte-for-byte, each course its own hand, Mist the paler/thinner quill, unknown water reads as Dawn, broken depth stays inside its span). 81 JS files pass syntax; JSON and git diff --check clean. course-water-smoke on production-loopback Chromium 390×844 passed whole: Dawn still rgb(7,30,29) hue 177 with inkHue 158.0 (unchanged against the committed build), Dusk rgb(7,16,26) with inkHue 196.0, Mist rgb(20,34,29) with inkHue 156.0, and reduced motion still takes the new water in one frame with the ink following; no console or page errors. eyebrow -> 83, offline shell -> v79; README and ARCHITECTURE extended.",
- "next_step": "Реальный device-pass на Android Chrome/PWA и iPhone Safari: читается ли синяя запись «Сумерек» и почти бесцветная «Тумана» на настоящем экране при дневном свете. Отдельно — по одной устаревшей проверке за слот из списка 0082 (shade, repose, release, departure-glint, shell-safe). Проверка Windows high-contrast открыта с 0073. Продукт не сломан.",
+ "iteration": 84,
+ "status": "the-departing-light-returns",
+ "current_goal": "Iteration 0084: возвращение уходящего света. Итерация 0057 честно заменила непрерывные голоса конечными чашами, но вместе с прежним хвостом осиротела видимая отправка ноты: массив `releaseGlints` остался объявленным, нарисованным, пересаженным и посчитанным, а нового блика в него больше никто не кладёт, поэтому «свет уходит с нотой» молча мёртв. Цель — вернуть отправку под эпоху чаш: при подъёме руки `endVoice` кладёт один блик в последнем месте голоса с честной оставшейся жизнью (`endsAt - now`, тот же `dataset.lastRelease`), чистая `waves.releaseGlint` ограничивает её [.45, 1.9] с; осмотр берега блик не оставляет (осмотр — не игра); пул ограничен 12. Проверка: честный `departure-glint-smoke` (чистое ожидание жизни из pond-waves + счётчик dataset.releaseGlints) и новый статический страж `tests/shell-wiring.test.js`, который ловит любой массив, что чистится в кадре, но не получает настоящего push.",
+ "previous_goal": "Iteration 0083: чернила носят цвет течения. Дневник на воде перестаёт писаться одной рукой на любой воде: у каждого течения в `COURSE_WATER` есть свой чернильный тон, входящий в `PALETTE_STOPS`, а чистая `PondTide.inkTone(water, depth)` отдаёт замороженный тон (глубина растёт на неизменном `INK_DEPTH_SPAN = 26` внутри своего течения, неизвестная вода честно пишет рукой «Рассвета», «Рассвет» остаётся байт-в-байт прежними чернилами soft 46/60, fine 60/76). Оболочка читает `inkTone(waterLook, depth)` из того же пигмента кадра, поэтому чернила и вода идут одним кроссфейдом; проба `dataset.inkHue` называет тон кадра.",
+ "last_verified": "2026-09-28 (0084): 142 Node tests pass (was 139). 82 JS files syntax clean; JSON and git diff --check clean. departure-glint-smoke whole-green on 390x844: one departing pool per lift at the voice's last place, life 1943/1939ms against the pure envelope 1900ms, counter 1 -> 0 and stays, deep spot +163 over its same-band control, no console/page errors. eyebrow -> 84, offline shell -> v80; README and KAIZEN updated.",
+ "next_step": "Реальный device-pass на Android Chrome/PWA и iPhone Safari: заметно ли уходящее пятно при дневном свете и не мешает ли оно следующему касанию. Отдельно — по одной устаревшей проверке за слот из списка 0082 (`shade`, `repose`, `release`, `shell-safe`); `departure-glint` закрыт этой итерацией, потому что чинилась сама отправка, а не смоук. Проверка Windows high-contrast открыта с 0073.",
  "alpha_feedback": {
   "captured_at": "2026-07-26T13:59:00+03:00",
   "observations": [
@@ -340,7 +340,7 @@
   ],
   "next_step": "done; real-device pass should compare the warm near lap and cool far skim on phone speakers and bright screens"
  },
- "current_iteration": 80,
+ "current_iteration": 84,
  "iteration_51": {
   "started": "2026-09-02T22:17:00+03:00",
   "phase": "done",
@@ -979,5 +979,27 @@
    "no console or page errors"
   ],
   "next_step": "done; device-pass remains the shared backlog, plus the five stale smokes listed in 0082"
+ },
+ "iteration_84": {
+  "started": "2026-09-28T20:17:00+03:00",
+  "planned_finish": "2026-09-28T21:20:00+03:00",
+  "phase": "done",
+  "plan": [
+   "вернуть отправку: endVoice кладёт releaseGlints (born=performance.now, depth, releaseSeconds=остаток), предел RELEASE_GLINT_MAX=12, осмотр не оставляет блик",
+   "обновить честный комментарий pond-waves.releaseGlint: жизнь берётся из настоящего остатка, а не из снятого waterRelease",
+   "новый страж tests/shell-wiring.test.js: каждый массив, чистящийся в кадре, обязан получать настоящий (не spread) push",
+   "переписать scripts/departure-glint-smoke.js на честные ожидания (жизнь из чистого pond-waves, счётчик, проба пикселя)",
+   "eyebrow 84, offline shell v80, README/KAIZEN, прогон node/синтаксис/JSON/git diff --check, один commit и push main"
+  ],
+  "finished": "2026-09-28T20:52:00+03:00",
+  "verified": [
+   "142 Node tests pass (was 139; three new shell-wiring guards: the frame loop prunes a real set, every pruned collection receives a fresh push and not only a resize re-seed, and the departing light is seated in endVoice from the honest remaining decay while the shore inspection is skipped)",
+   "82 JS files pass syntax; state/package JSON valid; git diff --check clean",
+   "departure-glint-smoke on production-loopback Chromium 390x844 passed whole: no light before any gesture; after the lift exactly one pool rose (releaseGlints 1 -> 0 and stayed 0); a held deep note named lastRelease 2.842s and its light lived 1943ms against the pure expectation 1900ms, a quick tap 4.001s / 1939ms against the same 1900ms (bounded above, never below); the spot was +163 brighter than a same-band control; no console or page errors",
+   "the stale smoke was stale because the product was broken: commit 89e4c85 (0057, finite bowls) dropped the `releaseGlints.push` while leaving the array declared, reposed, drawn, pruned and counted, so the visible departure was silently dead for three weeks",
+   "README's departure paragraph rewritten to the bowl-era truth (the old text still described the removed material exit)",
+   "screenshot output/pond-piano/departure-light-84.png inspected directly: full-bleed organic water, title and shore stones intact, soft light pools and ripple rings read as water, no clipping or rectangle"
+  ],
+  "next_step": "Реальный device-pass на Android Chrome/PWA и iPhone Safari: заметно ли уходящее пятно при дневном свете и не мешает ли оно следующему касанию. Отдельно — по одной устаревшей проверке за слот из списка 0082 (`shade`, `repose`, `release`, `shell-safe`); `departure-glint` закрыт этой итерацией, потому что чинилась сама отправка, а не смоук. Проверка Windows high-contrast открыта с 0073."
  }
 }

@@ -1,7 +1,7 @@
-const CACHE = 'pond-piano-shell-v79';
-// Iteration 0081: the water takes the colour of the chosen course - dawn keeps
-// the mineral green, dusk turns it into a deep warm blue, mist pales and gives
-// colour up, and the walk between them is calm (one frame under reduced motion).
+const CACHE = 'pond-piano-shell-v80';
+// Iteration 0084: when the hand lifts, the departing light comes back under the
+// finite bowls - one soft pool rests where the voice last sounded and sinks away
+// over the honest remaining decay, while the shore inspection still leaves none.
 const SHELL = [
   './',
   './index.html',

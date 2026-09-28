@@ -554,7 +554,23 @@
     const now = audio.context.currentTime;
     voice.releasing = true;
     // Lifting does not choke the bowl. Its already scheduled finite decay wins.
-    canvas.dataset.lastRelease = Math.max(0, voice.endsAt-now).toFixed(3);
+    const remaining = Math.max(0, voice.endsAt-now);
+    canvas.dataset.lastRelease = remaining.toFixed(3);
+    // The departing light rides that same honest remainder (iteration 0084):
+    // the hand leaves, the bowl keeps ringing, and one soft pool rests where
+    // the voice last sounded and sinks away. Its life is bounded by the pure
+    // releaseGlint envelope, so a long ring cannot leave a pool behind forever.
+    // The shore inspection is not play, so its own scenes leave no light.
+    if (remaining > .02 && !String(id).startsWith('inspect:')) {
+      releaseGlints.push({
+        x: Number.isFinite(voice.lastX) ? voice.lastX : width * .5,
+        y: Number.isFinite(voice.lastY) ? voice.lastY : height * .5,
+        born: performance.now(),
+        depth: voice.materialDepth,
+        releaseSeconds: remaining
+      });
+      if (releaseGlints.length > RELEASE_GLINT_MAX) releaseGlints.shift();
+    }
     balanceVoices(audio);
     scheduleWakeSync();
   }

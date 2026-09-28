@@ -82,10 +82,11 @@
     });
   }
 
-  // The visible departure: after a note ends, its resting light sinks away
-  // along the same stretched tail the sound uses (iteration 0044 taught the
-  // ear; this teaches the eye). Life derives from the real waterRelease
-  // seconds plus the water depth, stays bounded, and the pool drifts
+  // The visible departure: when the hand lifts, the note's resting light
+  // sinks away over the decay the water still holds (iteration 0045 taught
+  // the eye; 0084 re-attached it after the finite bowls replaced the old
+  // continuous tail). Life derives from the real remaining decay seconds the
+  // shell reports plus the water depth, stays bounded, and the pool drifts
   // downward as it dims. Reduced motion keeps a calm still glow with no
   // sink. Broken clocks and junk inputs stay bounded.
   function releaseLifeSeconds(depth = .5, releaseSeconds = .55) {
