@@ -164,11 +164,15 @@
   function silentNotice(state = {}) {
     const reason = state.reason;
     if (state.state === 'running') return null;
+    // A closed pond is closed whatever event said so: the words follow the real
+    // state of the water, so no caller can soften the truth by naming its own
+    // reason (a return from the background must not promise a touch will wake
+    // water the browser already closed).
+    if (state.state === 'closed' || reason === 'closed') {
+      return Object.freeze({ tone: 'hard', text: 'Браузер закрыл звук пруда: перезагрузите страницу, чтобы вода снова зазвучала.' });
+    }
     if (reason === 'unsupported') {
       return Object.freeze({ tone: 'hard', text: 'Это устройство не открывает браузеру звук: вода играется молча.' });
-    }
-    if (reason === 'closed') {
-      return Object.freeze({ tone: 'hard', text: 'Браузер закрыл звук пруда: перезагрузите страницу, чтобы вода снова зазвучала.' });
     }
     if (reason === 'resume-failed') {
       const attempts = Number.isFinite(state.attempts) ? Math.max(0, Math.trunc(state.attempts)) : 0;

@@ -64,7 +64,7 @@ class FakeContext extends EventTarget {
   visible = true;
   lifecycle.foreground();
   assert.equal(context.resumeCalls, 1, 'foregrounding alone must not violate autoplay policy');
-  assert.equal(events.at(-1), 'gesture-required');
+  assert.equal(events.at(-1), 'foreground', 'coming back to merely sleeping water is not a trouble and is not a wake');
   const resumed = lifecycle.activateFromGesture();
   await Promise.resolve();
   assert.equal(resumed, first, 'the post-background note reuses the original context');
@@ -80,6 +80,12 @@ class FakeContext extends EventTarget {
   context.changeState('closed');
   assert.equal(lifecycle.activateFromGesture(), null, 'a browser-closed context needs reload, not a hidden replacement context');
   assert.equal(createCount, 1, 'closed audio is never silently replaced');
+  // Returning to water the browser closed while the player was away must name
+  // the real state: a touch cannot wake a closed context, so the pond may not
+  // promise one.
+  lifecycle.foreground();
+  assert.equal(events.at(-1), 'closed', 'a closed pond is reported closed when the player comes back');
+  assert.equal(createCount, 1, 'the return path still creates no second context');
 
   // keepScreenAwake: the lock is only sought while a gesture is audible and the shell is visible.
   const keep = lifecycleFactory.keepScreenAwake;

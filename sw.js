@@ -1,4 +1,4 @@
-const CACHE = 'pond-piano-shell-v70';
+const CACHE = 'pond-piano-shell-v71';
 // Iteration 0073: the shore instruments stay real controls under high contrast - the chosen current is told by edge weight, not colour.
 const SHELL = [
   './',

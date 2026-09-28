@@ -105,9 +105,15 @@
     }
 
     function foreground() {
-      if (!backgrounded && engine?.context?.state === 'running') return;
+      const state = engine?.context?.state;
+      if (!backgrounded && state === 'running') return;
       backgrounded = false;
-      report(engine && engine.context.state !== 'running' ? 'gesture-required' : 'foreground');
+      // Coming back is not a failure and not a wake. The pond only reports what
+      // is really true of its water: a context the browser closed while the
+      // player was away can never be woken by a gesture, so it is named closed
+      // and the player learns to reload; water that merely slept is not a
+      // trouble and stays quiet until a real gesture cannot wake it.
+      report(state === 'closed' ? 'closed' : 'foreground');
     }
 
     return Object.freeze({

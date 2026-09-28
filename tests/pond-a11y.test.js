@@ -193,6 +193,10 @@ test('the pond says nothing about sound before it has been asked', () => {
   assert.equal(a11y.silentNotice({ reason: 'resume-settled', state: 'running' }), null);
   assert.equal(a11y.silentNotice({ reason: 'prime-failed', state: 'suspended' }), null);
   assert.equal(a11y.silentNotice({ reason: 'foreground', state: 'running' }), null);
+  // Coming back to water that merely slept is not a failure either: the pond
+  // says nothing until a real gesture cannot wake it.
+  assert.equal(a11y.silentNotice({ reason: 'foreground', state: 'suspended' }), null);
+  assert.equal(a11y.silentNotice({ reason: 'foreground', state: 'uninitialized' }), null);
   // Running water is never troubled, whatever the reason string claims.
   assert.equal(a11y.silentNotice({ reason: 'unsupported', state: 'running' }), null);
 });
@@ -206,6 +210,13 @@ test('a device without Web Audio is told plainly and never retried', () => {
   const closed = a11y.silentNotice({ reason: 'closed', state: 'closed' });
   assert.equal(closed.tone, 'hard');
   assert.match(closed.text, /перезагрузите/i);
+  // The words follow the real state of the water, not the caller's reason
+  // string: a return from the background must not soften a closed pond into
+  // "touch to wake", because no touch can wake it.
+  const returned = a11y.silentNotice({ reason: 'foreground', state: 'closed' });
+  assert.equal(returned.tone, 'hard', 'a return to closed water is still a hard truth');
+  assert.equal(returned.text, closed.text, 'both paths say exactly the same words');
+  assert.equal(a11y.silentNotice({ reason: 'gesture', state: 'closed' }).tone, 'hard', 'any event on closed water tells the truth');
 });
 
 test('a failed wake stays soft and retryable until it truly keeps failing', () => {
