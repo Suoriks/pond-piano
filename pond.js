@@ -2576,6 +2576,25 @@ function disconnectSkipVoice(engine, skip) {
     }
   }
 
+  // The water answers the hand, not only the ear. A real strike earns one
+  // short pulse sized by the strike itself; reduced motion stills it, a
+  // platform without an actuator simply hears nothing, and a fast series of
+  // taps cannot buzz. The automatic diary replay never calls this - it is the
+  // pond's own voice, not the player's hand.
+  let lastHapticAt = -Infinity;
+  function answerWithHaptic(pointerType, intensity, now) {
+    if (typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') return;
+    if (!a11y || typeof a11y.hapticPulse !== 'function') return;
+    const pulse = a11y.hapticPulse({
+      pointerType, intensity, reduced: reduced.matches,
+      playerGesture: true, sinceLastPulseMs: now - lastHapticAt
+    });
+    canvas.dataset.haptic = pulse ? String(pulse.ms) : '0';
+    if (!pulse) return;
+    lastHapticAt = now;
+    try { navigator.vibrate(pulse.ms); } catch {}
+  }
+
   function start(event) {
     if (event.button !== undefined && event.button !== 0) return;
     const p = point(event), now = eventTime(event);
@@ -2584,7 +2603,7 @@ function disconnectSkipVoice(engine, skip) {
     const attack = music.attackIntensity({ pressure, pressureAvailable });
     const engine = audioLifecycle.activateFromGesture();
     const sounding = startVoice(event.pointerId, p.x, p.y, pressure, pitchAt(p.x), attack, engine, phraseNoteIndex);
-    if (sounding) phraseNoteIndex += 1;
+    if (sounding) { phraseNoteIndex += 1; answerWithHaptic(event.pointerType, attack, now); }
     pointers.set(event.pointerId, {
       ...p, pressure, pressureAvailable, attack, splashPlayed: false, sounding, born: now, lastMotion: now, movedAt: now, motionSpeed: 0,
       originX: p.x, originY: p.y, materialBias: null,

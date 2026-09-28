@@ -246,3 +246,30 @@ test('sleeping water is spoken softly and the words match the live region', () =
     a11y.silentNotice({ reason: 'resume-failed', state: 'suspended', attempts: 3 })
   ]) assert.ok(typeof notice.text === 'string' && notice.text.length > 0);
 });
+
+test('a real hand earns one short pulse sized by the strike', () => {
+  const soft = a11y.hapticPulse({ pointerType: 'touch', intensity: 0, playerGesture: true, reduced: false });
+  const hard = a11y.hapticPulse({ pointerType: 'touch', intensity: 1, playerGesture: true, reduced: false });
+  assert.equal(soft.ms, a11y.HAPTIC_MIN_MS, 'the gentlest strike still answers, but short');
+  assert.equal(hard.ms, a11y.HAPTIC_MAX_MS, 'a full strike answers with the longest pulse');
+  assert.ok(soft.ms < hard.ms, 'intensity really shapes the pulse');
+  assert.equal(soft.cooldownMs, a11y.HAPTIC_COOLDOWN_MS, 'the calm gap is named in the answer');
+  // A pen is a real hand too, and the same rule holds.
+  assert.ok(a11y.hapticPulse({ pointerType: 'pen', intensity: .5, playerGesture: true, reduced: false }));
+});
+
+test('the pulse stays silent when the hand did not ask for it', () => {
+  // Reduced motion stills the answer, not only the water.
+  assert.equal(a11y.hapticPulse({ pointerType: 'touch', intensity: .8, playerGesture: true, reduced: true }), null);
+  // The pond's own replay is not the player's hand.
+  assert.equal(a11y.hapticPulse({ pointerType: 'touch', intensity: .8, playerGesture: false, reduced: false }), null);
+  // A mouse over water has no actuator to answer.
+  assert.equal(a11y.hapticPulse({ pointerType: 'mouse', intensity: .8, playerGesture: true, reduced: false }), null);
+  // A fast series cannot buzz: inside the gap there is no answer.
+  assert.equal(a11y.hapticPulse({ pointerType: 'touch', intensity: .8, playerGesture: true, reduced: false, sinceLastPulseMs: a11y.HAPTIC_COOLDOWN_MS - 1 }), null);
+  assert.ok(a11y.hapticPulse({ pointerType: 'touch', intensity: .8, playerGesture: true, reduced: false, sinceLastPulseMs: a11y.HAPTIC_COOLDOWN_MS }), 'the gap passes and the hand is answered again');
+  // Broken inputs never invent a pulse.
+  assert.equal(a11y.hapticPulse(), null);
+  assert.equal(a11y.hapticPulse('nope'), null);
+  assert.equal(a11y.hapticPulse({ pointerType: 'touch', intensity: NaN, playerGesture: true, reduced: false }).ms, a11y.HAPTIC_MIN_MS, 'a broken intensity reads as the gentlest, not the loudest');
+});

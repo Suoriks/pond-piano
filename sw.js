@@ -1,5 +1,5 @@
-const CACHE = 'pond-piano-shell-v74';
-// Iteration 0076: the water shows how much of the diary replay is still to come - a quiet cool ember on every phrase the chronicle has not reached yet and one warm ember on the phrase now sounding.
+const CACHE = 'pond-piano-shell-v75';
+// Iteration 0078: where the platform has an actuator the pond answers the hand too - one short pulse per real strike, stilled by reduced motion, never during its own replay.
 const SHELL = [
   './',
   './index.html',

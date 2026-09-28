@@ -188,9 +188,35 @@
     return null;
   }
 
+  // ---- A tactile answer to a real hand -------------------------------------
+  // The pond already answers the ear; where the platform has an actuator it
+  // may answer the hand too. One real strike earns one short pulse whose
+  // length follows the strike's own intensity. Three truths keep it calm:
+  // reduced motion stills the answer completely, the automatic diary replay
+  // is not the player's hand and stays silent, and a fast series of taps can
+  // never buzz continuously. Pure decision only - the shell owns
+  // navigator.vibrate, and a platform without it simply hears nothing.
+  const HAPTIC_MIN_MS = 9;
+  const HAPTIC_MAX_MS = 24;
+  const HAPTIC_COOLDOWN_MS = 90;
+
+  function hapticPulse(strike = {}) {
+    if (!strike || typeof strike !== 'object') return null;
+    if (strike.reduced === true) return null;
+    if (strike.playerGesture !== true) return null;
+    const kind = typeof strike.pointerType === 'string' ? strike.pointerType : '';
+    if (kind !== 'touch' && kind !== 'pen') return null;
+    const since = Number.isFinite(strike.sinceLastPulseMs) ? strike.sinceLastPulseMs : Infinity;
+    if (since < HAPTIC_COOLDOWN_MS) return null;
+    const intensity = Math.max(0, Math.min(1, Number.isFinite(strike.intensity) ? strike.intensity : 0));
+    const ms = Math.round(HAPTIC_MIN_MS + (HAPTIC_MAX_MS - HAPTIC_MIN_MS) * intensity);
+    return Object.freeze({ ms, cooldownMs: HAPTIC_COOLDOWN_MS });
+  }
+
   return Object.freeze({
     expandedState, countIndex: trapIndex, openIndex, bowlLocation, keyboardLegend,
     legendIntroKey, shouldIntroduceLegend, legendIntroText, legendFitHeight, keyboardRest,
-    silentNotice
+    silentNotice,
+    HAPTIC_MIN_MS, HAPTIC_MAX_MS, HAPTIC_COOLDOWN_MS, hapticPulse
   });
 });

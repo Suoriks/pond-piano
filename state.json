@@ -1,12 +1,12 @@
 {
  "project": "pond-piano",
  "phase": "device-validation",
- "iteration": 77,
- "status": "the-replay-says-what-the-water-shows",
- "current_goal": "Iteration 0077: то, что вода показывает огоньками, пруд теперь и произносит — во время разлива дневника живой регион один раз называет каждую новую звучащую фразу и честно говорит, сколько фраз ещё впереди, а остановленный разлив честно называет, сколько осталось непрозвучавшим. Слова читаются из того же immutable-плана чистой flushProgress; звук и вода не затрагиваются, ни одна строка не повторяется.",
- "previous_goal": "Iteration 0076: пока разлив дневника идёт, сама вода показывает, сколько ещё осталось — каждая ещё не достигнутая фраза держит тихий прохладный огонёк на первой точке своего контура, звучащая сейчас несёт единственный тёплый огонёк с кольцом, уже ответившая возвращается к обычным чернилам, при reduced motion огоньки неподвижны. Прогресс читается из того же immutable-плана чистой flushProgress, звук не затрагивается, огоньки подчинены кадровому бюджету.",
- "last_verified": "2026-09-28: 108 Node tests pass (was 104). 73 JS files pass syntax. scripts/flush-diary-smoke.js passes on a production-loopback Chromium at 390x844 with a real seeded three-phrase chronicle: the live region stays silent before the first touch, R opens the replay, and the phrase boundary really speaks the honest step ('Разлив идёт: звучит фраза N из M. Впереди ещё …'); the end clears the line with the embers, and a replay stopped right after it opens names honestly how many phrases and notes never came home. No console or page errors. Screenshot output/pond-piano/diary-flush-77.png captured and inspected.",
- "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari): how the spoken line reads in TalkBack/VoiceOver during a replay, whether six phrases make it chatty on the ear, and whether stopping from outside the focused water should also name the remainder. Windows high-contrast check still open from 0073.",
+ "iteration": 78,
+ "status": "the-water-answers-the-hand-too",
+ "current_goal": "Iteration 0078: там, где у платформы есть вибрация, вода отвечает не только уху, но и руке — настоящее касание получает один короткий толчок (9–24 мс), длину которого задаёт сила самого удара; reduced motion замирает полностью, мышь молчит, серия быстрее 90 мс не жужжит, а собственный разлив дневника руку не трогает, потому что это не жест игрока. Аудио-правила не тронуты.",
+ "previous_goal": "Iteration 0077: то, что вода показывает огоньками, пруд теперь и произносит — во время разлива дневника живой регион один раз называет каждую новую звучащую фразу и честно говорит, сколько фраз ещё впереди, а остановленный разлив честно называет, сколько осталось непрозвучавшим.",
+ "last_verified": "2026-09-28: 110 Node tests pass (was 108; two new suites cover one honest pulse sized by the strike and silence when the hand did not ask for it). 74 JS files pass syntax (was 73). scripts/haptics-smoke.js passes on a production-loopback Chromium: a real touch earns exactly one 9–24 ms pulse and the probe matches it, a mouse strike answers nothing, three strikes landing in the same instant answer only the first, the seeded diary replay never buzzes the hand, and under reduced motion the pond stays playable but stills the answer completely. No console or page errors. Screenshot output/pond-piano/haptics-78.png captured and inspected.",
+ "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari): how the single pulse reads in the hand, whether Android really vibrates without an engaged-site gesture, and how the calm 90 ms gap feels during a real melodic series. Windows high-contrast check still open from 0073.",
  "alpha_feedback": {
   "captured_at": "2026-07-26T13:59:00+03:00",
   "observations": [
@@ -340,7 +340,7 @@
   ],
   "next_step": "done; real-device pass should compare the warm near lap and cool far skim on phone speakers and bright screens"
  },
- "current_iteration": 77,
+ "current_iteration": 78,
  "iteration_51": {
   "started": "2026-09-02T22:17:00+03:00",
   "phase": "done",
@@ -858,5 +858,22 @@
    "screenshot output/pond-piano/diary-flush-77.png inspected directly: organic full-bleed water with three ink phrases and live echo rings, title, eyebrow 77, map and shore stones intact, no clipping"
   ],
   "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari): how the spoken line reads in TalkBack/VoiceOver during a replay, whether six phrases make it chatty on the ear, and whether stopping from outside the focused water should also name the remainder. Windows high-contrast check still open from 0073."
+ },
+ "iteration_78": {
+  "started": "2026-09-28T13:20:00+03:00",
+  "finished": "2026-09-28T13:55:00+03:00",
+  "phase": "done",
+  "plan": [
+   "pure pond-a11y.hapticPulse decides whether/which pulse a strike earns (pointer type, intensity, reduced motion, player gesture, cooldown)",
+   "wire one call into the real strike path in pond.js with a dataset.haptic probe; a missing navigator.vibrate stays silent",
+   "unit suites + instrumented Chromium smoke (touch/mouse/burst/replay/reduced motion)"
+  ],
+  "verified": [
+   "110 Node tests pass (was 108); 74 JS files pass syntax; JSON and git diff --check clean",
+   "haptics-smoke.js: real touch -> exactly one 9-24ms pulse matching dataset.haptic; mouse -> none; same-instant burst of three -> only the first answered; seeded diary replay -> no pulse; reduced motion -> playable but silent; no console/page errors",
+   "screenshot output/pond-piano/haptics-78.png inspected: full organic water, three ink lines, ripples, shore stones and legend trigger intact, no cropping"
+  ],
+  "next_step": "done; shared device-pass backlog now includes the hand-feel of the single pulse and Android's real vibrate gesture rules",
+  "resumed_from_interrupted_slot": false
  }
 }
