@@ -1,15 +1,19 @@
 'use strict';
-// Instrumented headless-Chromium smoke for iteration 0044: a note leaves
-// the water the way it lived. One quick tap and one long settled hold land
-// on the exact same spot of mid-depth water; the scheduled stop of the
-// sustain trio must sit close to the material base for the tap and stretch
-// visibly longer for the hold, while dataset.lastRelease reports the same
-// story through the shell.
+// Instrumented headless-Chromium smoke for the bowl era (originally 0044,
+// retargeted 0085): the note leaves the water the way it lived. After 0057 a
+// tap is a struck bowl whose decay is decided at touch-down, so a lift no
+// longer stretches the tail - it only reports how much of that fixed decay is
+// still ringing. The honest story the product keeps is the inverse of the old
+// one, and this smoke reads it from the shell's own numbers:
+//   - the same cell schedules the same decay whether the hand leaves at once
+//     or stays (the strike decides, not the lift);
+//   - dataset.lastRelease at the lift is the honest remainder, so it matches
+//     (scheduled decay - hold time) for both a quick tap and a long hold;
+//   - deeper water rings longer, because the bowl's life grows with depth.
 //
-// Identification: on release, oscillator/overtone/undertow share one stop
-// time (now + releaseSeconds); the droplet stops much earlier as its own
-// singleton. Per gesture window the longest singleton stop-span therefore
-// belongs to the release tail.
+// Identification: on release the shell schedules no new stop, so every fresh
+// oscillator stop is a strike-scheduled mode; the longest stop-span over a
+// gesture window is the bowl's fundamental (duration + .04).
 const { chromium } = require('/usr/lib/node_modules/openclaw/node_modules/playwright-core');
 const chromePath = require('./chrome-path');
 const http = require('node:http');
@@ -18,7 +22,7 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 4289;
-const OUT = path.join(ROOT, 'output', 'pond-piano', 'water-release-44.png');
+const OUT = path.join(ROOT, 'output', 'pond-piano', 'bowl-decay-85.png');
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -51,7 +55,7 @@ const server = http.createServer((req, res) => {
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push('page: ' + e));
-  page.on('console', msg => { if (msg.type === 'error') errors.push('console: ' + msg.text); });
+  page.on('console', msg => { if (msg.type() === 'error') errors.push('console: ' + msg.text); });
 
   await page.addInitScript(() => {
     window.__probe = { stops: [] };
@@ -81,12 +85,10 @@ const server = http.createServer((req, res) => {
   const eyebrow = (await page.locator('.eyebrow').textContent()).trim();
 
   const width = 390, height = 844;
-  const tapX = Math.round(width * .32), tapY = Math.round(height * .5); // mid water
+  const tapX = Math.round(width * .32);
 
-  // Release tail inside this gesture window: the sustain trio stops latest
-  // (now + releaseSeconds beats every transient), so the maximum stop-span
-  // over all fresh stops belongs to the tail. Short singleton stops around
-  // it are the droplet and possible stone-skip echoes.
+  // Scheduled decay inside this gesture window: the bowl's fundamental lives
+  // longest, so the maximum stop-span over fresh stops is that decay.
   async function harvestTail(previousCount) {
     return page.evaluate(prev => {
       const fresh = window.__probe.stops.slice(prev);
@@ -109,31 +111,31 @@ const server = http.createServer((req, res) => {
       await page.waitForTimeout(holdMs);
       heldVoices = await page.evaluate(() => Number(document.querySelector('#pond').dataset.audioVoices || 0));
       await page.mouse.up();
-      if (!heldVoices) await page.waitForTimeout(2400); // full retire before retry
+      if (!heldVoices) await page.waitForTimeout(4800); // full bowl retire before retry
     }
     if (!heldVoices) throw new Error('gesture never produced a held voice: ' + label);
-    await page.waitForTimeout(300); // let the release scheduling land
+    await page.waitForTimeout(300); // let the release bookkeeping land
     const sample = await harvestTail(stopsBefore);
     sample.label = label;
     sample.heldVoices = heldVoices;
+    sample.holdMs = holdMs;
     return sample;
   }
 
   // Warm-up gesture first: the very first interaction unlocks audio and
   // invitation state; its numbers are not part of the comparison.
   await gesture(140, 'warmup');
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(4800);
 
-  // Pair A - mid water: the tap keeps the material exit, the settled note
-  // stretches partway.
+  // Pair A - mid water.
   const tapA = await gesture(110, 'tap-mid');
-  await page.waitForTimeout(2200);
+  await page.waitForTimeout(4800);
   const holdA = await gesture(1650, 'hold-mid');
-  await page.waitForTimeout(2600);
+  await page.waitForTimeout(4800);
 
-  // Pair B - deep water: same story with a visibly longer departure.
+  // Pair B - deep water: the same story with a longer ring.
   const tapB = await gesture(110, 'tap-deep', .82);
-  await page.waitForTimeout(2200);
+  await page.waitForTimeout(4800);
   const holdB = await gesture(1650, 'hold-deep', .82);
   await page.waitForTimeout(400);
 
@@ -143,24 +145,30 @@ const server = http.createServer((req, res) => {
   console.log(JSON.stringify(report, null, 2));
 
   const num = v => Number(v ?? NaN);
-  const stretchA = num(holdA.lastRelease) - num(tapA.lastRelease);
-  const stretchB = num(holdB.lastRelease) - num(tapB.lastRelease);
+  const near = (a, b, tol) => Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) <= tol;
+  // The lift reports the honest remainder: the decay the strike scheduled,
+  // minus the time the hand already spent on the water.
+  const remainder = g => g.tailSpan - g.holdMs / 1000;
   const checks = {
-    eyebrow44: /44/.test(report.eyebrow),
-    allGesturesHeard: [tapA, holdA, tapB, holdB].every(g => g.tailSpan !== null),
-    midTapKeepsBaseExit: num(tapA.lastRelease) >= .45 && num(tapA.lastRelease) <= .62,
-    lifeStretchesMidWater: stretchA >= .05 && stretchA <= .12,
-    deepWaterStretchesMore: stretchB > stretchA,
-    longDeepTailBeyondOldConstant: num(holdB.lastRelease) >= .68,
-    scheduledStopFollows:
-      holdB.tailSpan > tapB.tailSpan && holdA.tailSpan > tapA.tailSpan,
-    tailsBounded: num(holdB.lastRelease) <= 1.15 && holdB.tailSpan < 3.2,
+    eyebrowNamesEtude: /^Этюд воды · \d+$/.test(report.eyebrow),
+    allGesturesHeard: [tapA, holdA, tapB, holdB].every(g => g.tailSpan !== null && g.heldVoices >= 1),
+    decayDecidedAtStrike:
+      near(tapA.tailSpan, holdA.tailSpan, .35) && near(tapB.tailSpan, holdB.tailSpan, .35),
+    liftReportsHonestRemainder:
+      [tapA, holdA, tapB, holdB].every(g => near(num(g.lastRelease), remainder(g), .4)),
+    deepWaterRingsLonger: num(tapB.tailSpan) > num(tapA.tailSpan) + .2,
+    tailsBounded: [tapA, holdA, tapB, holdB].every(g =>
+      num(g.lastRelease) >= 0 && num(g.lastRelease) <= 6 && num(g.tailSpan) < 6),
     noErrors: errors.length === 0
   };
   console.log('CHECKS ' + JSON.stringify(checks));
-  console.log('TAILS ' + JSON.stringify({
+  console.log('DECAY ' + JSON.stringify({
     mid: { tap: tapA.tailSpan, hold: holdA.tailSpan },
-    deep: { tap: tapB.tailSpan, hold: holdB.tailSpan }
+    deep: { tap: tapB.tailSpan, hold: holdB.tailSpan },
+    remainder: {
+      tapMid: remainder(tapA), holdMid: remainder(holdA),
+      tapDeep: remainder(tapB), holdDeep: remainder(holdB)
+    }
   }));
   if (Object.values(checks).some(v => !v)) process.exitCode = 1;
 

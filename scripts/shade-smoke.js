@@ -1,16 +1,16 @@
 'use strict';
-// Instrumented headless-Chromium smoke for iteration 0040: repeated short
-// taps become plainly separable on the ear. Three taps land on the exact
-// same X (same pitch), taking the three deterministic note shades in order;
-// the scheduled droplet transient must lengthen clear -> neutral -> deep
-// while the settled pitch stays identical, proving the shade reaches the
-// ear through the water transient without touching the height axis.
+// Instrumented headless-Chromium smoke for the bowl era (originally 0040,
+// retargeted 0085): after 0057 a tap is a struck bowl, not a droplet with a
+// per-tap shade cycle. The live path no longer hands out rotating shades, so
+// the old "same pitch, growing droplet" story is gone. The honest promise the
+// product keeps instead is that a bowl is an alloy: one cell always sounds the
+// same way (deterministic, never random), and a neighbouring cell is a
+// different bowl with its own pitch and its own shine. That is the real
+// variety axis a child hears when tapping the water.
 //
-// Drop identification: every fresh note creates four oscillators; three of
-// them (sustain pair + undertow) are stopped together by the release call
-// and share one stop time, while the droplet is scheduled to stop at
-// born + durationSeconds + .025 all by itself. So per tap window the
-// singleton stop time belongs to the droplet.
+// The probes are the shell's own honest numbers: dataset.bowlPitch and
+// dataset.bowlShine are written at the strike, so the reading needs no decay
+// wait. The shine is bounded [0,1] by the pure layer.
 const { chromium } = require('/usr/lib/node_modules/openclaw/node_modules/playwright-core');
 const chromePath = require('./chrome-path');
 const http = require('node:http');
@@ -19,7 +19,7 @@ const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 4287;
-const OUT = path.join(ROOT, 'output', 'pond-piano', 'shade-taps-40.png');
+const OUT = path.join(ROOT, 'output', 'pond-piano', 'bowl-alloy-85.png');
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -37,8 +37,7 @@ const server = http.createServer((req, res) => {
   if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
     res.writeHead(404); res.end('not found'); return;
   }
-  const ext = path.extname(file);
-  res.writeHead(200, { 'content-type': MIME[ext] || 'application/octet-stream' });
+  res.writeHead(200, { 'content-type': MIME[path.extname(file)] || 'application/octet-stream' });
   res.end(fs.readFileSync(file));
 });
 
@@ -53,98 +52,58 @@ const server = http.createServer((req, res) => {
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push('page: ' + e));
-  page.on('console', msg => { if (msg.type === 'error') errors.push('console: ' + msg.text); });
-
-  await page.addInitScript(() => {
-    window.__probe = { stops: [] };
-    const orig = window.AudioContext;
-    window.AudioContext = class extends orig {
-      constructor(...args) {
-        super(...args);
-        const ctx = this;
-        const origCreate = ctx.createOscillator.bind(ctx);
-        ctx.createOscillator = (...cargs) => {
-          const osc = origCreate(...cargs);
-          const born = ctx.currentTime;
-          const origStop = osc.stop.bind(osc);
-          osc.stop = (when) => {
-            const stopAt = typeof when === 'number' ? when : ctx.currentTime;
-            window.__probe.stops.push({ born, stopAt });
-            return origStop(when);
-          };
-          return osc;
-        };
-      }
-    };
-  });
+  page.on('console', msg => { if (msg.type() === 'error') errors.push('console: ' + msg.text); });
 
   await page.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(700);
   const eyebrow = (await page.locator('.eyebrow').textContent()).trim();
 
   const width = 390, height = 844;
-  const tapX = Math.round(width * .3), tapY = Math.round(height * .5);
-  const labels = ['clear', 'neutral', 'deep'];
-  const taps = [];
+  const y = Math.round(height * .5);
 
-  // Droplet length for this tap window: among fresh stops, the release
-  // cluster shares one rounded stop time; singleton stop times are the
-  // droplets (one per voice actually started, all of this tap's shade).
-  async function harvestDropSpan(previousCount) {
-    return page.evaluate(prev => {
-      const fresh = window.__probe.stops.slice(prev);
-      const key = s => Math.round(s.stopAt * 1000) / 1;
-      const counts = new Map();
-      for (const s of fresh) counts.set(key(s), (counts.get(key(s)) || 0) + 1);
-      const singletons = fresh.filter(s => counts.get(key(s)) === 1);
-      const spans = singletons.map(s => s.stopAt - s.born).filter(span => span > .03 && span < .3);
-      return {
-        dropSpan: spans.length ? Math.min(...spans) : null,
-        freshStops: fresh.length,
-        dropVoicesSeen: document.querySelector('#pond').dataset.dropVoices || '?'
-      };
-    }, previousCount);
+  // One strike reads the bowl the shell just drew, then lifts. The probe is
+  // written synchronously at the strike, so no decay wait is needed.
+  async function strike(xFraction) {
+    const x = Math.round(width * xFraction);
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.waitForTimeout(90);
+    const sample = await page.evaluate(() => {
+      const ds = document.querySelector('#pond').dataset;
+      return { pitch: Number(ds.bowlPitch || NaN), shine: Number(ds.bowlShine || NaN), held: Number(ds.audioVoices || 0) };
+    });
+    await page.mouse.up();
+    await page.waitForTimeout(120);
+    return { ...sample, x };
   }
 
-  for (let index = 0; index < labels.length; index += 1) {
-    let heldVoices = 0;
-    let stopsBeforeAttempt = 0;
-    for (let attempt = 0; attempt < 4 && !heldVoices; attempt += 1) {
-      // Baseline per attempt: a failed tap still creates oscillators, and
-      // every retry of the same shade sounds identically, so scoping to the
-      // last attempt keeps the droplet window honest.
-      stopsBeforeAttempt = await page.evaluate(() => window.__probe.stops.length);
-      await page.mouse.move(tapX, tapY);
-      await page.mouse.down();
-      await page.waitForTimeout(190);
-      heldVoices = await page.evaluate(() => Number(document.querySelector('#pond').dataset.audioVoices || 0));
-      await page.mouse.up();
-      if (!heldVoices) await page.waitForTimeout(2200); // full retire before retry
-    }
-    if (!heldVoices) throw new Error('tap never produced a held voice: ' + labels[index]);
-    await page.waitForTimeout(430); // let even the deepest droplet stop fire
-    const sample = await harvestDropSpan(stopsBeforeAttempt);
-    sample.label = labels[index];
-    sample.heldVoices = heldVoices;
-    taps.push(sample);
-    await page.waitForTimeout(1900); // release tail retires fully before next shade
-  }
+  // Warm-up unlocks audio and invitation state; its numbers are not read.
+  await strike(.3);
+  await page.waitForTimeout(300);
+
+  // The same cell twice: one bowl, one honest sound.
+  const a1 = await strike(.3);
+  await page.waitForTimeout(200);
+  const a2 = await strike(.3);
+  await page.waitForTimeout(200);
+  // A neighbouring cell: a different bowl.
+  const b = await strike(.5);
 
   await page.screenshot({ path: OUT, fullPage: false });
 
-  const report = { eyebrow, taps, errors };
+  const report = { eyebrow, a1, a2, b, errors };
   console.log(JSON.stringify(report, null, 2));
 
-  const minima = taps.map(t => t.dropSpan);
+  const finite = v => Number.isFinite(v);
   const checks = {
-    eyebrow40: /40/.test(report.eyebrow),
-    threeTapsHeard: minima.every(span => span !== null),
-    dropletGrowsWithShade: minima[0] < minima[1] && minima[1] < minima[2],
-    growthIsAudible: (minima[2] - minima[0]) >= .04,
+    eyebrowNamesEtude: /^Этюд воды · \d+$/.test(report.eyebrow),
+    gesturesHeard: a1.held >= 1 && a2.held >= 1 && b.held >= 1,
+    sameCellSameBowl: finite(a1.pitch) && a1.pitch === a2.pitch && finite(a1.shine) && a1.shine === a2.shine,
+    neighbouringCellDiffers: finite(b.pitch) && b.pitch !== a1.pitch && Math.abs(b.shine - a1.shine) >= .05,
+    shinesBounded: [a1, a2, b].every(s => s.shine >= 0 && s.shine <= 1),
     noErrors: errors.length === 0
   };
   console.log('CHECKS ' + JSON.stringify(checks));
-  console.log('DROP_SPANS ' + JSON.stringify(minima));
   if (Object.values(checks).some(v => !v)) { process.exitCode = 1; }
 
   await browser.close();

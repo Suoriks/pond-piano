@@ -1,9 +1,12 @@
 'use strict';
-// Instrumented headless-Chromium smoke for iteration 0039: the pond survives
-// a change of screen. A held note is relocated by a real window resize at
-// its normalized place (voice keeps sounding, light follows the water), and
-// finished live artifacts land in the new space instead of stranding in dead
-// coordinates.
+// Instrumented headless-Chromium smoke for iteration 0039 (retargeted 0085):
+// the pond survives a change of screen. A held note is relocated by a real
+// window resize at its normalized place (voice keeps sounding, light follows
+// the water), and finished live artifacts land in the new space instead of
+// stranding in dead coordinates. In the bowl era a lift does not choke the
+// note: its finite decay was scheduled at the strike, so the pool only empties
+// when that decay honestly ends - the smoke waits for that end instead of
+// guessing a fixed tail.
 const { chromium } = require('/usr/lib/node_modules/openclaw/node_modules/playwright-core');
 const chromePath = require('./chrome-path');
 const http = require('node:http');
@@ -96,10 +99,13 @@ const server = http.createServer((req, res) => {
   const brightAfterAtNewPlace = await patchBrightness(newX, newY);
   const brightOldSpot = await patchBrightness(holdX, holdY);
 
-  // Release cleanly after the move: the voice keeps its natural release
-  // tail (~1.5 s), so give it time before counting live voices.
+  // Release cleanly after the move. The struck bowl keeps ringing out its
+  // finite decay (its life grows with depth), so wait for the pool to empty
+  // honestly rather than freezing a tail length.
   await page.mouse.up();
-  await page.waitForTimeout(2200);
+  const released = await page.waitForFunction(
+    () => Number(document.querySelector('#pond').dataset.audioVoices || 0) === 0, null, { timeout: 9000 }
+  ).then(() => true, () => false);
   const voicesReleased = await page.evaluate(() => Number(document.querySelector('#pond').dataset.audioVoices || 0));
 
   // Fresh ripples from a finished short tap must also land in the new space:
@@ -129,12 +135,12 @@ const server = http.createServer((req, res) => {
   console.log(JSON.stringify(report, null, 2));
 
   const checks = {
-    eyebrow39: /39/.test(report.eyebrow),
+    eyebrowNamesEtude: /^Этюд воды · \d+$/.test(report.eyebrow),
     voiceHeldAcrossResize: heldBefore === 1 && heldAfter === 1,
     contactLightFollowedWater: brightAfterAtNewPlace > quietElsewhere + 6,
     oldSpotFadedIntoWater: true,
     freshRippleInNewSpace: rippleNearNew > rippleFarOldSpace + 6,
-    releaseClean: voicesReleased === 0,
+    releaseClean: released && voicesReleased === 0,
     noErrors: errors.length === 0
   };
   console.log('CHECKS ' + JSON.stringify(checks));

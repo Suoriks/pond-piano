@@ -1,12 +1,12 @@
 {
  "project": "pond-piano",
  "phase": "device-validation",
- "iteration": 84,
- "status": "the-departing-light-returns",
- "current_goal": "Iteration 0084: возвращение уходящего света. Итерация 0057 честно заменила непрерывные голоса конечными чашами, но вместе с прежним хвостом осиротела видимая отправка ноты: массив `releaseGlints` остался объявленным, нарисованным, пересаженным и посчитанным, а нового блика в него больше никто не кладёт, поэтому «свет уходит с нотой» молча мёртв. Цель — вернуть отправку под эпоху чаш: при подъёме руки `endVoice` кладёт один блик в последнем месте голоса с честной оставшейся жизнью (`endsAt - now`, тот же `dataset.lastRelease`), чистая `waves.releaseGlint` ограничивает её [.45, 1.9] с; осмотр берега блик не оставляет (осмотр — не игра); пул ограничен 12. Проверка: честный `departure-glint-smoke` (чистое ожидание жизни из pond-waves + счётчик dataset.releaseGlints) и новый статический страж `tests/shell-wiring.test.js`, который ловит любой массив, что чистится в кадре, но не получает настоящего push.",
- "previous_goal": "Iteration 0083: чернила носят цвет течения. Дневник на воде перестаёт писаться одной рукой на любой воде: у каждого течения в `COURSE_WATER` есть свой чернильный тон, входящий в `PALETTE_STOPS`, а чистая `PondTide.inkTone(water, depth)` отдаёт замороженный тон (глубина растёт на неизменном `INK_DEPTH_SPAN = 26` внутри своего течения, неизвестная вода честно пишет рукой «Рассвета», «Рассвет» остаётся байт-в-байт прежними чернилами soft 46/60, fine 60/76). Оболочка читает `inkTone(waterLook, depth)` из того же пигмента кадра, поэтому чернила и вода идут одним кроссфейдом; проба `dataset.inkHue` называет тон кадра.",
- "last_verified": "2026-09-28 (0084): 142 Node tests pass (was 139). 82 JS files syntax clean; JSON and git diff --check clean. departure-glint-smoke whole-green on 390x844: one departing pool per lift at the voice's last place, life 1943/1939ms against the pure envelope 1900ms, counter 1 -> 0 and stays, deep spot +163 over its same-band control, no console/page errors. eyebrow -> 84, offline shell -> v80; README and KAIZEN updated.",
- "next_step": "Реальный device-pass на Android Chrome/PWA и iPhone Safari: заметно ли уходящее пятно при дневном свете и не мешает ли оно следующему касанию. Отдельно — по одной устаревшей проверке за слот из списка 0082 (`shade`, `repose`, `release`, `shell-safe`); `departure-glint` закрыт этой итерацией, потому что чинилась сама отправка, а не смоук. Проверка Windows high-contrast открыта с 0073.",
+ "iteration": 85,
+ "status": "the-stale-checks-learn-the-bowl-era",
+ "current_goal": "Iteration 0085: устаревшие проверки учат правду эпохи чаш. 0082 починила путь к браузеру, но четыре смоука всё ещё держали ожидания до-чашевой эпохи. Цель — вернуть их к честной правде продукта, ничего не меняя в продукте: `shade` теперь стережёт сплав чаши (одна ячейка всегда звучит одинаково, соседняя — другой инструмент со своим блеском), `release` читает обратную правду (затухание решено ударом, подъём руки лишь называет остаток `затухание − удержание`, глубокая вода звенит дольше), `repose` и `shell-safe` ждут честного конца конечного затухания, а у всех четырёх убран замороженный номер этюда.",
+ "previous_goal": "Iteration 0084: возвращение уходящего света. Итерация 0057 честно заменила непрерывные голоса конечными чашами, но вместе с прежним хвостом осиротела видимая отправка ноты: массив `releaseGlints` остался объявленным, нарисованным, пересаженным и посчитанным, а нового блика в него больше никто не кладёт, поэтому «свет уходит с нотой» молча мёртв. Цель — вернуть отправку под эпоху чаш: при подъёме руки `endVoice` кладёт один блик в последнем месте голоса с честной оставшейся жизнью (`endsAt - now`, тот же `dataset.lastRelease`), чистая `waves.releaseGlint` ограничивает её [.45, 1.9] с; осмотр берега блик не оставляет (осмотр — не игра); пул ограничен 12. Проверка: честный `departure-glint-smoke` (чистое ожидание жизни из pond-waves + счётчик dataset.releaseGlints) и новый статический страж `tests/shell-wiring.test.js`, который ловит любой массив, что чистится в кадре, но не получает настоящего push.",
+ "last_verified": "2026-09-28 (0085): 142 Node tests pass. 82 JS files syntax clean; state/package JSON and git diff --check clean. All four revived smokes whole-green on production-loopback Chromium 390x844 (repose 1280x720 -> 390x844): shade one cell twice gives one pitch 392.438Hz and one shine, neighbouring cell a different pitch and shine 0.29, all bounded; release decay 4.14s mid / 4.588s deep identical for tap and hold, lastRelease 4.03/4.478 tap and 2.49/2.938 hold match the honest remainder; repose held voice survives resize, light follows the water, pool empties to 0; shell-safe containment holds, voice sounded, pool returns to 0, remainder 3.815s bounded; no console or page errors. Product unchanged: no shipped file touched, so eyebrow stayed 84 and the offline shell stayed v80 - only the checks expectations were stale.",
+ "next_step": "Список устаревших проверок 0082 закрыт. Реальный device-pass на Android Chrome/PWA и iPhone Safari (заметно ли уходящее пятно при дневном свете и не мешает ли оно следующему касанию) и проверка Windows high-contrast, открытая с 0073.",
  "alpha_feedback": {
   "captured_at": "2026-07-26T13:59:00+03:00",
   "observations": [
@@ -340,7 +340,7 @@
   ],
   "next_step": "done; real-device pass should compare the warm near lap and cool far skim on phone speakers and bright screens"
  },
- "current_iteration": 84,
+ "current_iteration": 85,
  "iteration_51": {
   "started": "2026-09-02T22:17:00+03:00",
   "phase": "done",
@@ -1001,5 +1001,27 @@
    "screenshot output/pond-piano/departure-light-84.png inspected directly: full-bleed organic water, title and shore stones intact, soft light pools and ripple rings read as water, no clipping or rectangle"
   ],
   "next_step": "Реальный device-pass на Android Chrome/PWA и iPhone Safari: заметно ли уходящее пятно при дневном свете и не мешает ли оно следующему касанию. Отдельно — по одной устаревшей проверке за слот из списка 0082 (`shade`, `repose`, `release`, `shell-safe`); `departure-glint` закрыт этой итерацией, потому что чинилась сама отправка, а не смоук. Проверка Windows high-contrast открыта с 0073."
+ },
+ "iteration_85": {
+  "started": "2026-09-28T21:17:00+03:00",
+  "finished": "2026-09-28T21:50:00+03:00",
+  "phase": "done",
+  "plan": [
+   "shade-smoke: переписать на правду эпохи чаш (детерминизм одной ячейки + различие соседней, честные dataset.bowlPitch/bowlShine, блеск в [0,1])",
+   "release-smoke: переписать на обратную правду (затухание решено ударом, lastRelease = затухание − удержание, глубокая вода звенит дольше, границы)",
+   "repose-smoke и shell-safe-smoke: ждать честного конца конечного затухания вместо замороженного хвоста",
+   "у всех четырёх убрать замороженный номер этюда (форма Этюд воды · N, как в departure-glint 0084)",
+   "прогнать четыре оживлённых смоука на production-loopback Chromium + юнит-наборы, синтаксис, JSON, git diff --check",
+   "KAIZEN 0085, состояние, один commit и push в main"
+  ],
+  "verified": [
+   "142 Node tests pass; 82 JS files syntax clean; state/package JSON valid; git diff --check clean",
+   "shade-smoke green: same cell twice one pitch 392.438Hz and one shine; neighbouring cell different pitch and shine 0.29; shines bounded; no errors",
+   "release-smoke green: decay mid 4.14s and deep 4.588s identical for tap and hold (decided at strike); lastRelease 4.03/4.478 tap and 2.49/2.938 hold match remainder within 0.4s; deep rings longer; tails bounded; no errors",
+   "repose-smoke green: held voice 1 across 1280x720 -> 390x844, contact light follows the water, fresh ripple in the new space, pool empties to 0; no errors",
+   "shell-safe-smoke green: gesture surface holds user-select/overscroll none, voice held, pool returns to 0, remainder 3.815s bounded; no errors",
+   "product unchanged: only scripts/ touched, so eyebrow stayed 84 and the offline shell stayed v80 (same as 0082 precedent)"
+  ],
+  "next_step": "список устаревших проверок 0082 закрыт; остаётся реальный device-pass (Android Chrome/PWA, iPhone Safari) и Windows high-contrast с 0073"
  }
 }

@@ -1,7 +1,9 @@
 'use strict';
-// Instrumented headless-Chromium smoke for iteration 0034: the mobile shell
-// holds the water — gesture containment present, a gesture still sounds a voice,
-// and the wake-lock policy releases on silence.
+// Instrumented headless-Chromium smoke for iteration 0034 (retargeted 0085):
+// the mobile shell holds the water — gesture containment present, a gesture
+// still sounds a voice, and the pool empties honestly on silence. In the bowl
+// era a lift does not stop the note: the strike scheduled a finite decay, so
+// the smoke waits for that decay to end instead of guessing a fixed tail.
 const { chromium } = require('/usr/lib/node_modules/openclaw/node_modules/playwright-core');
 const chromePath = require('./chrome-path');
 const http = require('node:http');
@@ -66,7 +68,11 @@ const server = http.createServer((req, res) => {
   await page.waitForTimeout(300);
   const heldVoices = await page.evaluate(() => Number(document.querySelector('#pond').dataset.audioVoices || 0));
   await page.mouse.up();
-  await page.waitForTimeout(1500);
+  const lastRelease = Number(await page.evaluate(() => document.querySelector('#pond').dataset.lastRelease || NaN));
+  // The bowl rings out the decay its strike scheduled; wait for the honest end.
+  const released = await page.waitForFunction(
+    () => Number(document.querySelector('#pond').dataset.audioVoices || 0) === 0, null, { timeout: 9000 }
+  ).then(() => true, () => false);
   const afterRelease = await page.evaluate(() => Number(document.querySelector('#pond').dataset.audioVoices || 0));
 
   await page.screenshot({ path: OUT });
@@ -75,8 +81,8 @@ const server = http.createServer((req, res) => {
   server.close();
 
   const held = heldVoices >= 1;
-  const released = afterRelease === 0;
-  const ok = !errors.length && surfaceOk && held && released;
-  console.log(JSON.stringify({ ok, surface, surfaceOk, held, released, heldVoices, afterRelease, errors }, null, 2));
+  const tailBounded = Number.isFinite(lastRelease) && lastRelease > 0 && lastRelease <= 6;
+  const ok = !errors.length && surfaceOk && held && released && afterRelease === 0 && tailBounded;
+  console.log(JSON.stringify({ ok, surface, surfaceOk, held, released, heldVoices, afterRelease, lastRelease, tailBounded, errors }, null, 2));
   if (!ok) process.exitCode = 1;
 })().catch(e => { console.error(e); process.exitCode = 1; });
