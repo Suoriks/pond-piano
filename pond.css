@@ -306,3 +306,37 @@ h1 { margin: 0; font: 400 clamp(24px, 4vw, 44px)/1.05 Georgia, serif; letter-spa
   .legend-trigger, .legend-panel, .legend-close { transition: none; }
   .water-silence { transition: none; }
 }
+/* High contrast: the shore instruments are controls, not decoration. When the
+   reader asks for more contrast, or the system forces its own palette, the
+   chosen current must be told by the weight and shape of its stone - never by
+   colour alone - and no panel may lean on a gradient to be seen. Nothing in
+   this layer touches the pond's audio or its first-gesture rule. */
+@media (prefers-contrast: more) {
+  .eyebrow, .tuning-label, .legend-heading { color: #d6e6cc; }
+  .hint { color: #e9f0e0; opacity: 1; }
+  .water-invitation { color: #f3f8ed; }
+  .water-silence { color: #f7f0e3; }
+  .water-silence.is-shown { opacity: 1; }
+  #tuning-value { color: #f1f6ea; }
+  .tuning-pebble { border-color: rgba(226, 240, 204, .64); }
+  .volume-stone, .diary-stone, .legend-trigger, .legend-close, .mute-water,
+  .diary-return, .leaf-return, .diary-entry { border-color: rgba(224, 238, 202, .6); }
+  .volume-panel, .diary-panel, .legend-panel { border-color: rgba(228, 242, 208, .58); }
+  .legend-key { border-color: rgba(226, 242, 205, .62); background: rgba(96, 132, 104, .34); }
+  .legend-text { color: #eaf1e0; }
+}
+@media (forced-colors: active) {
+  /* The forced palette erases our glow and gradients, so selection is carried
+     by edge weight: the chosen current stone is doubled and heavier than its
+     calm neighbours. */
+  .tuning-pebble, .volume-stone, .diary-stone, .legend-trigger, .legend-close,
+  .mute-water, .diary-return, .leaf-return, .diary-entry { border-width: 2px; border-style: solid; }
+  .tuning-choice input:checked + .tuning-pebble { border-width: 3px; border-style: double; }
+  .tuning-choice:hover .tuning-pebble { border-width: 3px; }
+  .tuning-choice input:focus-visible + .tuning-pebble { outline: 3px solid; outline-offset: 3px; }
+  /* Opaque panels and map keys: the forced Canvas behind canvas-text keeps
+     every word readable above the water. */
+  .volume-panel, .diary-panel, .legend-panel { border-width: 2px; border-style: solid; background: Canvas; }
+  .legend-key { border-width: 2px; border-style: solid; background: Canvas; }
+  #pond:focus-visible { outline: 3px solid; outline-offset: -5px; }
+}

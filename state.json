@@ -1,12 +1,12 @@
 {
  "project": "pond-piano",
  "phase": "device-validation",
- "iteration": 72,
- "status": "honest-silence-when-the-water-cannot-sound",
- "current_goal": "Iteration 0072: the water never pretends about sound - while the audio system has not been asked yet nothing is said, but when a real gesture genuinely cannot wake the pond (this device gives the browser no Web Audio at all, the browser closed the context, or a wake failed three times) the pond says so in one calm line that the eye sees and the live region speaks, the water stays playable, and the line leaves the moment sound returns.",
- "previous_goal": "Iteration 0071: the water itself shows a sighted keyboard player where they stand — while the water honestly owns focus and stays silent, a calm light with a quiet ring rests under the chosen bowl and depth, arrives gently, travels with the arrows, yields the instant a real strike sounds, never starts the audio system, and holds still under reduced motion.",
- "last_verified": "2026-09-28: 98 Node tests pass (was 94; four new suites cover the honest silence: nothing before a gesture, a device with no Web Audio and a closed context, the soft/hard three-failure boundary with broken attempt counts, and sleeping water whose words match the live region; the lifecycle suite also proves a throwing or contextless createEngine reports 'unsupported' instead of swallowing the gesture); 70 JS files pass syntax; state/package JSON and git diff --check clean. Instrumented production-loopback Chromium 390x844, two pages: on a device with no AudioContext the silence line is empty and audioState uninitialized before the player; the first Tab + Space yields audioTrouble 'hard', a visible line \"Это устройство не открывает браузеру звук...\", the same words in the live region (never the voices fallback), and the contact patch at the centre really brightens by 6+, so the pond stays playable without sound; on a page that keeps the context asleep and refuses resume(), the first gesture yields a soft \"Браузер пока не вернул звук — коснитесь воды ещё раз\", audioTrouble 'soft' and audioState 'suspended', and the settled wake no longer wipes the honest line. No console or page errors; keyboard-rest-71 and keyboard-water-59 regressions green. Screenshots silence-notice-72-unsupported.png and silence-notice-72-refused.png inspected directly: both lines read whole above the shore stones, title, eyebrow 72 and water intact, no clipping or rectangular artifact.",
- "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari): how does the honest line read on a real screen under a genuine sound refusal (e.g. after a long background), does it ever cover the shore controls under a thumb, and should it also be spoken once when returning from the background.",
+ "iteration": 73,
+ "status": "shore-instruments-survive-high-contrast",
+ "current_goal": "Iteration 0073: the shore instruments stay real controls when the reader asks for more contrast or the system forces its own palette - the chosen current is told by the weight and shape of the stone rather than by colour alone, stones, panels and the keyboard map keep a hard honest edge instead of a stripped gradient, the focus ring survives, and nothing here starts the pond's audio.",
+ "previous_goal": "Iteration 0072: the water never pretends about sound - while the audio system has not been asked yet nothing is said, but when a real gesture genuinely cannot wake the pond (this device gives the browser no Web Audio at all, the browser closed the context, or a wake failed three times) the pond says so in one calm line that the eye sees and the live region speaks, the water stays playable, and the line leaves the moment sound returns.",
+ "last_verified": "2026-09-28: 98 Node tests pass; 71 JS files pass syntax; state/package JSON and git diff --check clean. Instrumented production-loopback Chromium 390x844, two pages: under forced-colors (matchMedia confirms) the chosen current stone is 3px/double against a 2px/solid neighbour, so the choice reads by weight and shape rather than colour; the volume panel and the keyboard map keep a hard 2px edge and an opaque Canvas body; a tuning target stays 50x50 (>=44px); audioState is uninitialized before the gesture, so the contrast layer starts no audio; Tab gives the water a visible focus ring and Space still sounds a voice and returns to 0. Under prefers-contrast: more (matchMedia confirms) the hint stops half-hiding (opacity 1), the invitation and the honest-silence line read at full strength (rgb(243,248,237) / rgb(247,240,227)), and audioState stays uninitialized. No console or page errors. Screenshots high-contrast-73-forced.png and high-contrast-73-more.png inspected directly: the shore labels sit on system backplates in the forced palette, the stones and the map stay visible silhouettes, the water is intact, no clipping or rectangular dashboard artifact.",
+ "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari) and a real Windows high-contrast check: how does the doubled edge of the chosen current read on a small screen, do the system text backplates ever cover the shore stones under a thumb, and should the honest silence line also be spoken once on return from the background (still open from 0072).",
  "alpha_feedback": {
   "captured_at": "2026-07-26T13:59:00+03:00",
   "observations": [
@@ -340,7 +340,7 @@
   ],
   "next_step": "done; real-device pass should compare the warm near lap and cool far skim on phone speakers and bright screens"
  },
- "current_iteration": 71,
+ "current_iteration": 73,
  "iteration_51": {
   "started": "2026-09-02T22:17:00+03:00",
   "phase": "done",
@@ -767,5 +767,18 @@
   ],
   "finished": "2026-09-28T05:55:00+03:00",
   "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari): how does the honest line read on a real screen under a genuine sound refusal (e.g. after a long background), does it ever cover the shore controls under a thumb, and should it also be spoken once when returning from the background."
+ },
+ "iteration_73": {
+  "started": "2026-09-28T06:20:00+03:00",
+  "phase": "done",
+  "verified": [
+   "node tests: 98 pass; syntax 71 JS files clean (was 70; the new smoke script); JSON and git diff --check clean",
+   "high-contrast-smoke.js instrumented production-loopback Chromium 390x844, forced-colors page (matchMedia true): the chosen current stone is 3px/double while a calm neighbour stays 2px/solid, so selection reads without colour; the volume panel and the keyboard map keep a hard 2px edge and an opaque Canvas body; a tuning target stays 50x50 (>=44px); audioState stays uninitialized before the gesture (the contrast layer starts no audio); Tab gives the water a visible focus ring and Space still sounds a voice and returns it to 0",
+   "prefers-contrast: more page (matchMedia true): the hint stops half-hiding (opacity 1), the invitation and the honest-silence line read at full strength (rgb(243,248,237) / rgb(247,240,227)), audioState stays uninitialized",
+   "no console or page errors; screenshots high-contrast-73-forced.png and high-contrast-73-more.png inspected directly - the shore labels sit on system backplates, the stones and map stay visible silhouettes, the water is intact, no clipping or dashboard artifact"
+  ],
+  "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari) and a real Windows high-contrast check: how does the doubled edge of the chosen current read on a small screen, do the system text backplates ever cover the shore stones under a thumb, and should the honest silence line also be spoken once on return from the background (still open from 0072).",
+  "finished": "2026-09-28T06:45:00+03:00",
+  "goal": "Iteration 0073: the shore instruments stay real controls when the reader asks for more contrast or the system forces its own palette - the chosen current is told by the weight and shape of the stone rather than by colour alone, stones, panels and the keyboard map keep a hard honest edge instead of a stripped gradient, the focus ring survives, and nothing here starts the pond's audio."
  }
 }
