@@ -1,4 +1,4 @@
-const CACHE = 'pond-piano-shell-v73';
+const CACHE = 'pond-piano-shell-v74';
 // Iteration 0076: the water shows how much of the diary replay is still to come - a quiet cool ember on every phrase the chronicle has not reached yet and one warm ember on the phrase now sounding.
 const SHELL = [
   './',

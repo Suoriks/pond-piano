@@ -98,6 +98,9 @@
   let flushPhrasesFired = 0;
   let flushNotesFired = 0;
   let flushNotesSkipped = 0;
+  // The phrase whose takeover has already been spoken aloud, so the live
+  // region never repeats a milestone the water has moved past.
+  let flushSpokenPhrase = -1;
   // A lifted phrase rests on the shore leaf until the water takes it back.
   let heldLeafScroll = null;
   let loopPassesFired = 0;
@@ -1159,13 +1162,18 @@
       canvas.dataset.flushFraction = '0';
       canvas.dataset.flushCurrent = '-1';
       canvas.dataset.flushEmber = '0';
+      canvas.dataset.flushSpoken = '-1';
     }
   }
 
   function startDiaryFlush() {
     if (flushingDiary) {
+      // Before the plan is forgotten, read how much of the replay never came
+      // home: a stopped replay names its own remainder instead of implying the
+      // whole chronicle was heard.
+      const stopped = score.flushStopSummary(score.flushProgress(flushPlan, performance.now() - flushStartedAt));
       stopDiaryFlush();
-      status.textContent = 'Пруд перестал разливать дневник';
+      status.textContent = stopped ? stopped.text : 'Пруд перестал разливать дневник';
       pourAnnounced = true;
       if (diaryOpen) syncDiaryPanel();
       return;
@@ -1194,6 +1202,8 @@
     flushPhrasesFired = 0;
     flushNotesFired = 0;
     flushNotesSkipped = 0;
+    flushSpokenPhrase = -1;
+    canvas.dataset.flushSpoken = '-1';
     canvas.dataset.flushing = '1';
     canvas.dataset.flushPhrases = '0';
     canvas.dataset.flushNotes = '0';
@@ -1213,6 +1223,16 @@
         startPourEcho(phrase.line);
         flushPhrasesFired += 1;
         canvas.dataset.flushPhrases = String(flushPhrasesFired);
+        // The water shows where the replay stands; the live region says the
+        // same thing in words, one calm line per phrase that takes over.
+        const spoken = score.flushMilestone(
+          score.flushProgress(flushPlan, performance.now() - flushStartedAt), flushSpokenPhrase);
+        if (spoken) {
+          flushSpokenPhrase = spoken.phrase;
+          canvas.dataset.flushSpoken = String(spoken.phrase);
+          status.textContent = spoken.text;
+          pourAnnounced = true;
+        }
       }, Math.max(0, phrase.at));
       flushTimers.add(phraseTimer);
       for (const note of phrase.notes) {
@@ -1237,6 +1257,7 @@
             canvas.dataset.flushing = '0';
             canvas.dataset.flushRemaining = '0';
             canvas.dataset.flushEmber = '0';
+            canvas.dataset.flushSpoken = '-1';
             status.textContent = `Пруд разлил свой дневник обратно на воду: ${flushPhrasesFired} ${flushPhrasesFired === 1 ? 'фраза' : flushPhrasesFired >= 2 && flushPhrasesFired <= 4 ? 'фразы' : 'фраз'}`;
             pourAnnounced = true;
             if (diaryOpen) syncDiaryPanel();

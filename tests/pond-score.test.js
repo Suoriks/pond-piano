@@ -649,3 +649,97 @@ test('the replay progress refuses to invent itself on broken input', () => {
   assert.equal(negative.state, 'waiting', 'a negative clock is honestly clamped to the start');
   assert.equal(negative.remaining, 1, 'nothing has sounded at the clamped start');
 });
+
+test('the replay speaks one honest line each time a new phrase takes over', () => {
+  const plan = [
+    { at: 560, notes: [{ at: 560, anchor: { x: .2, y: .3 } }, { at: 900, anchor: { x: .4, y: .5 } }] },
+    { at: 1740, notes: [{ at: 1740, anchor: { x: .5, y: .4 } }] },
+    { at: 3000, notes: [{ at: 3000, anchor: { x: .7, y: .6 } }, { at: 3200, anchor: { x: .8, y: .7 } }] }
+  ];
+  const first = score.flushProgress(plan, plan[0].notes[0].at);
+  const spoken = score.flushMilestone(first, -1);
+  assert.ok(spoken, 'the first phrase that takes over is spoken');
+  assert.equal(spoken.key, 'phrase:0', 'the milestone is keyed by the phrase it names');
+  assert.equal(spoken.phrase, 0, 'the phrase is named by its real index');
+  assert.equal(spoken.ahead, 2, 'the honest count still ahead is carried');
+  assert.match(spoken.text, /звучит фраза 1 из 3/, 'the line names which phrase is sounding now');
+  assert.match(spoken.text, /Впереди ещё 2 фразы/, 'the line names how much is still to come');
+
+  assert.equal(score.flushMilestone(first, 0), null, 'the same phrase is never spoken twice');
+
+  const second = score.flushProgress(plan, plan[1].notes[0].at);
+  const advanced = score.flushMilestone(second, 0);
+  assert.ok(advanced, 'a genuinely new phrase is spoken');
+  assert.equal(advanced.key, 'phrase:1', 'the advance is honest');
+  assert.match(advanced.text, /звучит фраза 2 из 3/, 'the second phrase is named');
+  assert.match(advanced.text, /Впереди ещё 1 фраза$/, 'one phrase left reads as one phrase');
+
+  const last = score.flushProgress(plan, plan[2].notes[0].at);
+  const closing = score.flushMilestone(last, 1);
+  assert.ok(closing, 'the last phrase is spoken too');
+  assert.equal(closing.ahead, 0, 'nothing is left ahead of the last phrase');
+  assert.match(closing.text, /последняя/, 'the last phrase is named as the last');
+
+  const done = score.flushProgress(plan, score.pourAllSpan(plan));
+  assert.equal(score.flushMilestone(done, 1), null, 'a finished replay says nothing more');
+  assert.equal(score.flushMilestone(score.flushProgress(plan, 0), -1), null,
+    'a replay that has not begun says nothing yet');
+});
+
+test('the spoken milestone refuses to invent itself on broken input', () => {
+  assert.equal(score.flushMilestone(null, -1), null, 'no progress says nothing');
+  assert.equal(score.flushMilestone({}, -1), null, 'an empty progress says nothing');
+  assert.equal(score.flushMilestone({ state: 'sounding', phrases: 0, current: 0 }, -1), null,
+    'a plan with no phrases says nothing');
+  assert.equal(score.flushMilestone({ state: 'sounding', phrases: 3, current: -1 }, -1), null,
+    'a phrase that is not sounding says nothing');
+  assert.equal(score.flushMilestone({ state: 'sounding', phrases: 3, current: 1.5 }, -1), null,
+    'a fractional phrase index says nothing');
+  assert.equal(score.flushMilestone({ state: 'idle', phrases: 3, current: 1 }, -1), null,
+    'an idle replay says nothing');
+  const fallback = score.flushMilestone({ state: 'sounding', phrases: 3, current: 0 }, 'junk');
+  assert.ok(fallback && fallback.key === 'phrase:0',
+    'a broken spoken key falls back to nothing spoken yet rather than going silent forever');
+  const once = score.flushMilestone({ state: 'sounding', phrases: 3, current: 2 }, 0);
+  assert.ok(once && once.key === 'phrase:2', 'the phrase index itself is the honest key');
+});
+
+test('a stopped replay names honestly what never came home', () => {
+  const plan = [
+    { at: 560, notes: [{ at: 560 }, { at: 900 }] },
+    { at: 1740, notes: [{ at: 1740 }] },
+    { at: 3000, notes: [{ at: 3000 }] }
+  ];
+  const early = score.flushStopSummary(score.flushProgress(plan, plan[0].notes[0].at));
+  assert.ok(early, 'a stopped replay still speaks');
+  assert.equal(early.remaining, 3, 'the three notes that never spoke are counted');
+  assert.equal(early.phrases, 2, 'the two phrases still waiting are counted');
+  assert.match(early.text, /перестал разливать дневник/, 'the stop is named honestly');
+  assert.match(early.text, /осталось 2 фразы и 3 ноты/, 'the remainder is named in words');
+
+  const full = score.flushStopSummary(score.flushProgress(plan, score.pourAllSpan(plan)));
+  assert.ok(full, 'stopping after the last promised note still answers');
+  assert.equal(full.remaining, 0, 'nothing remained at the very end');
+  assert.match(full.text, /всё обещанное уже прозвучало/, 'a complete replay says so plainly');
+
+  assert.equal(score.flushStopSummary(null), null, 'no progress says nothing');
+  assert.equal(score.flushStopSummary({ state: 'idle' }), null, 'an idle replay says nothing');
+  const broken = score.flushStopSummary({ state: 'sounding', phrases: 'junk', current: 'junk', remaining: -4 });
+  assert.ok(broken, 'broken numbers still get an honest answer');
+  assert.equal(broken.remaining, 0, 'a negative remainder is clamped, never promised back');
+  assert.match(broken.text, /уже прозвучало/, 'nothing left is told as nothing left');
+});
+
+test('phrase and note words follow the real Russian counts', () => {
+  assert.equal(score.phraseWord(1), 'фраза');
+  assert.equal(score.phraseWord(2), 'фразы');
+  assert.equal(score.phraseWord(4), 'фразы');
+  assert.equal(score.phraseWord(5), 'фраз');
+  assert.equal(score.phraseWord(11), 'фраз');
+  assert.equal(score.phraseWord(21), 'фраза');
+  assert.equal(score.noteWord(1), 'нота');
+  assert.equal(score.noteWord(3), 'ноты');
+  assert.equal(score.noteWord(7), 'нот');
+  assert.equal(score.noteWord(12), 'нот');
+  assert.equal(score.noteWord(22), 'ноты');
+});

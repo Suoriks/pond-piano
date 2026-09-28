@@ -1,12 +1,12 @@
 {
  "project": "pond-piano",
  "phase": "device-validation",
- "iteration": 76,
- "status": "the-water-shows-what-is-left",
- "current_goal": "Iteration 0076: пока разлив дневника идёт, сама вода показывает, сколько ещё осталось — каждая ещё не достигнутая фраза держит тихий прохладный огонёк на первой точке своего контура, звучащая сейчас несёт единственный тёплый огонёк с кольцом, уже ответившая возвращается к обычным чернилам, при reduced motion огоньки неподвижны. Прогресс читается из того же immutable-плана чистой flushProgress, звук не затрагивается, огоньки подчинены кадровому бюджету.",
- "previous_goal": "Iteration 0075: пруд сам играет свой дневник — один жест отдаёт воде всю ещё читаемую хронику одним непрерывным разливом, ограниченным по фразам, нотам и времени, заканчивается сам и останавливается повторным жестом.",
- "last_verified": "2026-09-28: 104 Node tests pass (was 102; two new suites cover waiting/sounding/done with an honest sum and monotonic played count, plus refusal on broken plans and clocks). 73 JS files pass syntax. scripts/flush-diary-smoke.js passes on a production-loopback Chromium at 390x844 with a real seeded three-phrase chronicle: at the start the whole plan is still to come (remaining == planned, fraction 0, embers on every phrase), by mid-replay the remaining count honestly falls, the fraction sits inside (0,1), the sounding phrase is named and unreached phrases keep their embers; the replay ends by itself leaving zero remaining and zero embers, and a second R stops it with no half-promise and no held voices; no console or page errors. The first run exposed a real product gap (the readout was stale until the first frame) fixed in startDiaryFlush rather than in the test. Screenshot output/pond-piano/diary-flush-76.png captured; runtime pixel inspection of the ember colours was not performed this slot, so the smoke asserts the honest dataset readout and a human/device look remains.",
- "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari): does the cool waiting ember read as \"still to come\" and the warm one as \"sounding now\" under a thumb, do embers blur into ripple rings, and should a finished phrase keep a warming ember. Windows high-contrast check still open from 0073.",
+ "iteration": 77,
+ "status": "the-replay-says-what-the-water-shows",
+ "current_goal": "Iteration 0077: то, что вода показывает огоньками, пруд теперь и произносит — во время разлива дневника живой регион один раз называет каждую новую звучащую фразу и честно говорит, сколько фраз ещё впереди, а остановленный разлив честно называет, сколько осталось непрозвучавшим. Слова читаются из того же immutable-плана чистой flushProgress; звук и вода не затрагиваются, ни одна строка не повторяется.",
+ "previous_goal": "Iteration 0076: пока разлив дневника идёт, сама вода показывает, сколько ещё осталось — каждая ещё не достигнутая фраза держит тихий прохладный огонёк на первой точке своего контура, звучащая сейчас несёт единственный тёплый огонёк с кольцом, уже ответившая возвращается к обычным чернилам, при reduced motion огоньки неподвижны. Прогресс читается из того же immutable-плана чистой flushProgress, звук не затрагивается, огоньки подчинены кадровому бюджету.",
+ "last_verified": "2026-09-28: 108 Node tests pass (was 104). 73 JS files pass syntax. scripts/flush-diary-smoke.js passes on a production-loopback Chromium at 390x844 with a real seeded three-phrase chronicle: the live region stays silent before the first touch, R opens the replay, and the phrase boundary really speaks the honest step ('Разлив идёт: звучит фраза N из M. Впереди ещё …'); the end clears the line with the embers, and a replay stopped right after it opens names honestly how many phrases and notes never came home. No console or page errors. Screenshot output/pond-piano/diary-flush-77.png captured and inspected.",
+ "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari): how the spoken line reads in TalkBack/VoiceOver during a replay, whether six phrases make it chatty on the ear, and whether stopping from outside the focused water should also name the remainder. Windows high-contrast check still open from 0073.",
  "alpha_feedback": {
   "captured_at": "2026-07-26T13:59:00+03:00",
   "observations": [
@@ -340,7 +340,7 @@
   ],
   "next_step": "done; real-device pass should compare the warm near lap and cool far skim on phone speakers and bright screens"
  },
- "current_iteration": 76,
+ "current_iteration": 77,
  "iteration_51": {
   "started": "2026-09-02T22:17:00+03:00",
   "phase": "done",
@@ -838,5 +838,25 @@
    "screenshot output/pond-piano/diary-flush-76.png captured; runtime pixel inspection of the ember colours was not performed this slot"
   ],
   "next_step": "Real device pass: ember legibility under a thumb, embers vs ripple rings, and whether a finished phrase should keep a warming ember."
+ },
+ "iteration_77": {
+  "started": "2026-09-28T12:17:00+03:00",
+  "phase": "done",
+  "goal": "Iteration 0077: то, что вода показывает огоньками, пруд теперь и произносит — во время разлива дневника живой регион один раз называет каждую новую звучащую фразу и честно говорит, сколько фраз ещё впереди, а остановленный разлив честно называет, сколько осталось непрозвучавшим. Слова читаются из того же immutable-плана чистой flushProgress; звук и вода не затрагиваются, ни одна строка не повторяется.",
+  "plan": [
+   "pure flushMilestone(progress, spokenPhrase) + flushStopSummary(progress) + phraseWord/noteWord in pond-score.js: one calm spoken line per newly sounding phrase with the honest count still ahead, and honest words for a replay stopped early; null/idle on broken input, nothing repeated",
+   "pond.js: voice the milestone in the phrase-boundary timer and the honest remainder on stop through the existing live region; track flushSpokenPhrase and reset it with the replay; expose dataset.flushSpoken probe",
+   "unit suites for the milestone/stop words (first phrase, advance, last phrase, no repeat, broken input, honest remainder) ",
+   "extend scripts/flush-diary-smoke.js to assert the live region really speaks the step and the honest stop; screenshot",
+   "docs (README sentence, ARCHITECTURE line, KAIZEN 0077), eyebrow 77, shell v74, commit and push"
+  ],
+  "finished": "2026-09-28T12:55:00+03:00",
+  "verified": [
+   "108 Node tests pass (was 104; four new suites cover one honest spoken line per new sounding phrase, the refusal on broken input, the honest remainder of a stopped replay and the real Russian counts for phrases and notes)",
+   "73 JS files pass syntax; state JSON valid and git diff --check clean",
+   "production-loopback Chromium 390x844 with a seeded three-phrase chronicle: the live region is silent before the first touch, R opens the replay, and at the first phrase boundary it really speaks 'Разлив идёт: звучит фраза N из M. Впереди ещё …' - the same truth the embers carry; the end clears both the line and the embers, and a replay stopped right after it opens names honestly how many phrases and notes never came home; no console or page errors",
+   "screenshot output/pond-piano/diary-flush-77.png inspected directly: organic full-bleed water with three ink phrases and live echo rings, title, eyebrow 77, map and shore stones intact, no clipping"
+  ],
+  "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari): how the spoken line reads in TalkBack/VoiceOver during a replay, whether six phrases make it chatty on the ear, and whether stopping from outside the focused water should also name the remainder. Windows high-contrast check still open from 0073."
  }
 }

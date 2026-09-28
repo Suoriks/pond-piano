@@ -62,6 +62,7 @@ const SEED_HARNESS = () => {
         fraction: Number(canvas.dataset.flushFraction) || 0,
         current: Number(canvas.dataset.flushCurrent ?? -1),
         embers: Number(canvas.dataset.flushEmber) || 0,
+        spoken: Number(canvas.dataset.flushSpoken ?? -1),
         echoVoices: Number(canvas.dataset.echoVoices) || 0,
         status: document.querySelector('#status').textContent || '',
         legend: (document.querySelector('#legend-list')?.textContent || '').replace(/\s+/g, ' '),
@@ -99,7 +100,8 @@ const SEED_HARNESS = () => {
     assert.ok(started.planned > 0, 'the replay really scheduled notes');
     assert.ok(started.planned <= 14, `the replay stays inside its note bound (${started.planned})`);
     assert.ok(started.phrases === 0, 'the first phrase has not spoken yet when the replay opens');
-    assert.match(started.status, /разливает дневник/, 'the water says what it is doing');
+    assert.equal(started.spoken, -1, 'no phrase has been spoken aloud yet at the very start');
+    assert.match(started.status, /разливает дневник|Разлив идёт/, 'the water says what it is doing');
     // The surface shows how much of the replay is still to come: at the very
     // start the whole chronicle is waiting, and every planned phrase keeps a
     // quiet ember while the replay has not reached it.
@@ -119,7 +121,14 @@ const SEED_HARNESS = () => {
     assert.ok(midway.remaining < started.remaining, 'the water shows the replay is moving on');
     assert.ok(midway.current >= 0, 'the phrase now sounding is named on the water');
     assert.ok(midway.embers >= 1, 'a phrase the replay has not reached still holds its ember');
-    await page.screenshot({ path: path.join(root, 'output/pond-piano/diary-flush-76.png') });
+    // The water shows where the replay stands; the live region says the same
+    // thing in words, so a player who listens rather than watches is told too.
+    assert.ok(midway.spoken >= 0, 'the sounding phrase has really been spoken aloud, not only shown');
+    assert.match(midway.status, /Разлив идёт: звучит фраза \d+ из \d+/,
+      'the live region names which phrase of the chronicle is sounding now');
+    assert.match(midway.status, /Впереди ещё \d+ фраз|звучит последняя фраза/,
+      'the spoken line names honestly how much is still to come');
+    await page.screenshot({ path: path.join(root, 'output/pond-piano/diary-flush-77.png') });
 
     // It ends by itself, with every phrase spoken and the pool given back.
     await page.waitForFunction(() => document.querySelector('#pond').dataset.flushing === '0', null, { timeout: 25000 });
@@ -135,6 +144,7 @@ const SEED_HARNESS = () => {
     assert.equal(done.remaining, 0, 'when the replay ends nothing is left to come');
     assert.equal(done.embers, 0, 'no waiting ember outlives the replay it belonged to');
     assert.equal(done.fraction, 0, 'a finished replay holds no progress of its own on the water');
+    assert.equal(done.spoken, -1, 'a finished replay leaves no spoken milestone behind');
     assert.equal(done.echoVoices, 0, 'the shared echo pool is given back when the replay ends');
 
     // The diary panel carries the same route as a real, honest control.
@@ -156,6 +166,8 @@ const SEED_HARNESS = () => {
     await page.waitForFunction(() => (Number(document.querySelector('#pond').dataset.echoVoices) || 0) === 0, null, { timeout: 8000 });
     const stopped = await read(page);
     assert.match(stopped.status, /перестал разливать дневник/, 'a stopped replay says so');
+    assert.match(stopped.status, /осталось \d+ фраз|всё обещанное уже прозвучало/,
+      'a stopped replay names honestly what never came home instead of implying it was all heard');
     assert.equal(stopped.remaining, 0, 'a stopped replay leaves no half-promise on the water');
     assert.equal(stopped.embers, 0, 'a stopped replay takes its waiting embers with it');
     assert.equal(stopped.echoVoices, 0, 'a stopped replay holds no voices hostage');

@@ -435,6 +435,63 @@
     });
   }
 
+  // The replay already shows its remainder on the water. A player who hears
+  // the pond instead of watching it must learn the same truth from words: the
+  // live region says one calm line when a new phrase takes over, and names
+  // honestly how much of the chronicle is still to come. Pure words only - the
+  // shell decides when to speak, and the same immutable plan feeds both the
+  // embers and these lines.
+  function phraseWord(count) {
+    const lastTwo = count % 100, last = count % 10;
+    if (lastTwo >= 11 && lastTwo <= 14) return 'фраз';
+    if (last === 1) return 'фраза';
+    if (last >= 2 && last <= 4) return 'фразы';
+    return 'фраз';
+  }
+
+  function noteWord(count) {
+    const lastTwo = count % 100, last = count % 10;
+    if (lastTwo >= 11 && lastTwo <= 14) return 'нот';
+    if (last === 1) return 'нота';
+    if (last >= 2 && last <= 4) return 'ноты';
+    return 'нот';
+  }
+
+  function flushMilestone(progress, spokenPhrase = -1) {
+    if (!progress || typeof progress !== 'object') return null;
+    if (progress.state !== 'sounding' && progress.state !== 'waiting') return null;
+    const phrases = Math.max(0, Math.trunc(Number.isFinite(progress.phrases) ? progress.phrases : 0));
+    const current = Number.isInteger(progress.current) ? progress.current : -1;
+    const spoken = Number.isInteger(spokenPhrase) ? spokenPhrase : -1;
+    if (!phrases || current < 0 || current <= spoken) return null;
+    const ahead = Math.max(0, phrases - current - 1);
+    const text = ahead > 0
+      ? `Разлив идёт: звучит фраза ${current + 1} из ${phrases}. Впереди ещё ${ahead} ${phraseWord(ahead)}`
+      : `Разлив идёт: звучит последняя фраза, ${current + 1} из ${phrases}`;
+    return Object.freeze({ key: `phrase:${current}`, phrase: current, ahead, text });
+  }
+
+  // Stopping the replay early is honest about what never came home. The same
+  // plan says how many phrases and notes were still waiting, so the pond can
+  // name the remainder instead of implying the chronicle was fully heard.
+  function flushStopSummary(progress) {
+    if (!progress || typeof progress !== 'object' || progress.state === 'idle') return null;
+    const phrases = Math.max(0, Math.trunc(Number.isFinite(progress.phrases) ? progress.phrases : 0));
+    const current = Number.isInteger(progress.current) ? progress.current : -1;
+    const remainingNotes = Math.max(0, Math.trunc(Number.isFinite(progress.remaining) ? progress.remaining : 0));
+    const remainingPhrases = current < 0 ? phrases : Math.max(0, phrases - current - 1);
+    if (!remainingNotes && !remainingPhrases) {
+      return Object.freeze({
+        key: 'stop:none', remaining: 0, phrases: 0,
+        text: 'Пруд перестал разливать дневник: всё обещанное уже прозвучало'
+      });
+    }
+    return Object.freeze({
+      key: 'stop:left', remaining: remainingNotes, phrases: remainingPhrases,
+      text: `Пруд перестал разливать дневник: осталось ${remainingPhrases} ${phraseWord(remainingPhrases)} и ${remainingNotes} ${noteWord(remainingNotes)}`
+    });
+  }
+
   // A finished phrase can leave the pond as a compact self-contained scroll:
   // its real path, sounding pitch and depth, duration, pressure and chosen
   // current remain transportable without the audio engine or the DOM. Pure
@@ -686,6 +743,7 @@
     LOOP_FIRST_DELAY_MS, LOOP_PASS_GAP_MS, MAX_LOOP_PASSES, loopSchedule, loopProbe,
     FLUSH_FIRST_DELAY_MS, FLUSH_PHRASE_GAP_MS, FLUSH_MAX_PHRASES, FLUSH_MAX_NOTES,
     FLUSH_NOTES_PER_PHRASE, FLUSH_MAX_SPAN_MS, pourAllPlan, pourAllSpan, flushProgress,
+    flushMilestone, flushStopSummary, phraseWord, noteWord,
     rehearsalDecision, REHEARSAL_TAP_HOLD_MS, REHEARSAL_TAP_MOVE, REHEARSAL_WINDOW_MS, REHEARSAL_MAX_TAPS,
     INVITE_BREATH_MS, INVITE_RING_MS, invitation,
     phraseScroll, phraseScrollText, parseScrollText, inkFromScroll, scrollSummary,
