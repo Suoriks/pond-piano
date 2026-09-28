@@ -97,7 +97,10 @@
   let diaryOpen = false;
   let lastInkCount = -1;
   let lastPourAt = -Infinity;
-  const keyboard = { x: .5, y: .52, pitchX: .5, pressure: .48, sounding: false, born: 0, lastMotion: 0, motionSpeed: 0, mapping: null, materialBias: null, precisionActive: false, precisionAmount: 0, precisionOriginX: null, scoreSamples: [], distanceTraveled: 0, resonanceX: 0, resonanceY: 0, resonatedMemories: new Set(), dive: null, dived: false, gather: null, chord: null };
+  const keyboard = { x: .5, y: .52, pitchX: .5, pressure: .48, sounding: false, born: 0, lastMotion: 0, motionSpeed: 0, mapping: null, materialBias: null, precisionActive: false, precisionAmount: 0, precisionOriginX: null, scoreSamples: [], distanceTraveled: 0, resonanceX: 0, resonanceY: 0, resonatedMemories: new Set(), dive: null, dived: false, gather: null, chord: null, restBorn: 0 };
+  // The water owns keyboard focus: the resting light shows the keyboard where
+  // it stands before any strike, and yields the moment a real note sounds.
+  let waterFocused = false;
   let audio = null;
   let audioLifecycle = null;
   let masterState = loadMasterState();
@@ -2582,6 +2585,8 @@ function disconnectSkipVoice(engine, skip) {
   }
 
   canvas.addEventListener('focus', () => {
+    waterFocused = true;
+    keyboard.restBorn = performance.now();
     announceKeyboardLocation(true);
     introduceLegendOnKeyboardVisit();
   });
@@ -2749,6 +2754,7 @@ function disconnectSkipVoice(engine, skip) {
     }
   });
   canvas.addEventListener('blur', () => {
+    waterFocused = false;
     if (keyboard.sounding) {
       const p = keyboardPoint();
       rememberContact(keyboard, p.x, p.y, performance.now(), .48);
@@ -3407,6 +3413,41 @@ function disconnectSkipVoice(engine, skip) {
     ctx.restore();
   }
 
+  // The keyboard's resting light: where the water stands under the keyboard
+  // hand before any strike. One small still bowl of light, drawn under the
+  // real contact light and spent on nothing else — it is the difference
+  // between "focused" and "here, this bowl, this depth".
+  function drawKeyboardRest(now) {
+    const plan = waterFocused
+      ? a11y.keyboardRest({
+        focused: true, sounding: keyboard.sounding,
+        x: keyboard.x, y: keyboard.y, now, born: keyboard.restBorn, reducedMotion: reduced.matches
+      })
+      : null;
+    canvas.dataset.keyboardRest = plan ? plan.alpha.toFixed(3) : '0';
+    if (!plan) {
+      // A resting light that is gone must not leave a stale position behind.
+      if (canvas.dataset.keyboardRestAt !== undefined) delete canvas.dataset.keyboardRestAt;
+      return;
+    }
+    canvas.dataset.keyboardRestAt = `${plan.x.toFixed(3)},${plan.y.toFixed(3)}`;
+    const p = keyboardPoint();
+    const radius = Math.max(6, plan.radius * Math.min(width, height));
+    const breathe = 1 + (plan.pulse - .5) * .14;
+    const glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, radius * 2.2);
+    glow.addColorStop(0, `hsla(${plan.hue + 14} 70% 86% / ${plan.alpha})`);
+    glow.addColorStop(1, 'transparent');
+    ctx.save();
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(p.x, p.y, radius * 2.2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y, radius * 1.9 * breathe, radius * .78 * breathe, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = `hsla(${plan.hue} 62% 80% / ${plan.ringAlpha})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+  }
+
   function drawContact(pointer, now) {
     const pitch = Math.max(0, Math.min(1, pointer.x / Math.max(1, width)));
     const pulse = reduced.matches ? .5 : .5 + Math.sin((now - pointer.born) * (.004 + pitch * .003)) * .5;
@@ -3699,6 +3740,7 @@ function disconnectSkipVoice(engine, skip) {
     canvas.dataset.releaseGlints = String(releaseGlints.length);
     for (let i = releaseGlints.length - 1; i >= 0; i--) if (!drawReleaseGlint(releaseGlints[i], now)) releaseGlints.splice(i, 1);
     for (const pointer of pointers.values()) drawContact(pointer, now);
+    drawKeyboardRest(now);
     if (keyboardVisual) drawContact(keyboardVisual, now);
     // The water frame budget: record the observed render cost, then let the
     // eased style feed the next frame. Quiet, cheap stretches unwind the

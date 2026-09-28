@@ -115,8 +115,43 @@
     return Math.max(0, Math.round(height - bottom - gap - edge));
   }
 
+  // ---- The water shows where the keyboard stands ---------------------------
+  // A finger landing on the water meets a contact light at once; a sighted
+  // keyboard player who tabbed in saw only the canvas focus ring — "focused",
+  // not "here, this bowl, this depth". The resting light gives the keyboard
+  // the same quiet pre-contact mark: it shows while the water owns focus and
+  // yields the moment a strike really sounds, so the two lights never stack.
+  // Pure geometry, bounded: a calm arrival, a breathing ring that stops under
+  // reduced motion, and an honest null when the water is not focused.
+  const REST_ARRIVAL_MS = 420;
+  const REST_RADIUS_SHARE = .038;
+  const REST_MIN_RADIUS = .012;
+  const REST_MAX_RADIUS = .06;
+
+  function restPlace(value) {
+    return Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : .5;
+  }
+
+  function keyboardRest(state = {}) {
+    if (state.focused !== true || state.sounding === true) return null;
+    const x = restPlace(state.x), y = restPlace(state.y);
+    const now = Number(state.now), born = Number(state.born);
+    const elapsed = Math.max(0, Number.isFinite(now) && Number.isFinite(born) ? now - born : 0);
+    const reducedMotion = state.reducedMotion === true;
+    const arrival = Math.min(1, elapsed / REST_ARRIVAL_MS);
+    const pulse = reducedMotion ? 0 : .5 + Math.sin(elapsed * .0016) * .5;
+    const radius = Math.max(REST_MIN_RADIUS, Math.min(REST_MAX_RADIUS,
+      REST_RADIUS_SHARE * (.55 + (1 - x) * .45) * (.62 + arrival * .38)));
+    return Object.freeze({
+      x, y, radius, arrival, pulse, reducedMotion,
+      alpha: .18 + .26 * arrival,
+      ringAlpha: .22 + .3 * arrival,
+      hue: 152 + 30 * (1 - y)
+    });
+  }
+
   return Object.freeze({
     expandedState, countIndex: trapIndex, openIndex, bowlLocation, keyboardLegend,
-    legendIntroKey, shouldIntroduceLegend, legendIntroText, legendFitHeight
+    legendIntroKey, shouldIntroduceLegend, legendIntroText, legendFitHeight, keyboardRest
   });
 });

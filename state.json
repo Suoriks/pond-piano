@@ -1,12 +1,12 @@
 {
  "project": "pond-piano",
  "phase": "device-validation",
- "iteration": 70,
- "status": "keyboard-map-fits-the-water",
- "current_goal": "Iteration 0070: the keyboard map never pushes the pond - on a short viewport (a phone in landscape, a small window) it takes only the honest room left below its trigger, scrolls inside, reads above the shore stones it covers, and stays reachable from the keyboard, so the water never shifts up and the title is never cut off.",
- "previous_goal": "Iteration 0069: the keyboard map introduces itself - on the first honest keyboard visit the quiet «Клавиши пуда» slate opens once on this device without pulling focus off the water, any real gesture (arrow, strike, G, H) dismisses it like a guest, and it never returns in the session or after a reload.",
- "last_verified": "2026-09-28: Node tests pass (90), 68 JS syntax clean. Instrumented production-loopback Chromium at 844x390, 667x375, 1280x640 and 390x844: main.scrollTop and document.scrollTop stay 0, .title-block stays at y=24, the open map's bottom (378/363/628) and Закрыть (363/348/613) stay inside the water, all seven routes are present, the map wins the elementFromPoint hit test in the shore stones' corner, and on 390x844 the list is still unclipped; from the keyboard, Tab reaches the list, End scrolls the clipped routes, Escape closes, and Space still strikes a bowl (voices 1 -> 0); no browser errors. 0068 and 0069 regressions green. Screenshots output/pond-piano/landscape-map-70-*.png inspected directly: title and water edge intact, the map reads as one quiet slate above the water, shore labels no longer bleed through its rows.",
- "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari) with a Bluetooth keyboard and TalkBack/VoiceOver: how does a clipped map feel to scroll by finger (inertia, screen edge), and should a phone lying down open the map from the opposite edge where there is more room.",
+ "iteration": 71,
+ "status": "keyboard-rest-light-shows-the-stand",
+ "current_goal": "Iteration 0071: the water itself shows a sighted keyboard player where they stand — while the water honestly owns focus and stays silent, a calm light with a quiet ring rests under the chosen bowl and depth, arrives gently, travels with the arrows, yields the instant a real strike sounds, never starts the audio system, and holds still under reduced motion.",
+ "previous_goal": "Iteration 0070: the keyboard map never pushes the pond - on a short viewport (a phone in landscape, a small window) it takes only the honest room left below its trigger, scrolls inside, reads above the shore stones it covers, and stays reachable from the keyboard, so the water never shifts up and the title is never cut off.",
+ "last_verified": "2026-09-28: 94 Node tests pass (was 90; four new suites cover honesty, calm bounded arrival, breathing vs reduced-motion stillness, broken geometry and depth hue); 69 JS files pass syntax; state/package JSON and git diff --check clean. Instrumented production-loopback Chromium 390x844: no mark and audioState uninitialized before the player arrives; the first Tab shows the light at 0.500,0.520 with the audio system still uncreated; the patch at the mark brightens by 8+; eight ArrowRight steps carry it right (at x > .6) and the light really sits at the new bowl (new patch 6+ brighter than the old); a held Space yields the mark to the contact light (keyboardRest 0) and the mark honestly returns after release because the player still stands there; blur clears it and deletes the stale position key; a reduced-motion page holds one still 0.440 ring across 400 ms; no console/page errors. Screenshot output/pond-piano/keyboard-rest-71.png inspected directly: calm light with its ring under the chosen bowl, title and shore stones intact, no clipping or rectangular artifact. Stale regression repaired honestly: keyboard-water-smoke.js failed on the baseline too because iteration 0069 auto-opened the keyboard map on the first Tab and overwrote the bowl narration; it now marks the map read first (like keyboard-legend-smoke.js) and is green again, product unchanged.",
+ "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari) with a Bluetooth keyboard and TalkBack/VoiceOver: does the quiet resting light read as \"I stand here\" rather than as a sounding contact, and on the very first, never-played visit is it too crowded where the invitation ring and the resting light sit close in the centre.",
  "alpha_feedback": {
   "captured_at": "2026-07-26T13:59:00+03:00",
   "observations": [
@@ -340,7 +340,7 @@
   ],
   "next_step": "done; real-device pass should compare the warm near lap and cool far skim on phone speakers and bright screens"
  },
- "current_iteration": 67,
+ "current_iteration": 71,
  "iteration_51": {
   "started": "2026-09-02T22:17:00+03:00",
   "phase": "done",
@@ -723,5 +723,27 @@
    "0068 and 0069 regressions green; screenshots landscape-map-70-*.png inspected directly: title and edge intact, map reads as one quiet slate, shore labels no longer bleed through"
   ],
   "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari) with a Bluetooth keyboard and TalkBack/VoiceOver: how does a clipped map feel to scroll by finger (inertia, screen edge), and should a phone lying down open the map from the opposite edge where there is more room."
+ },
+ "iteration_71": {
+  "started": "2026-09-28T03:17:00+03:00",
+  "finished": "2026-09-28T04:05:00+03:00",
+  "phase": "done",
+  "plan": [
+   "pure keyboardRest(state) in pond-a11y.js: null unless the water owns focus and stays silent; calm bounded arrival, breathing that stops under reduced motion, depth-warm hue, broken geometry safe",
+   "unit suites for honesty, arrival/bounds, breathing vs stillness, broken geometry and hue",
+   "pond.js: waterFocused on canvas focus/blur, keyboard.restBorn, drawKeyboardRest under the real contact light, honest keyboardRest/keyboardRestAt probes cleared with the mark",
+   "scripts/keyboard-rest-smoke.js instrumented production-loopback Chromium proof + screenshot",
+   "repair the stale keyboard-water-smoke assertion surfaced by the regression run (fails on baseline too; product unchanged)",
+   "eyebrow 71, shell v68, README sentence, KAIZEN 0071, state, one commit and push main"
+  ],
+  "verified": [
+   "94 Node tests pass; 69 JS files syntax clean; JSON and git diff --check clean",
+   "instrumented Chromium 390x844: no mark and no audio before the player arrives; first Tab shows 0.500,0.520 with audioState still uninitialized; patch at the mark +8; eight ArrowRight steps move it (at x > .6) and the light is at the new bowl; a held Space yields the mark and it returns after release; blur clears it and deletes the stale position key",
+   "reduced motion: the same still 0.440 ring across 400 ms",
+   "screenshot output/pond-piano/keyboard-rest-71.png inspected directly",
+   "regressions green after the honest stale-assertion repair: keyboard-water-smoke, keyboard-legend-smoke, keyboard-legend-intro-smoke, landscape-map-smoke"
+  ],
+  "next_step": "Real device pass (Android Chrome/PWA, iPhone Safari) with a Bluetooth keyboard and TalkBack/VoiceOver: does the quiet resting light read as \"I stand here\" rather than as a sounding contact, and on the very first, never-played visit is it too crowded where the invitation ring and the resting light sit close in the centre.",
+  "note": "The mark is one shape and deliberate accessibility feedback, so the frame budget does not spend it away."
  }
 }

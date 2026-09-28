@@ -119,6 +119,60 @@ test('the open map is never taller than the water below its trigger', () => {
   assert.equal(a11y.legendFitHeight('tall', 'wide'), null);
 });
 
+test('the resting light shows only while the keyboard owns the water', () => {
+  // A pointer-only visit, an unfocused canvas, a real sounding contact: no mark.
+  assert.equal(a11y.keyboardRest(), null);
+  assert.equal(a11y.keyboardRest({ focused: false, x: .5, y: .5 }), null);
+  assert.equal(a11y.keyboardRest({ focused: 'yes', x: .5, y: .5 }), null);
+  assert.equal(a11y.keyboardRest({ focused: true, sounding: true, x: .5, y: .5 }), null);
+  // The water is focused and silent: the mark exists.
+  const rest = a11y.keyboardRest({ focused: true, x: .5, y: .52, born: 1000, now: 1000 });
+  assert.ok(rest, 'a focused, silent water must show the keyboard where it stands');
+  assert.ok(Object.isFrozen(rest), 'the plan is frozen so no layer can drift it');
+});
+
+test('the resting light arrives calmly and then rests, bounded', () => {
+  const at = elapsed => a11y.keyboardRest({ focused: true, x: .5, y: .52, born: 1000, now: 1000 + elapsed });
+  const born = at(0), mid = at(210), settled = at(420), late = at(90000);
+  assert.equal(born.arrival, 0);
+  assert.ok(mid.arrival > 0 && mid.arrival < 1, 'the mark grows in rather than popping');
+  assert.equal(settled.arrival, 1);
+  assert.equal(late.arrival, 1, 'a long stay never overshoots');
+  assert.ok(born.alpha < mid.alpha && mid.alpha < settled.alpha, 'alpha follows the arrival');
+  assert.equal(late.alpha, settled.alpha);
+  for (const plan of [born, mid, settled, late]) {
+    assert.ok(plan.alpha > 0 && plan.alpha <= .44, 'alpha stays inside its honest band');
+    assert.ok(plan.ringAlpha > 0 && plan.ringAlpha <= .52, 'the ring stays inside its band');
+    assert.ok(plan.radius >= .012 && plan.radius <= .06, 'the mark never grows beyond the water it marks');
+  }
+});
+
+test('the resting light breathes, and reduced motion makes it still', () => {
+  const breathe = elapsed => a11y.keyboardRest({ focused: true, x: .5, y: .5, born: 0, now: elapsed });
+  const a = breathe(700), b = breathe(2200);
+  assert.ok(a.pulse !== b.pulse, 'the open mark drifts with the water');
+  assert.ok(a.pulse >= 0 && a.pulse <= 1);
+  const still = elapsed => a11y.keyboardRest({ focused: true, reducedMotion: true, x: .5, y: .5, born: 0, now: elapsed });
+  assert.equal(still(700).pulse, 0);
+  assert.equal(still(700).pulse, still(2200).pulse, 'reduced motion holds one still ring');
+  assert.ok(still(700).alpha > 0, 'reduced motion still shows the mark');
+  assert.equal(still(700).reducedMotion, true);
+});
+
+test('the resting light answers broken geometry with a bounded mark', () => {
+  const broken = a11y.keyboardRest({ focused: true });
+  assert.ok(broken);
+  assert.equal(broken.x, .5); assert.equal(broken.y, .5);
+  assert.equal(broken.arrival, 0);
+  const wild = a11y.keyboardRest({ focused: true, x: 9, y: -9, born: NaN, now: 'soon' });
+  assert.equal(wild.x, 1); assert.equal(wild.y, 0);
+  assert.ok(wild.radius >= .012 && wild.radius <= .06);
+  assert.ok(Number.isFinite(wild.alpha) && Number.isFinite(wild.hue));
+  const deep = a11y.keyboardRest({ focused: true, x: .5, y: .95 });
+  const shallow = a11y.keyboardRest({ focused: true, x: .5, y: .05 });
+  assert.ok(shallow.hue > deep.hue, 'shallow water is warmer, deep water cooler, like the contact light');
+});
+
 test('the introduction storage key is versioned and never empty', () => {
   assert.equal(a11y.legendIntroKey(), 'pond-piano.legend-intro.v1');
   assert.equal(a11y.legendIntroKey(2), 'pond-piano.legend-intro.v2');

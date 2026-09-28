@@ -1,5 +1,5 @@
-const CACHE = 'pond-piano-shell-v67';
-// Iteration 0070: the keyboard map fits the water it hangs over, and scrolls inside.
+const CACHE = 'pond-piano-shell-v68';
+// Iteration 0071: the water shows a keyboard player where they stand, before any strike.
 const SHELL = [
   './',
   './index.html',

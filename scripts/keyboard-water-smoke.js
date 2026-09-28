@@ -17,6 +17,11 @@ const { createStaticServer, listenOnLoopback, closeServer } = require('../electr
     const errors = [];
     page.on('pageerror', e => errors.push(String(e)));
     page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+    // The keyboard map introduces itself once (0069); this proof is about the
+    // bowl narration, so the map is already a stranger here.
+    await page.addInitScript(() => {
+      try { localStorage.setItem('pond-piano.legend-intro.v1', 'seen'); } catch {}
+    });
     await page.goto(url, { waitUntil: 'networkidle' });
     const cdp = await page.context().newCDPSession(page);
     await cdp.send('Accessibility.enable');
